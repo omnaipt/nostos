@@ -1,2 +1,2 @@
-# Preencher project_id depois de criar o projeto Supabase do STOA
-project_id = ""
+# Projeto Supabase do STOA (org Omnai, regiao eu-west-1)
+project_id = "emuwqkdummdmacnkltte"
