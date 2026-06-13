@@ -31,6 +31,12 @@ create table if not exists public.restaurants (
   -- perder o input do form de onboarding.
   default_duration_min int not null default 120
     check (default_duration_min between 30 and 360),
+  -- Modo de atribuição de mesa do tenant. Ciclo de vida: cada restaurante
+  -- arranca SEMPRE em 'manual'; passa a 'auto' só quando tiver dados
+  -- suficientes. A Fase 2 é que vira o flag e define o critério (sem lógica
+  -- automática nesta fase: aqui é só o campo).
+  assignment_mode text not null default 'manual'
+    check (assignment_mode in ('manual','auto')),
   owner_id uuid not null references auth.users (id) on delete restrict,
   created_at timestamptz not null default now()
 );
