@@ -125,12 +125,29 @@ create table if not exists public.reservations (
   -- derivada de reserved_at pela aplicação no momento da criação). É a
   -- unidade de disponibilidade da Fase 1 junto com turn_id, e mantém o
   -- índice de unicidade IMMUTABLE (evita reserved_at::date, que depende
-  -- do TimeZone da sessão). Default = data UTC, ajustada pela app.
+  -- do TimeZone da sessão).
+  --
+  -- CONTRATO service_date (FROZEN): a APP é a fonte de verdade. Calcula
+  -- service_date a partir de reserved_at no fuso do restaurante
+  -- (restaurants.timezone, ex.: Europe/Lisbon) no momento da criação/edição.
+  -- O default UTC abaixo é APENAS fallback de segurança para inserts que
+  -- não passem o valor; NÃO é o comportamento correcto para o produto
+  -- (perto da meia-noite a data UTC diverge da data local). Tem de ser
+  -- ENFORCED no wiring da aplicação (Zé rework PR #11 → Marco #4): nenhuma
+  -- escrita de reserva deve depender deste default.
   service_date date not null default (now() at time zone 'UTC')::date,
   status text not null default 'confirmada'
     check (status in ('pendente','confirmada','sentada','cancelada','no_show')),
   notes text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Integridade de atribuição: uma mesa NUNCA é atribuída sem turno.
+  -- O índice único parcial (reservations_table_slot_uidx) NÃO protege o caso
+  -- table_id preenchido + turn_id null, porque NULL é distinto em índice único
+  -- (duas reservas na mesma mesa com turn_id null não colidiriam). Este CHECK
+  -- fecha esse buraco: se há mesa, tem de haver turno. O inverso é livre
+  -- (turno sem mesa = reserva por atribuir, caso válido da Fase 1).
+  constraint reservations_table_requires_turn
+    check (table_id is null or turn_id is not null)
 );
 create index if not exists reservations_restaurant_time_idx
   on public.reservations (restaurant_id, reserved_at);

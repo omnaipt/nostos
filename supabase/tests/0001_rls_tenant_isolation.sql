@@ -7,7 +7,7 @@
 
 begin;
 
-select plan(15);
+select plan(17);
 
 -- pgTAP disponível
 select has_extension('pgtap');
@@ -85,9 +85,46 @@ select lives_ok($$
      'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'Cancelada', 2, now(), date '2026-06-20', 'cancelada')
 $$, 'Reserva cancelada na mesma mesa/slot NÃO colide');
 
+-- ── Cenário 0b: CHECK reservations_table_requires_turn ────────────────────
+-- Uma mesa NUNCA pode ser atribuída sem turno (table_id not null + turn_id null
+-- viola o CHECK; o índice único parcial não protegia este caso por NULL ser
+-- distinto em índice único).
+
+-- (d) table_id preenchido + turn_id null FALHA (check violation, 23514).
+select throws_ok($$
+  insert into public.reservations
+    (restaurant_id, table_id, turn_id, customer_name, party_size, reserved_at, service_date)
+  values
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+     'dddddddd-dddd-dddd-dddd-dddddddddddd', null,
+     'Mesa Sem Turno', 2, now(), date '2026-06-21')
+$$, '23514', null,
+   'Mesa atribuída sem turno (table_id not null, turn_id null) FALHA (check violation)');
+
+-- (e) table_id preenchido + turn_id preenchido PASSA.
+select lives_ok($$
+  insert into public.reservations
+    (restaurant_id, table_id, turn_id, customer_name, party_size, reserved_at, service_date)
+  values
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+     'dddddddd-dddd-dddd-dddd-dddddddddddd',
+     'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'Mesa Com Turno', 2, now(), date '2026-06-21')
+$$, 'Mesa atribuída com turno (ambos preenchidos) PASSA');
+
+-- (f) table_id null (com ou sem turno) PASSA: reserva por atribuir é válida.
+select lives_ok($$
+  insert into public.reservations
+    (restaurant_id, table_id, turn_id, customer_name, party_size, reserved_at, service_date)
+  values
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', null, null,
+     'Sem Mesa Sem Turno', 2, now(), date '2026-06-21')
+$$, 'Reserva sem mesa (table_id null) PASSA mesmo com turn_id null');
+
 -- Limpeza dos extras do Cenário 0 para não afectar as contagens dos cenários
 -- seguintes (mantém só a reserva original 'Cliente Um').
-delete from public.reservations where customer_name in ('Sem Mesa 1','Sem Mesa 2','Cancelada');
+delete from public.reservations
+where customer_name in ('Sem Mesa 1','Sem Mesa 2','Cancelada',
+                        'Mesa Com Turno','Sem Mesa Sem Turno');
 
 -- ── Cenário 1: utilizador A (membro) VÊ os seus dados ─────────────────────
 set local role authenticated;
