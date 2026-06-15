@@ -1,8 +1,21 @@
 // Tipos de domínio STOA (vertical Restaurantes) — modelo Fase 1: mesas + turnos.
-// Espelham o schema em supabase/migrations/0001_init.sql (mesas+turnos reais).
-// Mantidos manualmente enquanto o wiring Supabase (Marco #4) está em espera.
-// TODO(marco): substituir por tipos gerados via `supabase gen types typescript`
-// quando o wiring arrancar; estes ficam como contrato de referência da UI.
+//
+// As FORMAS das tabelas vêm agora dos tipos GERADOS por
+// `supabase gen types typescript` (integrations/supabase/database.types.ts),
+// que são a fonte de verdade do schema. Aqui só:
+//   1. Damos aliases de domínio (Restaurant, RestaurantTable, ...) sobre as Row
+//      geradas, estreitando campos `string` para os literais de domínio
+//      (status, assignment_mode) — o Postgres CHECK não gera enum em TS.
+//   2. Exportamos aliases Insert/Update para o wiring (#4) usar nas mutações.
+//   3. Mantemos as constantes/helpers de UI (WEEKDAYS, labels, isoWeekdayOf).
+//
+// Regenerar tipos: `supabase gen types typescript --project-id emuwqkdummdmacnkltte`.
+
+import type {
+  Tables,
+  TablesInsert,
+  TablesUpdate,
+} from "@/integrations/supabase/database.types";
 
 export type ReservationStatus =
   | "pendente"
@@ -14,73 +27,39 @@ export type ReservationStatus =
 // Dias da semana ISO-8601: 1 = Segunda ... 7 = Domingo (igual ao schema: turns.weekdays int[]).
 export type IsoWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
-export interface Restaurant {
-  id: string;
-  name: string;
-  slug: string | null;
-  vertical: string;
-  timezone: string; // ex.: "Europe/Lisbon" — fuso para calcular service_date
-  email: string | null;
-  phone: string | null;
-  default_duration_min: number; // Fase 2-ready; não usado no cálculo Fase 1
+// ── Restaurante (public.restaurants) ────────────────────────────────────────
+export type Restaurant = Omit<Tables<"restaurants">, "assignment_mode"> & {
   assignment_mode: "manual" | "auto"; // Fase 1 = sempre 'manual'
-  owner_id: string;
-  created_at: string;
-}
+};
+export type RestaurantInsert = TablesInsert<"restaurants">;
+export type RestaurantUpdate = TablesUpdate<"restaurants">;
 
 // ── Mesa (public.tables) ────────────────────────────────────────────────────
-export interface RestaurantTable {
-  id: string;
-  restaurant_id: string;
-  label: string; // ex.: "Mesa 1", "Esplanada 3", "Balcão"
-  seats: number; // ≥ 1
-  sort_order: number; // ordem de apresentação na vista
-  active: boolean; // inactiva => não aparece para atribuição, mantém histórico
-  created_at: string;
-}
+export type RestaurantTable = Tables<"tables">;
+export type RestaurantTableInsert = TablesInsert<"tables">;
+export type RestaurantTableUpdate = TablesUpdate<"tables">;
 
 // ── Turno (public.turns) ────────────────────────────────────────────────────
-export interface Turn {
-  id: string;
-  restaurant_id: string;
-  label: string; // obrigatório, ex.: "1º turno almoço", "Jantar"
-  service: string | null; // OPCIONAL, texto livre (almoço/jantar/brunch/lanche/...), NÃO enum
-  start_time: string; // "HH:mm"
-  weekdays: IsoWeekday[]; // dias em que o turno se aplica
-  default_duration_min: number | null; // Fase 2-ready; não usado na Fase 1
-  active: boolean;
-  created_at: string;
-}
+// weekdays gerado como number[]; estreitamos para IsoWeekday[] no domínio.
+export type Turn = Omit<Tables<"turns">, "weekdays"> & {
+  weekdays: IsoWeekday[];
+};
+export type TurnInsert = TablesInsert<"turns">;
+export type TurnUpdate = TablesUpdate<"turns">;
 
-export interface Customer {
-  id: string;
-  restaurant_id: string;
-  name: string;
-  phone: string | null;
-  email: string | null;
-  notes: string | null; // notas persistentes do cliente (distintas das da reserva)
-  created_at: string;
-}
+// ── Cliente (public.customers) ──────────────────────────────────────────────
+export type Customer = Tables<"customers">;
+export type CustomerInsert = TablesInsert<"customers">;
+export type CustomerUpdate = TablesUpdate<"customers">;
 
-export interface Reservation {
-  id: string;
-  restaurant_id: string;
-  customer_id: string | null;
-  customer_name: string;
-  customer_phone: string | null;
-  customer_email: string | null;
-  party_size: number;
-  // Atribuição Fase 1: turno OBRIGATÓRIO; mesa OPCIONAL (null => POR ATRIBUIR).
-  turn_id: string;
-  table_id: string | null;
-  // service_date: dia de calendário no fuso do restaurante (unidade de
-  // disponibilidade Fase 1 junto com turn_id). reserved_at = hora exacta/exibição.
-  service_date: string; // "yyyy-MM-dd"
-  reserved_at: string | null; // ISO timestamptz, opcional (exibição)
+// ── Reserva (public.reservations) ───────────────────────────────────────────
+// Atribuição Fase 1: turno OBRIGATÓRIO no fluxo da app (schema permite null
+// para reservas órfãs); mesa OPCIONAL (null => POR ATRIBUIR). status estreitado.
+export type Reservation = Omit<Tables<"reservations">, "status"> & {
   status: ReservationStatus;
-  notes: string | null;
-  created_at: string;
-}
+};
+export type ReservationInsert = TablesInsert<"reservations">;
+export type ReservationUpdate = TablesUpdate<"reservations">;
 
 export const WEEKDAYS: { key: IsoWeekday; label: string; short: string }[] = [
   { key: 1, label: "Segunda", short: "Seg" },

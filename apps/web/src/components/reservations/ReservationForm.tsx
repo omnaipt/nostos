@@ -6,8 +6,10 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Field } from "@/components/ui/field";
 import { reservationSchema, type ReservationValues } from "@/lib/schemas";
-import { isPastDate, todayServiceDate, computeServiceDate } from "@/lib/service-date";
+import { isPastDate, todayServiceDate } from "@/lib/service-date";
 import { isoWeekdayOf, type RestaurantTable, type Reservation, type Turn } from "@/lib/types";
+import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
+import { useSaveReservation } from "@/hooks/use-reservations";
 
 // C4 — Criar / editar reserva. turno OBRIGATÓRIO; mesa OPCIONAL (opção
 // explícita "deixar por atribuir"). pax obrigatório; cliente nome+telefone
@@ -68,7 +70,14 @@ export function ReservationForm({
 
   const [errors, setErrors] = React.useState<Errors>({});
   const [globalError, setGlobalError] = React.useState<string>();
-  const [submitting, setSubmitting] = React.useState(false);
+
+  const { data: restaurant } = useActiveRestaurant();
+  const saveCtx = React.useMemo(
+    () => (restaurant ? { restaurant, turns } : undefined),
+    [restaurant, turns],
+  );
+  const save = useSaveReservation(saveCtx);
+  const submitting = save.isPending;
 
   const activeTables = React.useMemo(() => tables.filter((t) => t.active), [tables]);
   const activeTurns = React.useMemo(() => turns.filter((t) => t.active), [turns]);
@@ -140,22 +149,31 @@ export function ReservationForm({
     }
     setErrors({});
 
-    setSubmitting(true);
-    try {
-      // service_date enviado EXPLICITAMENTE (contrato FROZEN) — nunca o default UTC.
-      const service_date = computeServiceDate(date /* , restaurant.timezone */);
-      void service_date;
-      // TODO(marco): wire Supabase — upsert customer (match por telefone, C6),
-      // insert/update reservation com turn_id (obrig.), table_id (null se por
-      // atribuir), service_date EXPLÍCITO (fuso do restaurante), reserved_at se
-      // houver hora exacta, status 'confirmada'. Depois email C7 best-effort.
-      await new Promise((r) => setTimeout(r, 600));
-      onSaved();
-    } catch {
-      setGlobalError("Não foi possível guardar a reserva. Tenta novamente.");
-    } finally {
-      setSubmitting(false);
+    if (!parsed.success) return; // já tratado acima; type-guard para o output validado
+    if (!restaurant) {
+      setGlobalError("Restaurante ainda a carregar. Tenta novamente num instante.");
+      return;
     }
+
+    // WIRING #4 — upsert customer (C6) + insert/update reservation com turn_id
+    // obrigatório, table_id null se por atribuir, service_date e reserved_at
+    // EXPLÍCITOS (contrato FROZEN, fuso do restaurante), status 'confirmada'.
+    // Email C7 disparado best-effort no onSuccess do hook (não bloqueia).
+    save.mutate(
+      { values: parsed.data, id: initial?.id },
+      {
+        onSuccess: () => onSaved(),
+        onError: (err: unknown) => {
+          const msg = err instanceof Error ? err.message : "";
+          // Violação do índice único de atribuição (mesa já ocupada no slot).
+          if (/duplicate key|23505/i.test(msg)) {
+            setErrors((prev) => ({ ...prev, tableId: "Esta mesa já está ocupada neste turno." }));
+          } else {
+            setGlobalError(msg || "Não foi possível guardar a reserva. Tenta novamente.");
+          }
+        },
+      },
+    );
   }
 
   return (

@@ -10,24 +10,24 @@ import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/reservations/StatusBadge";
 import { ReservationFormDialog } from "@/components/reservations/ReservationFormDialog";
 import { AssignTableDialog } from "@/components/reservations/AssignTableDialog";
-import { mockReservations, mockTables, mockTurns } from "@/lib/mock-data";
+import { type ReservationFormInitial } from "@/components/reservations/ReservationForm";
 import { todayServiceDate, shiftIsoDate } from "@/lib/service-date";
+import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
+import { useTables } from "@/hooks/use-tables";
+import { useTurns } from "@/hooks/use-turns";
+import { useAvailability } from "@/hooks/use-availability";
+import { useAssignTable } from "@/hooks/use-reservations";
 import {
   STATUSES_COUNTING_FOR_OCCUPANCY,
   isoWeekdayOf,
   type Reservation,
-  type RestaurantTable,
-  type Turn,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 // C5 — Vista de disponibilidade por turno. Ecrã âncora (substitui a Vista de Dia).
-// Seletor de data + turno, resumo de topo, grelha de mesas (livre/ocupada) e
-// bloco POR ATRIBUIR visível e distinto. 5 estados: default/loading/vazio/erro/sucesso.
-// TODO(marco): wire Supabase — substituir mock por query de disponibilidade
-// (mesas × estado por (service_date, turn_id)) + reservas POR ATRIBUIR.
-
-type LoadState = "loading" | "error" | "ready";
+// WIRING #4: dados via TanStack Query (RLS tenant-scoped). Query de
+// disponibilidade por (service_date, turn_id) + reservas POR ATRIBUIR
+// (table_id null). Mutações invalidam as queries no save.
 
 function formatDateLabel(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -36,25 +36,23 @@ function formatDateLabel(iso: string): string {
 }
 
 export default function Availability() {
-  // Estado de carregamento simulado (mock). TODO(marco): React Query.
-  const [loadState, setLoadState] = React.useState<LoadState>("loading");
   const [date, setDate] = React.useState(todayServiceDate());
   const [turnId, setTurnId] = React.useState<string>("");
 
-  // Dados locais (mock) — mutáveis para refletir acções na UI sem refresh.
-  const [tables] = React.useState<RestaurantTable[]>(mockTables);
-  const [turns] = React.useState<Turn[]>(mockTurns);
-  const [reservations, setReservations] = React.useState<Reservation[]>(mockReservations);
-
   const [formOpen, setFormOpen] = React.useState(false);
+  const [editInitial, setEditInitial] = React.useState<ReservationFormInitial | undefined>();
   const [assignFor, setAssignFor] = React.useState<Reservation | null>(null);
 
-  // Simula fetch inicial (loading -> ready). TODO(marco): remover ao ligar dados.
-  React.useEffect(() => {
-    setLoadState("loading");
-    const t = setTimeout(() => setLoadState("ready"), 500);
-    return () => clearTimeout(t);
-  }, [date, turnId]);
+  const { data: restaurant } = useActiveRestaurant();
+  const restaurantId = restaurant?.id;
+
+  const tablesQuery = useTables(restaurantId);
+  const turnsQuery = useTurns(restaurantId);
+  const availabilityQuery = useAvailability(restaurantId, date, turnId);
+  const assignTable = useAssignTable();
+
+  const tables = React.useMemo(() => tablesQuery.data ?? [], [tablesQuery.data]);
+  const turns = React.useMemo(() => turnsQuery.data ?? [], [turnsQuery.data]);
 
   const activeTables = React.useMemo(() => tables.filter((t) => t.active), [tables]);
   const activeTurns = React.useMemo(() => turns.filter((t) => t.active), [turns]);
@@ -74,13 +72,10 @@ export default function Availability() {
     }
   }, [applicableTurns, turnId]);
 
-  // Reservas do (date, turno), excluindo canceladas.
+  // Reservas do (date, turno) — já vêm sem canceladas do servidor.
   const turnReservations = React.useMemo(
-    () =>
-      reservations.filter(
-        (r) => r.service_date === date && r.turn_id === turnId && r.status !== "cancelada",
-      ),
-    [reservations, date, turnId],
+    () => availabilityQuery.data ?? [],
+    [availabilityQuery.data],
   );
 
   const reservationByTable = React.useMemo(() => {
@@ -112,13 +107,49 @@ export default function Availability() {
     [activeTables, reservationByTable],
   );
 
+  // Estados de carregamento/erro (loading inicial e quando o turno muda).
+  const baseLoading = tablesQuery.isLoading || turnsQuery.isLoading;
+  const slotLoading = !!turnId && availabilityQuery.isLoading;
+  const loading = baseLoading || slotLoading;
+  const errored = tablesQuery.isError || turnsQuery.isError || availabilityQuery.isError;
+
+  function openCreate() {
+    setEditInitial(undefined);
+    setFormOpen(true);
+  }
+
+  function openEdit(r: Reservation) {
+    setEditInitial({
+      id: r.id,
+      customerName: r.customer_name,
+      customerPhone: r.customer_phone ?? "",
+      partySize: r.party_size,
+      date: r.service_date,
+      turnId: r.turn_id ?? turnId,
+      tableId: r.table_id,
+      notes: r.notes ?? "",
+    });
+    setFormOpen(true);
+  }
+
   function handleAssign(reservationId: string, tableId: string) {
-    // TODO(marco): wire Supabase — update reservation.table_id.
-    setReservations((prev) =>
-      prev.map((r) => (r.id === reservationId ? { ...r, table_id: tableId } : r)),
+    assignTable.mutate(
+      { reservationId, tableId },
+      {
+        onSuccess: () => {
+          setAssignFor(null);
+          toast.success("Mesa atribuída");
+        },
+        onError: (e) => {
+          const msg = e instanceof Error ? e.message : "";
+          toast.error(
+            /duplicate key|23505/i.test(msg)
+              ? "Essa mesa já foi ocupada neste turno."
+              : "Não foi possível atribuir a mesa.",
+          );
+        },
+      },
     );
-    setAssignFor(null);
-    toast.success("Mesa atribuída");
   }
 
   return (
@@ -132,7 +163,7 @@ export default function Availability() {
           <Link to="/definicoes" className={buttonVariants({ variant: "outline", size: "sm" })}>
             Mesas e turnos
           </Link>
-          <Button size="sm" onClick={() => setFormOpen(true)} disabled={!turnId}>
+          <Button size="sm" onClick={openCreate} disabled={!turnId}>
             <Plus className="h-4 w-4" /> Criar reserva
           </Button>
         </div>
@@ -168,11 +199,19 @@ export default function Availability() {
       </div>
 
       {/* ERRO */}
-      {loadState === "error" && (
+      {errored && (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
             <p className="text-sm text-muted-foreground">Não foi possível carregar a disponibilidade.</p>
-            <Button variant="outline" size="sm" onClick={() => setLoadState("loading")}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                tablesQuery.refetch();
+                turnsQuery.refetch();
+                availabilityQuery.refetch();
+              }}
+            >
               <RefreshCw className="h-4 w-4" /> Tentar novamente
             </Button>
           </CardContent>
@@ -180,7 +219,7 @@ export default function Availability() {
       )}
 
       {/* LOADING (skeleton da grelha) */}
-      {loadState === "loading" && (
+      {!errored && loading && (
         <div className="space-y-4">
           <Skeleton className="h-16 w-full" />
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -192,7 +231,7 @@ export default function Availability() {
       )}
 
       {/* SEM TURNOS no dia (caso de configuração) */}
-      {loadState === "ready" && applicableTurns.length === 0 && (
+      {!errored && !loading && applicableTurns.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             Não há turnos configurados para este dia. Define turnos em{" "}
@@ -204,7 +243,7 @@ export default function Availability() {
         </Card>
       )}
 
-      {loadState === "ready" && applicableTurns.length > 0 && (
+      {!errored && !loading && applicableTurns.length > 0 && (
         <>
           {/* RESUMO de topo */}
           <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -221,7 +260,7 @@ export default function Availability() {
                 <p className="text-sm text-muted-foreground">
                   Sem reservas para {selectedTurn?.label ?? "este turno"}. Todas as mesas estão livres.
                 </p>
-                <Button size="sm" onClick={() => setFormOpen(true)}>
+                <Button size="sm" onClick={openCreate}>
                   <Plus className="h-4 w-4" /> Criar reserva
                 </Button>
               </CardContent>
@@ -240,10 +279,9 @@ export default function Availability() {
                     type="button"
                     onClick={() => {
                       if (r) {
-                        // TODO(marco): abrir reserva para editar (C4).
-                        setFormOpen(true);
+                        openEdit(r);
                       } else {
-                        setFormOpen(true);
+                        openCreate();
                       }
                     }}
                     className={cn(
@@ -315,13 +353,15 @@ export default function Availability() {
         onOpenChange={setFormOpen}
         tables={tables}
         turns={turns}
-        existing={reservations}
+        existing={turnReservations}
+        initial={editInitial}
         presetTurnId={turnId}
         presetDate={date}
         onSaved={() => {
           setFormOpen(false);
-          // TODO(marco): invalidar query; aqui o mock não cria a reserva.
-          toast.success("Reserva guardada");
+          // Invalidação das queries é feita no hook de save; o refetch do slot
+          // actualiza a vista automaticamente.
+          toast.success(editInitial?.id ? "Reserva actualizada" : "Reserva guardada");
         }}
       />
 

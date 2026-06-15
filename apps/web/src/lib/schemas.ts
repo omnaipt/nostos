@@ -48,6 +48,9 @@ export const onboardingSchema = z.object({
   name: z.string().trim().min(2, "Indica o nome do restaurante"),
   email: z.string().trim().email("Email de contacto inválido"),
   phone: phoneSchema,
+  // Password da conta do owner (auth signUp). Recolhida no onboarding porque é
+  // o único ponto de criação de conta do fluxo (C3).
+  password: z.string().min(8, "A palavra-passe tem de ter pelo menos 8 caracteres"),
   tables: z.array(tableSchema).min(1, "Adiciona pelo menos uma mesa"),
   turns: z.array(turnSchema).min(1, "Define pelo menos um turno"),
 });

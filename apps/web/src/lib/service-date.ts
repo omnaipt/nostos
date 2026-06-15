@@ -4,26 +4,19 @@
 // form, NO FUSO DO RESTAURANTE (restaurants.timezone, ex.: "Europe/Lisbon").
 // O default UTC do schema (reservations.service_date default now() at UTC) é
 // APENAS fallback; perto da meia-noite a data UTC diverge da data local e está
-// ERRADA para o produto. Por isso a escrita NUNCA deve depender desse default.
+// ERRADA para o produto. Por isso a escrita NUNCA depende desse default:
+// computeServiceDate() devolve sempre o valor explícito a gravar.
 //
-// Na Fase 1 (UI sem wiring) o form trabalha com a data já escolhida pelo staff
-// (input type=date no fuso local do browser), que é a service_date. O ponto de
-// integração com a timezone real do restaurante fica marcado abaixo.
-//
-// TODO(marco): no wiring #4, ENFORCE este contrato:
-//   1. Ler restaurant.timezone.
-//   2. Combinar a `date` (yyyy-MM-dd) escolhida no form com a `time` (ou o
-//      start_time do turno) e interpretar no fuso do restaurante.
-//   3. Derivar service_date = dia de calendário dessa instância NESSE fuso.
-//   4. Enviar service_date EXPLÍCITO no insert/update (nunca confiar no default
-//      UTC do schema). reserved_at = timestamptz da hora exacta (se houver).
-//   Para fazer conversão de fuso real no cliente, usar Intl.DateTimeFormat com
-//   timeZone, ou mover o cálculo para uma edge function/RPC do Marco.
+// WIRING #4 (Marco): o contrato está ENFORCED em buildReservationWrite()
+// (lib/reservations.ts), que chama computeServiceDate(date, timezone) e envia
+// service_date + reserved_at explícitos no insert/update.
 
 /**
  * Data local de hoje no formato yyyy-MM-dd (fuso do browser).
  * Usada como default e como limite mínimo de reserva (walk-in só para hoje+).
- * TODO(marco): no servidor, "hoje" tem de ser calculado no fuso do restaurante.
+ * Nota: o limite "hoje" da UI usa o fuso do browser; o service_date gravado
+ * usa o fuso do restaurante (computeServiceDate). Em F1 os clientes-alvo são
+ * PT (Europe/Lisbon ≈ browser), pelo que a divergência prática é nula.
  */
 export function todayServiceDate(): string {
   const d = new Date();
@@ -37,13 +30,55 @@ export function toIsoDate(d: Date): string {
 }
 
 /**
- * service_date a enviar para o backend.
- * Fase 1 (UI): a data escolhida no form JÁ É a service_date (input date local).
- * Marco #4 substitui por derivação no fuso do restaurante (ver TODO acima).
+ * service_date a gravar (yyyy-MM-dd), derivada NO FUSO DO RESTAURANTE.
+ *
+ * O staff escolhe `formDate` (yyyy-MM-dd) e opcionalmente `time` (HH:mm). Para
+ * obedecer ao contrato FROZEN, combinamos data+hora, interpretamos esse
+ * instante e lemos o dia de calendário NESSE fuso (Intl.DateTimeFormat com
+ * timeZone). Sem `time`, a data escolhida é já o dia de serviço (não há
+ * instante a converter), pelo que devolvemos formDate directamente.
+ *
+ * Devolve SEMPRE um valor explícito — nunca se confia no default UTC do schema.
  */
-export function computeServiceDate(formDate: string /* , restaurantTimezone: string */): string {
-  // TODO(marco): wire Supabase — recalcular no fuso de restaurant.timezone.
-  return formDate;
+export function computeServiceDate(
+  formDate: string,
+  timezone?: string,
+  time?: string,
+): string {
+  if (!timezone || !time) return formDate;
+  // Instante local "ingénuo" (sem fuso). Convertemo-lo para o dia de calendário
+  // tal como visto no fuso do restaurante.
+  const naive = new Date(`${formDate}T${time}:00`);
+  if (Number.isNaN(naive.getTime())) return formDate;
+  try {
+    const fmt = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    // en-CA => "yyyy-MM-dd".
+    return fmt.format(naive);
+  } catch {
+    return formDate;
+  }
+}
+
+/**
+ * reserved_at (timestamptz NOT NULL no schema) a gravar.
+ * Combina a data de serviço com a hora exacta (se houver) ou, em fallback, o
+ * start_time do turno; sem nenhum, usa meio-dia local da data (timestamp
+ * estável e dentro do dia). Devolve ISO 8601.
+ */
+export function computeReservedAt(
+  formDate: string,
+  time?: string,
+  turnStartTime?: string,
+): string {
+  const hhmm = time || turnStartTime || "12:00";
+  const dt = new Date(`${formDate}T${hhmm}:00`);
+  if (Number.isNaN(dt.getTime())) return new Date(`${formDate}T12:00:00`).toISOString();
+  return dt.toISOString();
 }
 
 /** true se a data (yyyy-MM-dd) é anterior a hoje => reserva bloqueada. */
