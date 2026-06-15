@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { computeReservedAt, computeServiceDate } from "@/lib/service-date";
+import { queryKeys } from "@/lib/query-keys";
 import { sendReservationEmail } from "@/lib/email";
 import type { Restaurant, Turn } from "@/lib/types";
 import type { ReservationValues } from "@/lib/schemas";
@@ -31,28 +32,51 @@ async function upsertCustomer(
   email: string | null,
 ): Promise<string | null> {
   if (!phone) return null;
-  const { data: existing, error: findError } = await supabase
-    .from("customers")
-    .select("id")
-    .eq("restaurant_id", restaurantId)
-    .eq("phone", phone)
-    .maybeSingle();
-  if (findError) throw findError;
 
-  if (existing) {
+  // Selecciona o existente do tenant (índice único parcial por telefone).
+  async function findExistingId(): Promise<string | null> {
+    const { data, error } = await supabase
+      .from("customers")
+      .select("id")
+      .eq("restaurant_id", restaurantId)
+      .eq("phone", phone)
+      .maybeSingle();
+    if (error) throw error;
+    return data?.id ?? null;
+  }
+
+  const existingId = await findExistingId();
+  if (existingId) {
     const { error: updError } = await supabase
       .from("customers")
       .update({ name, email })
-      .eq("id", existing.id);
+      .eq("id", existingId);
     if (updError) throw updError;
-    return existing.id;
+    return existingId;
   }
+
   const { data: created, error: insError } = await supabase
     .from("customers")
     .insert({ restaurant_id: restaurantId, name, phone, email })
     .select("id")
     .single();
-  if (insError) throw insError;
+  if (insError) {
+    // Nit (a) — race no unique de telefone por tenant: dois inserts concorrentes
+    // do mesmo telefone. Em vez de rebentar, re-seleccionamos o existente
+    // (criado pelo concorrente) e actualizamos nome/email.
+    if ((insError as { code?: string }).code === "23505") {
+      const racedId = await findExistingId();
+      if (racedId) {
+        const { error: updError } = await supabase
+          .from("customers")
+          .update({ name, email })
+          .eq("id", racedId);
+        if (updError) throw updError;
+        return racedId;
+      }
+    }
+    throw insError;
+  }
   return created.id;
 }
 
@@ -74,7 +98,12 @@ export function useSaveReservation(ctx: SaveContext | undefined) {
 
       // Contrato FROZEN: service_date no fuso do restaurante; reserved_at NOT NULL.
       const service_date = computeServiceDate(values.date, restaurant.timezone, values.time);
-      const reserved_at = computeReservedAt(values.date, values.time, turn?.start_time);
+      const reserved_at = computeReservedAt(
+        values.date,
+        values.time,
+        turn?.start_time,
+        restaurant.timezone,
+      );
       const table_id = values.tableId && values.tableId !== UNASSIGNED_TABLE ? values.tableId : null;
 
       const row = {
@@ -121,7 +150,7 @@ export function useSaveReservation(ctx: SaveContext | undefined) {
           serviceDate: result.reservation.service_date,
         });
       }
-      await qc.invalidateQueries({ queryKey: ["availability"] });
+      await qc.invalidateQueries({ queryKey: queryKeys.availabilityRoot });
     },
   });
 }
@@ -139,7 +168,7 @@ export function useAssignTable() {
         .eq("id", reservationId);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["availability"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.availabilityRoot }),
   });
 }
 
@@ -155,6 +184,6 @@ export function useCancelReservation() {
         .eq("id", reservationId);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["availability"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.availabilityRoot }),
   });
 }

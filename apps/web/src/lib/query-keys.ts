@@ -6,6 +6,9 @@ export const queryKeys = {
   activeRestaurant: ["active-restaurant"] as const,
   tables: (restaurantId: string | undefined) => ["tables", restaurantId] as const,
   turns: (restaurantId: string | undefined) => ["turns", restaurantId] as const,
+  // Prefixo tipado para invalidar TODAS as queries de availability (qualquer
+  // data/turno) numa só chamada, sem literais "availability" soltos pelo código.
+  availabilityRoot: ["availability"] as const,
   availability: (
     restaurantId: string | undefined,
     serviceDate: string,
