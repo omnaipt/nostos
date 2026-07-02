@@ -9,6 +9,8 @@ import Onboarding from "@/pages/Onboarding";
 import Availability from "@/pages/Availability";
 import Settings from "@/pages/Settings";
 import Customers from "@/pages/Customers";
+import RecoverPassword from "@/pages/RecoverPassword";
+import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,6 +23,8 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/recuperar-password" element={<RecoverPassword />} />
+            <Route path="/repor-password" element={<ResetPassword />} />
             <Route
               path="/"
               element={

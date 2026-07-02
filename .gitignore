@@ -7,3 +7,5 @@ dist
 .DS_Store
 .vercel
 supabase/.temp
+.env*
+CL4R1T4S/ 
