@@ -3,7 +3,7 @@ import type { Restaurant } from "@/lib/types";
 
 // C7 — confirmação por email (best-effort). Chama a edge function
 // `send-reservation-email`. O envio REAL depende de RESEND_API_KEY + domínio
-// stoa.pt verificado no Resend (setup do David — ainda NÃO provisionado).
+// nostos.pt verificado no Resend (setup do David — ainda NÃO provisionado).
 //
 // GATE: esta função NUNCA lança nem bloqueia a criação da reserva. Se a edge
 // function não existir, não tiver a key, ou falhar, fazemos no-op OBSERVÁVEL
@@ -33,15 +33,15 @@ export async function sendReservationEmail(input: ReservationEmailInput): Promis
       },
     });
     if (error) {
-      console.warn("[STOA] Confirmação por email não enviada (edge function):", error.message);
+      console.warn("[nostos] Confirmação por email não enviada (edge function):", error.message);
       return;
     }
     if (data && data.sent === false) {
-      console.info("[STOA] Confirmação por email em no-op:", data.reason ?? "RESEND não configurado");
+      console.info("[nostos] Confirmação por email em no-op:", data.reason ?? "RESEND não configurado");
     }
   } catch (e) {
     // Defensivo: qualquer falha do canal de email é silenciada para não afectar
     // o fluxo de reserva.
-    console.warn("[STOA] Falha ao invocar send-reservation-email (ignorada):", e);
+    console.warn("[nostos] Falha ao invocar send-reservation-email (ignorada):", e);
   }
 }

@@ -226,7 +226,7 @@ function PublicShell({ children }: { children: React.ReactNode }) {
       <div className="flex w-full flex-col items-center gap-4">
         {children}
         <p className="text-xs text-muted-foreground">
-          Reservas por <span className="font-semibold">stoa</span>
+          Reservas por <span className="font-semibold">nostos</span>
         </p>
       </div>
     </div>

@@ -29,7 +29,7 @@ export default function Login() {
     <div className="grid min-h-screen place-items-center bg-muted/30 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>STOA · Entrar</CardTitle>
+          <CardTitle>nostos · Entrar</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">

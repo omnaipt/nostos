@@ -14,7 +14,7 @@ export default function Dashboard() {
   return (
     <div className="container py-8">
       <header className="mb-8 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">STOA</h1>
+        <img src="/brand/nostos-restaurantes.svg" alt="nostos restaurantes" className="h-12 -ml-2" />
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
           <span>{user?.email}</span>
           <Button variant="outline" size="sm" onClick={signOut}>Sair</Button>
