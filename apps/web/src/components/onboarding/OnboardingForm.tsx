@@ -108,7 +108,7 @@ export function OnboardingForm({ onCreated }: { onCreated: () => void }) {
               {(p) => <Input {...p} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="912 345 678" />}
             </Field>
           </div>
-          <Field id="ob-password" label="Palavra-passe" error={contactErrors.password} hint="Mínimo 8 caracteres. Usa-a para entrar na STOA." required>
+          <Field id="ob-password" label="Palavra-passe" error={contactErrors.password} hint="Mínimo 8 caracteres. Usa-a para entrar no nostos." required>
             {(p) => <Input {...p} type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />}
           </Field>
         </CardContent>
