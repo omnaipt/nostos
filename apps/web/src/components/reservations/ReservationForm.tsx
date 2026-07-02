@@ -10,6 +10,7 @@ import { isPastDate, todayServiceDate } from "@/lib/service-date";
 import { isoWeekdayOf, type RestaurantTable, type Reservation, type Turn } from "@/lib/types";
 import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import { useSaveReservation } from "@/hooks/use-reservations";
+import { useCustomerByPhone, useDebouncedValue } from "@/hooks/use-customers";
 
 // C4 — Criar / editar reserva. turno OBRIGATÓRIO; mesa OPCIONAL (opção
 // explícita "deixar por atribuir"). pax obrigatório; cliente nome+telefone
@@ -72,6 +73,25 @@ export function ReservationForm({
   const [globalError, setGlobalError] = React.useState<string>();
 
   const { data: restaurant } = useActiveRestaurant();
+
+  // C6 — reconhecer cliente recorrente pelo telefone (só na criação; na edição
+  // os dados já vêm da reserva). Sugere/preenche nome e email sem os
+  // sobrepor se o staff já tiver escrito algo.
+  const isEdit = Boolean(initial?.id);
+  const debouncedPhone = useDebouncedValue(customerPhone, 400);
+  const { data: knownCustomer } = useCustomerByPhone(
+    restaurant?.id,
+    isEdit ? "" : debouncedPhone,
+  );
+  const prefilledFor = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!knownCustomer || isEdit) return;
+    if (prefilledFor.current === knownCustomer.id) return;
+    prefilledFor.current = knownCustomer.id;
+    setCustomerName((prev) => (prev.trim() ? prev : knownCustomer.name));
+    setCustomerEmail((prev) => (prev.trim() ? prev : (knownCustomer.email ?? "")));
+  }, [knownCustomer, isEdit]);
+
   const saveCtx = React.useMemo(
     () => (restaurant ? { restaurant, turns } : undefined),
     [restaurant, turns],
@@ -186,6 +206,15 @@ export function ReservationForm({
           {(p) => <Input {...p} type="tel" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />}
         </Field>
       </div>
+
+      {knownCustomer && !isEdit && (
+        <div role="status" className="rounded-md border border-input bg-muted/50 p-3 text-sm">
+          <p className="font-medium">Cliente recorrente: {knownCustomer.name}</p>
+          {knownCustomer.notes && (
+            <p className="mt-1 text-xs text-muted-foreground">Notas: {knownCustomer.notes}</p>
+          )}
+        </div>
+      )}
 
       <Field id="r-email" label="Email (opcional)" error={errors.customerEmail} hint="Necessário para enviar a confirmação.">
         {(p) => <Input {...p} type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} />}

@@ -160,6 +160,9 @@ export default function Availability() {
           <p className="text-sm capitalize text-muted-foreground">{formatDateLabel(date)}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Link to="/clientes" className={buttonVariants({ variant: "outline", size: "sm" })}>
+            Clientes
+          </Link>
           <Link to="/definicoes" className={buttonVariants({ variant: "outline", size: "sm" })}>
             Mesas e turnos
           </Link>
