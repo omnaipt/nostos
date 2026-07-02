@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,9 @@ export default function Login() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "A entrar..." : "Entrar"}
             </Button>
+            <Link to="/recuperar-password" className="block text-center text-sm text-muted-foreground underline">
+              Esqueci-me da palavra-passe
+            </Link>
           </form>
         </CardContent>
       </Card>

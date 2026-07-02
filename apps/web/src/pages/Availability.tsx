@@ -16,7 +16,7 @@ import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import { useTables } from "@/hooks/use-tables";
 import { useTurns } from "@/hooks/use-turns";
 import { useAvailability } from "@/hooks/use-availability";
-import { useAssignTable } from "@/hooks/use-reservations";
+import { useAssignTable, useUpdateReservationStatus } from "@/hooks/use-reservations";
 import {
   STATUSES_COUNTING_FOR_OCCUPANCY,
   isoWeekdayOf,
@@ -50,6 +50,7 @@ export default function Availability() {
   const turnsQuery = useTurns(restaurantId);
   const availabilityQuery = useAvailability(restaurantId, date, turnId);
   const assignTable = useAssignTable();
+  const updateStatus = useUpdateReservationStatus();
 
   const tables = React.useMemo(() => tablesQuery.data ?? [], [tablesQuery.data]);
   const turns = React.useMemo(() => turnsQuery.data ?? [], [turnsQuery.data]);
@@ -130,6 +131,18 @@ export default function Availability() {
       notes: r.notes ?? "",
     });
     setFormOpen(true);
+  }
+
+  // G4 — Sentada / No-show a um toque, sem abrir o formulário.
+  function quickStatus(r: Reservation, status: "sentada" | "no_show") {
+    updateStatus.mutate(
+      { reservationId: r.id, status },
+      {
+        onSuccess: () =>
+          toast.success(status === "sentada" ? "Marcada como sentada" : "Marcada como no-show"),
+        onError: () => toast.error("Não foi possível actualizar o estado."),
+      },
+    );
   }
 
   function handleAssign(reservationId: string, tableId: string) {
@@ -277,9 +290,10 @@ export default function Availability() {
               {activeTables.map((t) => {
                 const r = reservationByTable.get(t.id);
                 return (
-                  <button
+                  <div
                     key={t.id}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => {
                       if (r) {
                         openEdit(r);
@@ -287,8 +301,15 @@ export default function Availability() {
                         openCreate();
                       }
                     }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        if (r) openEdit(r);
+                        else openCreate();
+                      }
+                    }}
                     className={cn(
-                      "min-h-24 rounded-lg border p-3 text-left transition-colors",
+                      "min-h-24 cursor-pointer rounded-lg border p-3 text-left transition-colors",
                       r
                         ? "border-[hsl(var(--status-seated-fg))]/30 bg-[hsl(var(--status-seated-bg))]"
                         : "border-input bg-card hover:bg-muted",
@@ -305,11 +326,40 @@ export default function Availability() {
                           <span className="text-xs text-muted-foreground">{r.party_size} pax</span>
                           <StatusBadge status={r.status} />
                         </div>
+                        {/* G4 — acções rápidas; stopPropagation para não abrir o editor. */}
+                        {(r.status === "confirmada" || r.status === "pendente") && (
+                          <div className="flex gap-1.5 pt-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-6 px-2 text-xs"
+                              disabled={updateStatus.isPending}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                quickStatus(r, "sentada");
+                              }}
+                            >
+                              Sentar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-6 px-2 text-xs"
+                              disabled={updateStatus.isPending}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                quickStatus(r, "no_show");
+                              }}
+                            >
+                              No-show
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <p className="mt-2 text-xs text-muted-foreground">Livre</p>
                     )}
-                  </button>
+                  </div>
                 );
               })}
             </div>

@@ -172,6 +172,28 @@ export function useAssignTable() {
   });
 }
 
+// G4 — mudar estado inline (Sentada / No-show) a partir da vista de
+// disponibilidade. O trigger de reservation_events (0003) regista o evento.
+export function useUpdateReservationStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      reservationId,
+      status,
+    }: {
+      reservationId: string;
+      status: "sentada" | "no_show" | "confirmada";
+    }) => {
+      const { error } = await supabase
+        .from("reservations")
+        .update({ status })
+        .eq("id", reservationId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.availabilityRoot }),
+  });
+}
+
 // Cancelar reserva (status -> cancelada). Liberta o slot da mesa (índice parcial
 // ignora canceladas).
 export function useCancelReservation() {
