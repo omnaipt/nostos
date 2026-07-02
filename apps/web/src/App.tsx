@@ -8,6 +8,7 @@ import Dashboard from "@/pages/Dashboard";
 import Onboarding from "@/pages/Onboarding";
 import Availability from "@/pages/Availability";
 import Settings from "@/pages/Settings";
+import Customers from "@/pages/Customers";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Availability />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/clientes"
+              element={
+                <ProtectedRoute>
+                  <Customers />
                 </ProtectedRoute>
               }
             />

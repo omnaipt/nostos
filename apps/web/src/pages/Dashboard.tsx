@@ -14,12 +14,19 @@ export default function Dashboard() {
           <Button variant="outline" size="sm" onClick={signOut}>Sair</Button>
         </div>
       </header>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader><CardTitle>Disponibilidade</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">Ver mesas e turnos do dia e gerir reservas.</p>
             <Link to="/disponibilidade" className={buttonVariants()}>Abrir disponibilidade</Link>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Clientes</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">Consultar fichas de cliente, notas e histórico de reservas.</p>
+            <Link to="/clientes" className={buttonVariants({ variant: "outline" })}>Abrir clientes</Link>
           </CardContent>
         </Card>
         <Card>
