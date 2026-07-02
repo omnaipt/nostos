@@ -14,4 +14,12 @@ export const queryKeys = {
     serviceDate: string,
     turnId: string,
   ) => ["availability", restaurantId, serviceDate, turnId] as const,
+  // C6 — clientes. customersRoot invalida lista + lookups por telefone.
+  customersRoot: ["customers"] as const,
+  customers: (restaurantId: string | undefined, search: string) =>
+    ["customers", restaurantId, "list", search] as const,
+  customerByPhone: (restaurantId: string | undefined, phone: string) =>
+    ["customers", restaurantId, "by-phone", phone] as const,
+  customerReservations: (customerId: string | undefined) =>
+    ["customer-reservations", customerId] as const,
 };
