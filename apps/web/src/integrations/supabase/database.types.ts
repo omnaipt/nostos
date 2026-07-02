@@ -70,6 +70,58 @@ export type Database = {
         }
         Relationships: []
       }
+      reservation_events: {
+        Row: {
+          actor: string
+          created_at: string
+          event_type: string
+          id: string
+          reservation_id: string
+          restaurant_id: string
+          table_id: string | null
+        }
+        Insert: {
+          actor: string
+          created_at?: string
+          event_type: string
+          id?: string
+          reservation_id: string
+          restaurant_id: string
+          table_id?: string | null
+        }
+        Update: {
+          actor?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          reservation_id?: string
+          restaurant_id?: string
+          table_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservation_events_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservation_events_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservation_events_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reservations: {
         Row: {
           created_at: string
@@ -306,6 +358,38 @@ export type Database = {
     }
     Functions: {
       is_restaurant_member: { Args: { target: string }; Returns: boolean }
+      public_create_reservation: {
+        Args: {
+          p_email: string
+          p_name: string
+          p_notes: string
+          p_party_size: number
+          p_phone: string
+          p_service_date: string
+          p_slug: string
+          p_turn_id: string
+        }
+        Returns: string
+      }
+      public_restaurant_by_slug: {
+        Args: { p_slug: string }
+        Returns: {
+          name: string
+          phone: string
+          slug: string
+        }[]
+      }
+      public_turns_for_date: {
+        Args: { p_date: string; p_slug: string }
+        Returns: {
+          id: string
+          label: string
+          service: string
+          start_time: string
+        }[]
+      }
+      slugify: { Args: { input: string }; Returns: string }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       [_ in never]: never

@@ -9,6 +9,7 @@ import Onboarding from "@/pages/Onboarding";
 import Availability from "@/pages/Availability";
 import Settings from "@/pages/Settings";
 import Customers from "@/pages/Customers";
+import PublicBooking from "@/pages/PublicBooking";
 import RecoverPassword from "@/pages/RecoverPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
@@ -23,6 +24,7 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/r/:slug" element={<PublicBooking />} />
             <Route path="/recuperar-password" element={<RecoverPassword />} />
             <Route path="/repor-password" element={<ResetPassword />} />
             <Route

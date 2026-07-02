@@ -1,10 +1,13 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
+  const { data: restaurant } = useActiveRestaurant();
+  const publicUrl = restaurant?.slug ? `${window.location.origin}/r/${restaurant.slug}` : null;
   return (
     <div className="container py-8">
       <header className="mb-8 flex items-center justify-between">
@@ -14,6 +17,14 @@ export default function Dashboard() {
           <Button variant="outline" size="sm" onClick={signOut}>Sair</Button>
         </div>
       </header>
+      {publicUrl && (
+        <p className="mb-6 rounded-md border border-input bg-card p-3 text-sm">
+          <span className="text-muted-foreground">Link público de reservas: </span>
+          <a href={publicUrl} target="_blank" rel="noreferrer" className="font-medium underline">
+            {publicUrl}
+          </a>
+        </p>
+      )}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader><CardTitle>Disponibilidade</CardTitle></CardHeader>

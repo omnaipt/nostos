@@ -172,6 +172,38 @@ export function useAssignTable() {
   });
 }
 
+// C8 — confirmar reserva pendente (vinda do canal público). Só na confirmação
+// segue o email C7 (best-effort): o email do cliente vive em customers.
+export function useConfirmReservation(restaurant: Restaurant | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (reservationId: string) => {
+      const { data, error } = await supabase
+        .from("reservations")
+        .update({ status: "confirmada" })
+        .eq("id", reservationId)
+        .select("*, customers(email)")
+        .single();
+      if (error) throw error;
+      return data as { customers: { email: string | null } | null } & Record<string, unknown>;
+    },
+    onSuccess: (row) => {
+      const email = row.customers?.email ?? null;
+      if (restaurant && email) {
+        void sendReservationEmail({
+          reservationId: row.id as string,
+          restaurant,
+          toEmail: email,
+          customerName: row.customer_name as string,
+          partySize: row.party_size as number,
+          serviceDate: row.service_date as string,
+        });
+      }
+      void qc.invalidateQueries({ queryKey: queryKeys.availabilityRoot });
+    },
+  });
+}
+
 // G4 — mudar estado inline (Sentada / No-show) a partir da vista de
 // disponibilidade. O trigger de reservation_events (0003) regista o evento.
 export function useUpdateReservationStatus() {

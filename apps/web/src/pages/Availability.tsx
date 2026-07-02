@@ -16,7 +16,7 @@ import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import { useTables } from "@/hooks/use-tables";
 import { useTurns } from "@/hooks/use-turns";
 import { useAvailability } from "@/hooks/use-availability";
-import { useAssignTable, useUpdateReservationStatus } from "@/hooks/use-reservations";
+import { useAssignTable, useConfirmReservation, useUpdateReservationStatus } from "@/hooks/use-reservations";
 import {
   STATUSES_COUNTING_FOR_OCCUPANCY,
   isoWeekdayOf,
@@ -51,6 +51,14 @@ export default function Availability() {
   const availabilityQuery = useAvailability(restaurantId, date, turnId);
   const assignTable = useAssignTable();
   const updateStatus = useUpdateReservationStatus();
+  const confirmReservation = useConfirmReservation(restaurant ?? undefined);
+
+  function quickConfirm(r: Reservation) {
+    confirmReservation.mutate(r.id, {
+      onSuccess: () => toast.success("Reserva confirmada"),
+      onError: () => toast.error("Não foi possível confirmar."),
+    });
+  }
 
   const tables = React.useMemo(() => tablesQuery.data ?? [], [tablesQuery.data]);
   const turns = React.useMemo(() => turnsQuery.data ?? [], [turnsQuery.data]);
@@ -329,6 +337,19 @@ export default function Availability() {
                         {/* G4 — acções rápidas; stopPropagation para não abrir o editor. */}
                         {(r.status === "confirmada" || r.status === "pendente") && (
                           <div className="flex gap-1.5 pt-1">
+                            {r.status === "pendente" && (
+                              <Button
+                                size="sm"
+                                className="h-6 px-2 text-xs"
+                                disabled={confirmReservation.isPending}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  quickConfirm(r);
+                                }}
+                              >
+                                Confirmar
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="outline"
@@ -390,9 +411,21 @@ export default function Availability() {
                         {r.party_size} pax{r.notes ? ` · ${r.notes}` : ""}
                       </p>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => setAssignFor(r)}>
-                      Atribuir mesa
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={r.status} />
+                      {r.status === "pendente" && (
+                        <Button
+                          size="sm"
+                          disabled={confirmReservation.isPending}
+                          onClick={() => quickConfirm(r)}
+                        >
+                          Confirmar
+                        </Button>
+                      )}
+                      <Button size="sm" variant="outline" onClick={() => setAssignFor(r)}>
+                        Atribuir mesa
+                      </Button>
+                    </div>
                   </li>
                 ))}
               </ul>
