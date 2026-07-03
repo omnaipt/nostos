@@ -10,6 +10,7 @@ import Availability from "@/pages/Availability";
 import Settings from "@/pages/Settings";
 import Customers from "@/pages/Customers";
 import PublicBooking from "@/pages/PublicBooking";
+import PublicMenu from "@/pages/PublicMenu";
 import RecoverPassword from "@/pages/RecoverPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
@@ -25,6 +26,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/r/:slug" element={<PublicBooking />} />
+            <Route path="/m/:slug" element={<PublicMenu />} />
             <Route path="/recuperar-password" element={<RecoverPassword />} />
             <Route path="/repor-password" element={<ResetPassword />} />
             <Route

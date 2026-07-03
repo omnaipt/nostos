@@ -91,3 +91,52 @@ export function isoWeekdayOf(date: Date): IsoWeekday {
   const js = date.getDay();
   return (js === 0 ? 7 : js) as IsoWeekday;
 }
+
+// ── Menu Digital (public.menu_categories / public.menu_items) ────────────────
+export type MenuCategory = Tables<"menu_categories">;
+export type MenuCategoryInsert = TablesInsert<"menu_categories">;
+export type MenuCategoryUpdate = TablesUpdate<"menu_categories">;
+
+export type MenuItem = Tables<"menu_items">;
+export type MenuItemInsert = TablesInsert<"menu_items">;
+export type MenuItemUpdate = TablesUpdate<"menu_items">;
+
+// Alergénios de declaração obrigatória na UE (Reg. 1169/2011, anexo II).
+export const ALLERGENS: { code: string; label: string }[] = [
+  { code: "gluten", label: "Glúten" },
+  { code: "crustaceos", label: "Crustáceos" },
+  { code: "ovos", label: "Ovos" },
+  { code: "peixe", label: "Peixe" },
+  { code: "amendoins", label: "Amendoins" },
+  { code: "soja", label: "Soja" },
+  { code: "leite", label: "Leite" },
+  { code: "frutos_casca", label: "Frutos de casca rija" },
+  { code: "aipo", label: "Aipo" },
+  { code: "mostarda", label: "Mostarda" },
+  { code: "sesamo", label: "Sésamo" },
+  { code: "sulfitos", label: "Sulfitos" },
+  { code: "tremoco", label: "Tremoço" },
+  { code: "moluscos", label: "Moluscos" },
+];
+
+export const ALLERGEN_LABEL: Record<string, string> = Object.fromEntries(
+  ALLERGENS.map((a) => [a.code, a.label]),
+);
+
+// Preço em cêntimos -> "12,50 €" (ou "—" quando sem preço, ex.: preço de mercado).
+export function formatPriceCents(cents: number | null | undefined): string {
+  if (cents == null) return "—";
+  return (cents / 100).toLocaleString("pt-PT", {
+    style: "currency",
+    currency: "EUR",
+  });
+}
+
+// "12,50" | "12.5" | "12" | "12,50 €" -> cêntimos (int) ou null se vazio/inválido.
+export function parsePriceToCents(input: string): number | null {
+  const t = input.trim().replace(/[\s€]/g, "").replace(",", ".");
+  if (t === "") return null;
+  const n = Number(t);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.round(n * 100);
+}

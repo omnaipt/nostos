@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableManager, type TableRow } from "@/components/tables/TableManager";
 import { TurnManager, type TurnRow } from "@/components/turns/TurnManager";
+import { MenuManager } from "@/components/menu/MenuManager";
+import { MenuQR } from "@/components/menu/MenuQR";
 import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import { useCreateTable, useDeleteTable, useTables, useUpdateTable } from "@/hooks/use-tables";
 import { useCreateTurn, useDeleteTurn, useTurns, useUpdateTurn } from "@/hooks/use-turns";
@@ -132,7 +134,7 @@ export default function Settings() {
   return (
     <div className="container max-w-2xl py-8">
       <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Mesas e turnos</h1>
+        <h1 className="text-2xl font-semibold">Definições</h1>
         <Link to="/disponibilidade" className={buttonVariants({ variant: "outline", size: "sm" })}>
           Voltar
         </Link>
@@ -191,6 +193,26 @@ export default function Settings() {
               <TurnManager turns={turns} onChange={onTurnsChange} />
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Menu digital</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {restaurantId && <MenuManager restaurantId={restaurantId} />}
+            </CardContent>
+          </Card>
+
+          {restaurant?.slug && (
+            <Card>
+              <CardHeader>
+                <CardTitle>QR do menu</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <MenuQR slug={restaurant.slug} />
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
     </div>
