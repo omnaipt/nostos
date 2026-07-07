@@ -9,7 +9,8 @@ import { TurnManager, type TurnRow } from "@/components/turns/TurnManager";
 import { MenuManager } from "@/components/menu/MenuManager";
 import { MenuQR } from "@/components/menu/MenuQR";
 import { PantryManager } from "@/components/menu/PantryManager";
-import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
+import { useActiveRestaurant, useUpdateRestaurant } from "@/hooks/use-active-restaurant";
+import { Input } from "@/components/ui/input";
 import { useCreateTable, useDeleteTable, useTables, useUpdateTable } from "@/hooks/use-tables";
 import { useCreateTurn, useDeleteTurn, useTurns, useUpdateTurn } from "@/hooks/use-turns";
 import type { IsoWeekday } from "@/lib/types";
@@ -206,6 +207,15 @@ export default function Settings() {
 
           <Card>
             <CardHeader>
+              <CardTitle>Margem alvo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {restaurant && <TargetMarginField key={restaurant.id} current={restaurant.target_margin_pct ?? 65} restaurantId={restaurant.id} />}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Menu digital</CardTitle>
             </CardHeader>
             <CardContent>
@@ -231,4 +241,50 @@ export default function Settings() {
 
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : "Não foi possível guardar. Tenta novamente.";
+}
+
+// Margem alvo (%): abaixo disto, o prato conta como alerta em /margens e no
+// dashboard. Guardar explícito no blur, com clamp 0-95 (CHECK do schema).
+function TargetMarginField({ current, restaurantId }: { current: number; restaurantId: string }) {
+  const [value, setValue] = React.useState(String(current));
+  const update = useUpdateRestaurant();
+
+  function save() {
+    const n = Math.trunc(Number(value));
+    if (!Number.isFinite(n) || n < 0 || n > 95) {
+      toast.error("A margem alvo tem de estar entre 0 e 95%.");
+      setValue(String(current));
+      return;
+    }
+    if (n === current) return;
+    update.mutate(
+      { id: restaurantId, patch: { target_margin_pct: n } },
+      {
+        onSuccess: () => toast.success(`Margem alvo guardada: ${n}%`),
+        onError: (e) => toast.error(errMsg(e)),
+      },
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        <Input
+          aria-label="Margem alvo em percentagem"
+          inputMode="numeric"
+          className="w-20 text-right"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={save}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          }}
+        />
+        <span className="text-sm text-muted-foreground">%</span>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Pratos com margem abaixo deste valor aparecem como alerta em Margens.
+      </p>
+    </div>
+  );
 }

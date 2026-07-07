@@ -1,7 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/query-keys";
-import type { Restaurant } from "@/lib/types";
+import type { Restaurant, RestaurantUpdate } from "@/lib/types";
 
 // Restaurante activo do utilizador autenticado. RESOLVIDO VIA RLS: a policy
 // restaurants_member_select só devolve restaurantes onde o user é membro, por
@@ -23,5 +23,19 @@ export function useActiveRestaurant() {
     queryKey: queryKeys.activeRestaurant,
     queryFn: fetchActiveRestaurant,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+// Actualização de definições do restaurante (S3: margem alvo; futuro: contacto).
+export function useUpdateRestaurant() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: RestaurantUpdate }) => {
+      const { error } = await supabase.from("restaurants").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.activeRestaurant });
+    },
   });
 }

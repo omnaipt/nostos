@@ -9,6 +9,8 @@ import Onboarding from "@/pages/Onboarding";
 import Availability from "@/pages/Availability";
 import Settings from "@/pages/Settings";
 import Customers from "@/pages/Customers";
+import Margins from "@/pages/Margins";
+import KitchenSheet from "@/pages/KitchenSheet";
 import PublicBooking from "@/pages/PublicBooking";
 import PublicMenu from "@/pages/PublicMenu";
 import RecoverPassword from "@/pages/RecoverPassword";
@@ -58,6 +60,22 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/margens"
+              element={
+                <ProtectedRoute>
+                  <Margins />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/fichas/:menuItemId/imprimir"
+              element={
+                <ProtectedRoute>
+                  <KitchenSheet />
                 </ProtectedRoute>
               }
             />

@@ -1,7 +1,12 @@
+import * as React from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import { useOwnerSummary, type WeekSummary } from "@/hooks/use-owner-summary";
+import { useIngredients } from "@/hooks/use-ingredients";
+import { useMenuItems } from "@/hooks/use-menu";
+import { useTechSheetLines, useTechSheets } from "@/hooks/use-tech-sheets";
+import { computeMenuMargins } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +16,27 @@ export default function Dashboard() {
   const { data: restaurant } = useActiveRestaurant();
   const publicUrl = restaurant?.slug ? `${window.location.origin}/r/${restaurant.slug}` : null;
   const summaryQuery = useOwnerSummary(restaurant?.id);
+
+  // Margens (S3): food cost médio + pratos abaixo do alvo, derivados das fichas.
+  const itemsQuery = useMenuItems(restaurant?.id);
+  const sheetsQuery = useTechSheets(restaurant?.id);
+  const sheetLinesQuery = useTechSheetLines(restaurant?.id);
+  const ingredientsQuery = useIngredients(restaurant?.id);
+  const margins = React.useMemo(() => {
+    if (!itemsQuery.data || !restaurant) return null;
+    return computeMenuMargins(
+      itemsQuery.data,
+      sheetsQuery.data ?? [],
+      sheetLinesQuery.data ?? [],
+      new Map(
+        (ingredientsQuery.data ?? []).map((i) => [
+          i.id,
+          { unit: i.unit, cost_per_unit_cents: i.cost_per_unit_cents },
+        ]),
+      ),
+      restaurant.target_margin_pct ?? 65,
+    );
+  }, [itemsQuery.data, sheetsQuery.data, sheetLinesQuery.data, ingredientsQuery.data, restaurant]);
   return (
     <div className="container py-8">
       <header className="mb-8 flex items-center justify-between">
@@ -105,6 +131,45 @@ export default function Dashboard() {
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">Configurar o esquema de mesas e os turnos.</p>
             <Link to="/definicoes" className={buttonVariants({ variant: "outline" })}>Abrir definições</Link>
+          </CardContent>
+        </Card>
+        <Card
+          className={
+            margins && margins.belowTargetCount > 0 ? "border-destructive/50" : undefined
+          }
+        >
+          <CardHeader><CardTitle>Margens</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {margins && margins.completeCount > 0 ? (
+                <>
+                  Food cost médio{" "}
+                  <strong className="text-foreground">
+                    {margins.avgFoodCostPct != null ? `${margins.avgFoodCostPct.toFixed(0)}%` : "—"}
+                  </strong>
+                  {margins.belowTargetCount > 0 ? (
+                    <>
+                      {" "}·{" "}
+                      <strong className="text-destructive">
+                        {margins.belowTargetCount} prato{margins.belowTargetCount > 1 ? "s" : ""} abaixo do alvo
+                      </strong>
+                    </>
+                  ) : (
+                    <> · todos os pratos no alvo</>
+                  )}
+                </>
+              ) : (
+                "Cria fichas técnicas para veres o food cost e a margem de cada prato."
+              )}
+            </p>
+            <Link
+              to="/margens"
+              className={buttonVariants(
+                margins && margins.belowTargetCount > 0 ? {} : { variant: "outline" },
+              )}
+            >
+              Abrir margens
+            </Link>
           </CardContent>
         </Card>
       </div>
