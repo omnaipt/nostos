@@ -311,6 +311,104 @@ export type Database = {
           },
         ]
       }
+      menu_categories: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          label: string
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          label: string
+          restaurant_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          label?: string
+          restaurant_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_categories_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_items: {
+        Row: {
+          active: boolean
+          allergens: string[]
+          available: boolean
+          category_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          price_cents: number | null
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          allergens?: string[]
+          available?: boolean
+          category_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          price_cents?: number | null
+          restaurant_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          allergens?: string[]
+          available?: boolean
+          category_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          price_cents?: number | null
+          restaurant_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_items_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       turns: {
         Row: {
           active: boolean
@@ -370,6 +468,21 @@ export type Database = {
           p_turn_id: string
         }
         Returns: string
+      }
+      public_menu_by_slug: {
+        Args: { p_slug: string }
+        Returns: {
+          allergens: string[]
+          available: boolean
+          category_id: string
+          category_label: string
+          category_sort: number
+          item_description: string
+          item_id: string
+          item_name: string
+          item_sort: number
+          price_cents: number
+        }[]
       }
       public_restaurant_by_slug: {
         Args: { p_slug: string }

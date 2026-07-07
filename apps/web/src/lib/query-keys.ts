@@ -22,4 +22,10 @@ export const queryKeys = {
     ["customers", restaurantId, "by-phone", phone] as const,
   customerReservations: (customerId: string | undefined) =>
     ["customer-reservations", customerId] as const,
+  // Menu Digital — categorias e itens tenant-scoped. menuRoot invalida ambos.
+  menuRoot: ["menu"] as const,
+  menuCategories: (restaurantId: string | undefined) =>
+    ["menu", restaurantId, "categories"] as const,
+  menuItems: (restaurantId: string | undefined) =>
+    ["menu", restaurantId, "items"] as const,
 };
