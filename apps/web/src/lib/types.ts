@@ -140,3 +140,90 @@ export function parsePriceToCents(input: string): number | null {
   if (!Number.isFinite(n) || n < 0) return null;
   return Math.round(n * 100);
 }
+
+// ── Ficha Técnica + Despensa (migration 0006) ────────────────────────────────
+export type Ingredient = Tables<"ingredients">;
+export type IngredientInsert = TablesInsert<"ingredients">;
+export type IngredientUpdate = TablesUpdate<"ingredients">;
+
+export type TechSheet = Tables<"tech_sheets">;
+export type TechSheetInsert = TablesInsert<"tech_sheets">;
+export type TechSheetUpdate = TablesUpdate<"tech_sheets">;
+
+export type TechSheetIngredient = Tables<"tech_sheet_ingredients">;
+export type TechSheetIngredientInsert = TablesInsert<"tech_sheet_ingredients">;
+
+export const UNIT_OPTIONS = [
+  { code: "g", label: "g" },
+  { code: "kg", label: "kg" },
+  { code: "ml", label: "ml" },
+  { code: "l", label: "L" },
+  { code: "un", label: "un" },
+] as const;
+export type Unit = (typeof UNIT_OPTIONS)[number]["code"];
+
+// Famílias de unidade para a conversão FIXA da v0: g↔kg e ml↔l (factor 1000).
+// Sem tabela de conversões; unidades de famílias diferentes não têm custo.
+function unitFamily(u: string): "mass" | "vol" | "count" | null {
+  if (u === "g" || u === "kg") return "mass";
+  if (u === "ml" || u === "l") return "vol";
+  if (u === "un") return "count";
+  return null;
+}
+
+function toBase(qty: number, unit: string): number {
+  return unit === "kg" || unit === "l" ? qty * 1000 : qty;
+}
+
+// Custo de uma linha da ficha em cêntimos, convertendo entre g/kg e ml/l.
+// null quando não há custo do ingrediente ou as famílias não coincidem.
+export function computeLineCostCents(
+  qty: number,
+  lineUnit: string,
+  ingredientUnit: string,
+  costPerUnitCents: number | null | undefined,
+): number | null {
+  if (costPerUnitCents == null || costPerUnitCents < 0 || qty <= 0) return null;
+  const lf = unitFamily(lineUnit);
+  const inf = unitFamily(ingredientUnit);
+  if (!lf || !inf || lf !== inf) return null;
+  const qtyBase = toBase(qty, lineUnit);
+  const costPerBase = costPerUnitCents / (ingredientUnit === "kg" || ingredientUnit === "l" ? 1000 : 1);
+  return qtyBase * costPerBase;
+}
+
+export interface FoodCostSummary {
+  costCents: number; // soma das linhas com custo calculável
+  costed: number; // nº de linhas com custo
+  total: number; // nº total de linhas
+}
+
+// Food cost da ficha: soma as linhas ligadas a ingredientes com custo.
+// Linhas livres (sem ingredient_id) ou sem custo contam em total mas não em costed.
+export function computeFoodCost(
+  lines: { qty: number; unit: string; ingredient_id: string | null }[],
+  ingredientsById: Map<string, { unit: string; cost_per_unit_cents: number | null }>,
+): FoodCostSummary {
+  let costCents = 0;
+  let costed = 0;
+  for (const line of lines) {
+    if (!line.ingredient_id) continue;
+    const ing = ingredientsById.get(line.ingredient_id);
+    if (!ing) continue;
+    const c = computeLineCostCents(line.qty, line.unit, ing.unit, ing.cost_per_unit_cents);
+    if (c != null) {
+      costCents += c;
+      costed += 1;
+    }
+  }
+  return { costCents, costed, total: lines.length };
+}
+
+// Margem percentual sobre o preço de venda. null sem preço ou preço 0.
+export function computeMarginPct(
+  priceCents: number | null | undefined,
+  costCents: number,
+): number | null {
+  if (priceCents == null || priceCents <= 0) return null;
+  return ((priceCents - costCents) / priceCents) * 100;
+}

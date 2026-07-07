@@ -8,6 +8,7 @@ import { TableManager, type TableRow } from "@/components/tables/TableManager";
 import { TurnManager, type TurnRow } from "@/components/turns/TurnManager";
 import { MenuManager } from "@/components/menu/MenuManager";
 import { MenuQR } from "@/components/menu/MenuQR";
+import { PantryManager } from "@/components/menu/PantryManager";
 import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import { useCreateTable, useDeleteTable, useTables, useUpdateTable } from "@/hooks/use-tables";
 import { useCreateTurn, useDeleteTurn, useTurns, useUpdateTurn } from "@/hooks/use-turns";
@@ -191,6 +192,15 @@ export default function Settings() {
                 </p>
               )}
               <TurnManager turns={turns} onChange={onTurnsChange} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Despensa</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {restaurantId && <PantryManager restaurantId={restaurantId} />}
             </CardContent>
           </Card>
 
