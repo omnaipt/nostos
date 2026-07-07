@@ -27,7 +27,9 @@ interface Payload {
   serviceDate: string;
 }
 
-const FROM_ADDRESS = "reservas@stoa.pt";
+// Domínio de envio: nostos.pt (rebrand 02-Jul; verificar no Resend antes de
+// activar a key — ver outputs/Resend_Setup_Nostos.md).
+const FROM_ADDRESS = "reservas@nostos.pt";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -66,7 +68,7 @@ Deno.serve(async (req: Request) => {
     return json({ sent: false, reason: "RESEND_API_KEY não configurada" });
   }
 
-  const fromName = (payload.restaurantName || "STOA").replace(/[\r\n"]/g, "").trim();
+  const fromName = (payload.restaurantName || "nostos").replace(/[\r\n"]/g, "").trim();
   const subject = `Reserva confirmada · ${fromName}`;
   const html = `
     <div style="font-family: system-ui, sans-serif; color: #1a1a1a;">
