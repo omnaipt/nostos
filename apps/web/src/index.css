@@ -37,3 +37,29 @@
   * { @apply border-border; }
   body { @apply bg-background text-foreground; }
 }
+
+/* ── Identidade Pinho & Tinta (landing pública) ──────────────────────────────
+   Tokens de MARCA scoped à landing: não tocam nos tokens neutros do
+   backoffice. Cores extraídas dos SVGs oficiais em /public/brand:
+   creme #FBF7F0 · verde pinho #16403C · terracota #B0461F. */
+.landing {
+  --brand-cream: 38 58% 96%;
+  --brand-cream-deep: 38 45% 92%;
+  --brand-pine: 174 49% 17%;
+  --brand-pine-soft: 174 30% 30%;
+  --brand-terracotta: 16 70% 41%;
+  --brand-terracotta-deep: 16 72% 33%;
+  --brand-paper: 40 60% 99%;
+  font-feature-settings: "ss01";
+}
+.landing .font-display {
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  letter-spacing: -0.015em;
+}
+/* Greca (meandro) da identidade: friso repetível em SVG inline. */
+.landing .greca {
+  height: 10px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='10' viewBox='0 0 40 10'%3E%3Cpath d='M0 10V2h18v4h-8V4h-4v6h14V0H0m40 10V2H22v4h8V4h4v6H20' fill='none' stroke='%23B0461F' stroke-width='1.4' opacity='0.55'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-size: 40px 10px;
+}
