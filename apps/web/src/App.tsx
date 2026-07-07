@@ -5,6 +5,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
+import Landing from "@/pages/Landing";
+import { useAuth } from "@/contexts/AuthContext";
 import Onboarding from "@/pages/Onboarding";
 import Availability from "@/pages/Availability";
 import Settings from "@/pages/Settings";
@@ -19,6 +21,14 @@ import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// Raiz condicionada pela sessão: anónimo vê a landing comercial; membro vê o
+// Dashboard. Sem redirect para não partir bookmarks nem piscar o ecrã.
+function HomeGate() {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  return user ? <Dashboard /> : <Landing />;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -31,14 +41,8 @@ export default function App() {
             <Route path="/m/:slug" element={<PublicMenu />} />
             <Route path="/recuperar-password" element={<RecoverPassword />} />
             <Route path="/repor-password" element={<ResetPassword />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
+            {/* Raiz: landing pública para anónimos, Dashboard para membros (S4). */}
+            <Route path="/" element={<HomeGate />} />
             <Route
               path="/disponibilidade"
               element={
