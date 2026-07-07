@@ -227,3 +227,103 @@ export function computeMarginPct(
   if (priceCents == null || priceCents <= 0) return null;
   return ((priceCents - costCents) / priceCents) * 100;
 }
+
+// ── Margens do menu (S3) ─────────────────────────────────────────────────────
+export interface DishMargin {
+  itemId: string;
+  name: string;
+  priceCents: number | null;
+  costCents: number;
+  marginPct: number | null; // null sem PVP
+  marginCents: number | null; // PVP - custo, null sem PVP
+  complete: boolean; // todas as linhas da ficha têm custo
+  hasSheet: boolean;
+  belowTarget: boolean; // só true quando completa e com PVP
+}
+
+export interface MenuMarginsSummary {
+  rows: DishMargin[]; // ordenadas: margem asc (piores primeiro), sem ficha no fim
+  avgFoodCostPct: number | null; // média de custo/PVP das fichas completas com PVP
+  belowTargetCount: number;
+  completeCount: number;
+}
+
+export function computeMenuMargins(
+  items: { id: string; name: string; price_cents: number | null; active: boolean }[],
+  sheets: { id: string; menu_item_id: string }[],
+  lines: { tech_sheet_id: string; qty: number; unit: string; ingredient_id: string | null }[],
+  ingredientsById: Map<string, { unit: string; cost_per_unit_cents: number | null }>,
+  targetPct: number,
+): MenuMarginsSummary {
+  const linesBySheet = new Map<string, typeof lines>();
+  for (const l of lines) {
+    const arr = linesBySheet.get(l.tech_sheet_id) ?? [];
+    arr.push(l);
+    linesBySheet.set(l.tech_sheet_id, arr);
+  }
+  const sheetByItem = new Map(sheets.map((s) => [s.menu_item_id, s]));
+
+  const rows: DishMargin[] = items
+    .filter((i) => i.active)
+    .map((item) => {
+      const sheet = sheetByItem.get(item.id);
+      if (!sheet) {
+        return {
+          itemId: item.id,
+          name: item.name,
+          priceCents: item.price_cents,
+          costCents: 0,
+          marginPct: null,
+          marginCents: null,
+          complete: false,
+          hasSheet: false,
+          belowTarget: false,
+        };
+      }
+      const summary = computeFoodCost(linesBySheet.get(sheet.id) ?? [], ingredientsById);
+      const complete = summary.total > 0 && summary.costed === summary.total;
+      const marginPct = computeMarginPct(item.price_cents, summary.costCents);
+      return {
+        itemId: item.id,
+        name: item.name,
+        priceCents: item.price_cents,
+        costCents: summary.costCents,
+        marginPct,
+        marginCents: item.price_cents != null ? item.price_cents - summary.costCents : null,
+        complete,
+        hasSheet: true,
+        belowTarget: complete && marginPct != null && marginPct < targetPct,
+      };
+    });
+
+  // Piores margens primeiro; fichas incompletas a seguir; sem ficha no fim.
+  rows.sort((a, b) => {
+    // Fiabilidade primeiro: completas (0), parciais (1, margem aparente é
+    // optimista porque o custo está subestimado), sem ficha (2).
+    const tierA = !a.hasSheet ? 2 : a.complete ? 0 : 1;
+    const tierB = !b.hasSheet ? 2 : b.complete ? 0 : 1;
+    if (tierA !== tierB) return tierA - tierB;
+    if (a.marginPct == null && b.marginPct == null) return a.name.localeCompare(b.name);
+    if (a.marginPct == null) return 1;
+    if (b.marginPct == null) return -1;
+    return a.marginPct - b.marginPct;
+  });
+
+  const completeWithPrice = rows.filter(
+    (r) => r.hasSheet && r.complete && r.priceCents != null && r.priceCents > 0,
+  );
+  const avgFoodCostPct =
+    completeWithPrice.length > 0
+      ? completeWithPrice.reduce(
+          (acc, r) => acc + (r.costCents / (r.priceCents as number)) * 100,
+          0,
+        ) / completeWithPrice.length
+      : null;
+
+  return {
+    rows,
+    avgFoodCostPct,
+    belowTargetCount: rows.filter((r) => r.belowTarget).length,
+    completeCount: completeWithPrice.length,
+  };
+}

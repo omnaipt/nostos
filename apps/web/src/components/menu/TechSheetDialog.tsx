@@ -499,6 +499,16 @@ export function TechSheetDialog({
           </label>
           <div className="flex items-center gap-2">
             {sheet && (
+              <a
+                href={`/fichas/${item.id}/imprimir`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+              >
+                Ficha de cozinha
+              </a>
+            )}
+            {sheet && (
               <Button
                 size="sm"
                 variant="ghost"

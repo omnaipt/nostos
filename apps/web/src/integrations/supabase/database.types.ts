@@ -43,6 +43,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_generations: {
+        Row: {
+          created_at: string
+          dish_name: string
+          id: string
+          input_tokens: number | null
+          output_tokens: number | null
+          restaurant_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          dish_name: string
+          id?: string
+          input_tokens?: number | null
+          output_tokens?: number | null
+          restaurant_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          dish_name?: string
+          id?: string
+          input_tokens?: number | null
+          output_tokens?: number | null
+          restaurant_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_generations_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           created_at: string
@@ -407,6 +445,7 @@ export type Database = {
           owner_id: string
           phone: string | null
           slug: string
+          target_margin_pct: number
           timezone: string
           vertical: string
         }
@@ -420,6 +459,7 @@ export type Database = {
           owner_id: string
           phone?: string | null
           slug?: string
+          target_margin_pct?: number
           timezone?: string
           vertical?: string
         }
@@ -433,6 +473,7 @@ export type Database = {
           owner_id?: string
           phone?: string | null
           slug?: string
+          target_margin_pct?: number
           timezone?: string
           vertical?: string
         }
