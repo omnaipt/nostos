@@ -2,14 +2,12 @@ import * as React from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowRight, CalendarCheck, ChefHat, LineChart, QrCode, Users } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 
-// Landing pública de nostos.pt (S4). Decisões do David (07-Jul): SEM preço à
-// vista; CTA = pedido de demonstração founding (leads gravados via RPC 0009).
-// Autenticados nunca chegam aqui (HomeGate manda-os para o Dashboard).
+// Landing pública de nostos.pt — identidade Pinho & Tinta (Zé, 07-Jul).
+// Tokens de marca scoped em .landing (index.css): creme, verde pinho,
+// terracota; Fraunces como serifa de display; greca como friso.
+// Decisões mantidas: SEM preço à vista; CTA founding; leads via RPC 0009.
 
 const LINE = [
   { label: "Stock", sub: "a despensa" },
@@ -19,127 +17,189 @@ const LINE = [
   { label: "Reserva", sub: "mesa marcada" },
 ];
 
+const pine = "text-[hsl(var(--brand-pine))]";
+const terra = "text-[hsl(var(--brand-terracotta))]";
+
+function CtaPrimary({
+  href,
+  children,
+  type,
+  disabled,
+  full,
+}: {
+  href?: string;
+  children: React.ReactNode;
+  type?: "submit";
+  disabled?: boolean;
+  full?: boolean;
+}) {
+  const cls =
+    "inline-flex items-center justify-center gap-2 rounded-full bg-[hsl(var(--brand-terracotta))] px-7 py-3.5 text-base font-semibold text-[hsl(var(--brand-cream))] shadow-[0_2px_0_hsl(var(--brand-terracotta-deep))] transition-all hover:-translate-y-0.5 hover:bg-[hsl(var(--brand-terracotta-deep))] hover:shadow-[0_4px_12px_hsl(var(--brand-terracotta)/0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--brand-terracotta))] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60 " +
+    (full ? "w-full" : "");
+  if (href) {
+    return (
+      <a href={href} className={cls}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <button type={type} disabled={disabled} className={cls}>
+      {children}
+    </button>
+  );
+}
+
+function CtaGhost({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-[hsl(var(--brand-pine)/0.25)] px-7 py-3 text-base font-medium text-[hsl(var(--brand-pine))] transition-colors hover:border-[hsl(var(--brand-pine))] hover:bg-[hsl(var(--brand-pine)/0.05)]"
+    >
+      {children}
+    </a>
+  );
+}
+
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="container flex items-center justify-between py-5">
-        <img src="/brand/nostos-restaurantes.svg" alt="nostos restaurantes" className="h-10" />
-        <Link to="/login" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+    <div className="landing min-h-screen bg-[hsl(var(--brand-cream))] text-[hsl(var(--brand-pine))] antialiased">
+      {/* Header */}
+      <header className="container flex items-center justify-between py-6">
+        <img src="/brand/nostos-restaurantes.svg" alt="nostos restaurantes" className="h-11" />
+        <Link
+          to="/login"
+          className="rounded-full px-4 py-2 text-sm font-medium text-[hsl(var(--brand-pine-soft))] transition-colors hover:bg-[hsl(var(--brand-pine)/0.06)] hover:text-[hsl(var(--brand-pine))]"
+        >
           Entrar
         </Link>
       </header>
 
       {/* Hero */}
-      <section className="container py-14 text-center sm:py-20">
-        <h1 className="mx-auto max-w-3xl text-4xl font-semibold leading-tight sm:text-5xl">
-          O sistema operativo do teu restaurante.
-        </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-          Da despensa à reserva, num só sítio. Sem comissões por reserva. Feito para quem gere a
-          casa, não para engenheiros.
+      <section className="container pb-16 pt-12 text-center sm:pb-24 sm:pt-16">
+        <p className={"text-sm font-semibold uppercase tracking-[0.25em] " + terra}>
+          restaurantes fundadores · portugal
         </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <a href="#fundador" className={buttonVariants({ size: "lg" })}>
-            Quero ser restaurante fundador
-          </a>
-          <a
-            href="/m/restaurante-saloio-demo"
-            target="_blank"
-            rel="noreferrer"
-            className={buttonVariants({ variant: "outline", size: "lg" })}
-          >
-            Vê um menu de exemplo
-          </a>
+        <h1 className={"font-display mx-auto mt-4 max-w-3xl text-5xl font-semibold leading-[1.05] sm:text-6xl " + pine}>
+          O sistema operativo do teu <em className="italic">restaurante</em>.
+        </h1>
+        <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[hsl(var(--brand-pine-soft))]">
+          Da despensa à reserva, num só sítio. Sem comissões por reserva.
+          <br className="hidden sm:block" />
+          Feito para quem gere a casa, não para engenheiros.
+        </p>
+        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+          <CtaPrimary href="#fundador">Quero ser restaurante fundador</CtaPrimary>
+          <CtaGhost href="/m/restaurante-saloio-demo">Vê um menu de exemplo</CtaGhost>
         </div>
+        <p className="mt-6 text-sm text-[hsl(var(--brand-pine-soft))]">
+          Sem comissões · Alergénios UE no menu · Clientes que voltam
+        </p>
       </section>
 
+      <div className="greca" aria-hidden="true" />
+
       {/* A linha completa */}
-      <section className="border-y border-border bg-muted/30 py-12">
+      <section className="bg-[hsl(var(--brand-paper))] py-14">
         <div className="container">
-          <h2 className="text-center text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+          <h2 className={"text-center text-xs font-bold uppercase tracking-[0.3em] " + terra}>
             A linha completa
           </h2>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          <div className="mt-8 flex flex-wrap items-stretch justify-center gap-2 sm:gap-3">
             {LINE.map((step, i) => (
               <React.Fragment key={step.label}>
-                <div className="rounded-lg border border-input bg-card px-4 py-3 text-center">
-                  <p className="text-sm font-semibold">{step.label}</p>
-                  <p className="text-xs text-muted-foreground">{step.sub}</p>
+                <div className="w-[104px] rounded-xl border border-[hsl(var(--brand-pine)/0.14)] bg-[hsl(var(--brand-cream))] px-3 py-4 text-center shadow-[0_1px_2px_hsl(var(--brand-pine)/0.06)] sm:w-32">
+                  <p className={"font-display text-base font-semibold " + pine}>{step.label}</p>
+                  <p className="mt-0.5 text-xs text-[hsl(var(--brand-pine-soft))]">{step.sub}</p>
                 </div>
                 {i < LINE.length - 1 && (
-                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <ArrowRight
+                    className={"h-4 w-4 shrink-0 self-center " + terra}
+                    aria-hidden
+                  />
                 )}
               </React.Fragment>
             ))}
           </div>
-          <p className="mx-auto mt-5 max-w-2xl text-center text-sm text-muted-foreground">
-            Cada peça alimenta a seguinte. A ficha técnica é o elo que quase ninguém tem: transforma
-            o menu de uma lista de preços num sistema que sabe quanto custa e quanto rende cada
-            prato.
+          <p className="mx-auto mt-7 max-w-2xl text-center leading-relaxed text-[hsl(var(--brand-pine-soft))]">
+            Cada peça alimenta a seguinte. A ficha técnica é o elo que quase ninguém tem:
+            transforma o menu de uma lista de preços num sistema que sabe{" "}
+            <strong className={pine}>quanto custa e quanto rende cada prato</strong>.
           </p>
         </div>
       </section>
 
       {/* Bandeira: ficha técnica IA */}
-      <section className="container py-14">
-        <div className="grid items-start gap-10 lg:grid-cols-2">
+      <section className="container py-20">
+        <div className="grid items-center gap-12 lg:grid-cols-2">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-widest text-primary">
+            <p className={"text-xs font-bold uppercase tracking-[0.3em] " + terra}>
               O diferenciador
             </p>
-            <h2 className="mt-2 text-3xl font-semibold leading-tight">
-              A ficha técnica de cada prato, escrita por IA. A margem, calculada por ti nunca mais.
+            <h2 className={"font-display mt-3 text-4xl font-semibold leading-tight " + pine}>
+              A ficha técnica de cada prato, escrita por IA.
             </h2>
-            <ul className="mt-6 space-y-4 text-muted-foreground">
-              <li className="flex gap-3">
-                <ChefHat className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
-                <span>
-                  A partir do nome do prato, o nostos escreve o primeiro rascunho: ingredientes,
-                  quantidades, passos e alergénios. O chef corrige, não escreve do zero.
-                </span>
-              </li>
-              <li className="flex gap-3">
-                <LineChart className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
-                <span>
-                  Com a despensa e os preços de compra, sabes o food cost e a margem de cada coisa
-                  que serves, e quais os pratos que estão a perder dinheiro.
-                </span>
-              </li>
-              <li className="flex gap-3">
-                <Users className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
-                <span>
-                  Consistência de cozinha e formação de equipa sem papelada: a ficha imprime-se num
-                  clique para a parede da cozinha.
-                </span>
-              </li>
+            <p className="mt-3 text-lg text-[hsl(var(--brand-pine-soft))]">
+              A margem, calculada por ti nunca mais.
+            </p>
+            <ul className="mt-8 space-y-5">
+              <Point icon={<ChefHat className="h-5 w-5" aria-hidden />}>
+                A partir do nome do prato, o nostos escreve o primeiro rascunho: ingredientes,
+                quantidades, passos e alergénios. <strong className={pine}>O chef corrige, não escreve do zero.</strong>
+              </Point>
+              <Point icon={<LineChart className="h-5 w-5" aria-hidden />}>
+                Com a despensa e os preços de compra, sabes o food cost e a margem de cada coisa
+                que serves, e <strong className={pine}>quais os pratos que estão a perder dinheiro</strong>.
+              </Point>
+              <Point icon={<Users className="h-5 w-5" aria-hidden />}>
+                Consistência de cozinha e formação de equipa sem papelada: a ficha imprime-se num
+                clique para a parede da cozinha.
+              </Point>
             </ul>
           </div>
-          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Exemplo real</p>
-            <p className="mt-1 text-lg font-semibold">Bacalhau à Brás</p>
-            <div className="mt-4 space-y-2 text-sm">
-              <Row k="Bacalhau demolhado" v="180 g" />
-              <Row k="Batata" v="200 g" />
-              <Row k="Ovos" v="3 un" />
-              <Row k="Cebola, azeite, azeitona, salsa" v="…" />
+
+          {/* Card "ficha de papel" — o herói visual */}
+          <div className="relative mx-auto w-full max-w-md">
+            <div className="absolute inset-0 translate-x-2 translate-y-2 rounded-2xl bg-[hsl(var(--brand-pine)/0.10)]" aria-hidden />
+            <div className="relative rounded-2xl border border-[hsl(var(--brand-pine)/0.15)] bg-[hsl(var(--brand-paper))] p-7 shadow-sm">
+              <div className="greca -mx-7 -mt-7 mb-6 rounded-t-2xl" aria-hidden />
+              <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[hsl(var(--brand-pine-soft))]">
+                Ficha técnica · exemplo real
+              </p>
+              <p className={"font-display mt-1 text-2xl font-semibold " + pine}>Bacalhau à Brás</p>
+              <div className="mt-5 space-y-2.5 text-sm">
+                <SheetRow k="Bacalhau demolhado" v="180 g" />
+                <SheetRow k="Batata" v="200 g" />
+                <SheetRow k="Ovos" v="3 un" />
+                <SheetRow k="Cebola, azeite, azeitona, salsa" v="…" />
+              </div>
+              <div className="mt-5 space-y-2.5 border-t-2 border-dashed border-[hsl(var(--brand-pine)/0.2)] pt-4 text-sm">
+                <SheetRow k="Food cost por dose" v="3,66 €" strong />
+                <SheetRow k="Preço de venda" v="14,50 €" />
+                <div className="flex items-baseline justify-between">
+                  <span className="text-[hsl(var(--brand-pine-soft))]">Margem</span>
+                  <span className={"font-display text-2xl font-semibold " + terra}>75%</span>
+                </div>
+              </div>
+              <p className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--brand-pine)/0.08)] px-3 py-1 text-xs font-medium text-[hsl(var(--brand-pine))]">
+                <ChefHat className="h-3.5 w-3.5" aria-hidden /> Gerada por IA · validada pelo chef
+              </p>
             </div>
-            <div className="mt-4 border-t border-border pt-3 text-sm">
-              <Row k="Food cost por dose" v="3,66 €" strong />
-              <Row k="Preço de venda" v="14,50 €" />
-              <Row k="Margem" v="75%" strong accent />
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Gerada por IA e validada pelo chef no restaurante de demonstração.
-            </p>
           </div>
         </div>
       </section>
 
+      <div className="greca" aria-hidden="true" />
+
       {/* Já a funcionar */}
-      <section className="border-y border-border bg-muted/30 py-14">
+      <section className="bg-[hsl(var(--brand-paper))] py-16">
         <div className="container">
-          <h2 className="text-center text-2xl font-semibold">Já a funcionar, sem comissões</h2>
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <h2 className={"font-display text-center text-3xl font-semibold " + pine}>
+            Já a funcionar, sem comissões
+          </h2>
+          <div className="mt-10 grid gap-5 sm:grid-cols-3">
             <Feature
               icon={<CalendarCheck className="h-5 w-5" aria-hidden />}
               title="Reservas com link próprio"
@@ -160,10 +220,12 @@ export default function Landing() {
       </section>
 
       {/* CTA founding + form */}
-      <section id="fundador" className="container py-16">
+      <section id="fundador" className="container py-20">
         <div className="mx-auto max-w-xl">
-          <h2 className="text-center text-3xl font-semibold">Queres ser um dos restaurantes fundadores?</h2>
-          <p className="mt-3 text-center text-muted-foreground">
+          <h2 className={"font-display text-center text-4xl font-semibold leading-tight " + pine}>
+            Queres ser um dos restaurantes fundadores?
+          </h2>
+          <p className="mt-4 text-center leading-relaxed text-[hsl(var(--brand-pine-soft))]">
             Estamos a escolher os primeiros restaurantes em Portugal. Montamos o teu restaurante
             contigo, usa-lo no serviço real com condições de fundador, e a tua opinião desenha o
             produto. Deixa o contacto e falamos.
@@ -172,26 +234,35 @@ export default function Landing() {
         </div>
       </section>
 
-      <footer className="border-t border-border py-8">
-        <p className="container text-center text-sm text-muted-foreground">
-          nostos.pt · uma plataforma OMNAI · reservas@nostos.pt
-        </p>
+      <footer className="border-t border-[hsl(var(--brand-pine)/0.12)] py-10">
+        <div className="container flex flex-col items-center gap-3">
+          <div className="greca w-40" aria-hidden="true" />
+          <p className="text-sm text-[hsl(var(--brand-pine-soft))]">
+            nostos.pt · uma plataforma OMNAI · reservas@nostos.pt
+          </p>
+        </div>
       </footer>
     </div>
   );
 }
 
-function Row({ k, v, strong, accent }: { k: string; v: string; strong?: boolean; accent?: boolean }) {
+function Point({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-4">
-      <span className="text-muted-foreground">{k}</span>
-      <span
-        className={
-          "tabular-nums " +
-          (strong ? "font-semibold " : "") +
-          (accent ? "text-[hsl(var(--status-seated-fg))]" : "")
-        }
-      >
+    <li className="flex gap-4">
+      <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--brand-terracotta)/0.12)] text-[hsl(var(--brand-terracotta))]">
+        {icon}
+      </span>
+      <span className="leading-relaxed text-[hsl(var(--brand-pine-soft))]">{children}</span>
+    </li>
+  );
+}
+
+function SheetRow({ k, v, strong }: { k: string; v: string; strong?: boolean }) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <span className="text-[hsl(var(--brand-pine-soft))]">{k}</span>
+      <span className="mx-1 flex-1 border-b border-dotted border-[hsl(var(--brand-pine)/0.3)]" aria-hidden />
+      <span className={"tabular-nums " + (strong ? "font-semibold text-[hsl(var(--brand-pine))]" : "text-[hsl(var(--brand-pine))]")}>
         {v}
       </span>
     </div>
@@ -200,15 +271,18 @@ function Row({ k, v, strong, accent }: { k: string; v: string; strong?: boolean;
 
 function Feature({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+    <div className="rounded-2xl border border-[hsl(var(--brand-pine)/0.12)] bg-[hsl(var(--brand-cream))] p-6 shadow-[0_1px_2px_hsl(var(--brand-pine)/0.05)] transition-shadow hover:shadow-[0_6px_20px_hsl(var(--brand-pine)/0.10)]">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[hsl(var(--brand-terracotta)/0.12)] text-[hsl(var(--brand-terracotta))]">
         {icon}
       </div>
-      <h3 className="mt-3 font-semibold">{title}</h3>
-      <p className="mt-1 text-sm text-muted-foreground">{text}</p>
+      <h3 className={"font-display mt-4 text-xl font-semibold " + pine}>{title}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-[hsl(var(--brand-pine-soft))]">{text}</p>
     </div>
   );
 }
+
+const inputCls =
+  "flex h-12 w-full rounded-xl border border-[hsl(var(--brand-pine)/0.2)] bg-[hsl(var(--brand-paper))] px-4 text-base text-[hsl(var(--brand-pine))] placeholder:text-[hsl(var(--brand-pine)/0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--brand-terracotta))]";
 
 function LeadForm() {
   const [name, setName] = React.useState("");
@@ -256,9 +330,9 @@ function LeadForm() {
 
   if (done) {
     return (
-      <div className="mt-8 rounded-xl border border-border bg-card p-8 text-center">
-        <p className="text-lg font-semibold">Recebido. Falamos em breve.</p>
-        <p className="mt-2 text-sm text-muted-foreground">
+      <div className="mt-9 rounded-2xl border border-[hsl(var(--brand-pine)/0.15)] bg-[hsl(var(--brand-paper))] p-9 text-center shadow-sm">
+        <p className={"font-display text-2xl font-semibold " + pine}>Recebido. Falamos em breve.</p>
+        <p className="mt-3 text-sm leading-relaxed text-[hsl(var(--brand-pine-soft))]">
           Vamos contactar-te para marcar uma demonstração de 15 minutos com o teu restaurante em
           mente. Entretanto, espreita o menu de exemplo.
         </p>
@@ -267,42 +341,50 @@ function LeadForm() {
   }
 
   return (
-    <form onSubmit={submit} className="mt-8 space-y-3">
+    <form
+      onSubmit={submit}
+      className="mt-9 space-y-3 rounded-2xl border border-[hsl(var(--brand-pine)/0.15)] bg-[hsl(var(--brand-paper))] p-6 shadow-sm sm:p-8"
+    >
       <div className="grid gap-3 sm:grid-cols-2">
-        <Input
+        <input
           aria-label="O teu nome"
           placeholder="O teu nome *"
+          className={inputCls}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <Input
+        <input
           aria-label="Nome do restaurante"
           placeholder="Nome do restaurante *"
+          className={inputCls}
           value={restaurantName}
           onChange={(e) => setRestaurantName(e.target.value)}
         />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Input
+        <input
           aria-label="Telefone"
           inputMode="tel"
           placeholder="Telefone"
+          className={inputCls}
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
         />
-        <Input
+        <input
           aria-label="Email"
           inputMode="email"
           placeholder="Email"
+          className={inputCls}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
       </div>
-      <Textarea
+      <textarea
         aria-label="Mensagem"
         rows={3}
         maxLength={1000}
         placeholder="Conta-nos do teu restaurante (opcional)"
+        className={inputCls + " h-auto py-3"}
         value={message}
         onChange={(e) => setMessage(e.target.value)}
       />
@@ -319,10 +401,10 @@ function LeadForm() {
           />
         </label>
       </div>
-      <Button type="submit" size="lg" className="w-full" disabled={submitting}>
+      <CtaPrimary type="submit" disabled={submitting} full>
         {submitting ? "A enviar..." : "Pedir demonstração"}
-      </Button>
-      <p className="text-center text-xs text-muted-foreground">
+      </CtaPrimary>
+      <p className="text-center text-xs text-[hsl(var(--brand-pine-soft))]">
         Sem compromisso. Usamos o contacto só para falar contigo sobre o nostos.
       </p>
     </form>
