@@ -6,7 +6,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useIngredients } from "@/hooks/use-ingredients";
+import { useCreateIngredient, useIngredients } from "@/hooks/use-ingredients";
 import {
   useDeleteTechSheet,
   useGenerateTechSheet,
@@ -36,6 +36,9 @@ interface LocalLine {
   name: string;
   qty: string; // input controlado; parse no save/custo
   unit: string;
+  // Custo de compra estimado pela IA (para criar o ingrediente na despensa
+  // com um clique). Só existe em linhas vindas de um rascunho gerado.
+  estCost?: { unit: string; cents: number } | null;
 }
 
 function parseQty(input: string): number | null {
@@ -67,6 +70,7 @@ export function TechSheetDialog({
   const removeSheet = useDeleteTechSheet(restaurantId);
   const generate = useGenerateTechSheet();
   const updateItem = useUpdateItem(restaurantId);
+  const createIngredient = useCreateIngredient(restaurantId);
 
   const sheet = React.useMemo(
     () => (sheetsQuery.data ?? []).find((s) => s.menu_item_id === item.id) ?? null,
@@ -123,14 +127,23 @@ export function TechSheetDialog({
 
   function onGenerate() {
     generate.mutate(
-      { dishName: item.name, description: item.description, servings },
+      {
+        restaurantId,
+        dishName: item.name,
+        description: item.description,
+        servings,
+        pantry: ingredients.filter((i) => i.active).map((i) => i.name),
+      },
       {
         onSuccess: (result) => {
           if (!result.generated || !result.sheet) {
+            const reason = result.reason ?? "erro desconhecido";
             toast.error(
-              result.reason === "ANTHROPIC_API_KEY não configurada"
+              reason === "ANTHROPIC_API_KEY não configurada"
                 ? "A geração por IA ainda não está activa neste ambiente."
-                : `Não foi possível gerar o rascunho (${result.reason ?? "erro desconhecido"}).`,
+                : reason.startsWith("limite diário")
+                  ? "Limite diário de gerações atingido. Volta amanhã ou edita a ficha à mão."
+                  : `Não foi possível gerar o rascunho (${reason}).`,
             );
             return;
           }
@@ -144,6 +157,7 @@ export function TechSheetDialog({
                 name: ing.name,
                 qty: String(ing.qty).replace(".", ","),
                 unit: ing.unit,
+                estCost: ing.est_cost,
               };
             }),
           );
@@ -152,9 +166,45 @@ export function TechSheetDialog({
           setSuggestedAllergens(draft.allergens);
           setAiGenerated(true);
           setStatus("rascunho");
-          toast.success("Rascunho gerado. Revê as quantidades antes de validar.");
+          toast.success(
+            result.remaining != null
+              ? `Rascunho gerado (${result.remaining} gerações restantes hoje). Revê antes de validar.`
+              : "Rascunho gerado. Revê as quantidades antes de validar.",
+          );
         },
         onError: () => toast.error("Falha ao contactar a geração por IA."),
+      },
+    );
+  }
+
+  // Cria o ingrediente na despensa com o custo estimado pela IA e liga a linha.
+  function addLineToPantry(line: LocalLine) {
+    if (!line.estCost) return;
+    createIngredient.mutate(
+      {
+        name: line.name.trim(),
+        unit: line.estCost.unit,
+        costPerUnitCents: line.estCost.cents,
+      },
+      {
+        onSuccess: (created) => {
+          setLines((ls) =>
+            ls.map((l) => (l.key === line.key ? { ...l, ingredientId: created.id } : l)),
+          );
+          toast.success(`"${created.name}" criado na despensa com custo estimado. Confirma o preço real.`);
+        },
+        onError: (e) => {
+          // Nome duplicado: tenta ligar ao existente em vez de falhar.
+          const existing = ingredientsByName.get(line.name.trim().toLowerCase());
+          if (existing) {
+            setLines((ls) =>
+              ls.map((l) => (l.key === line.key ? { ...l, ingredientId: existing.id } : l)),
+            );
+            toast.success(`Ligado ao ingrediente existente "${existing.name}".`);
+          } else {
+            toast.error(e instanceof Error ? e.message : "Não foi possível criar o ingrediente.");
+          }
+        },
       },
     );
   }
@@ -354,6 +404,18 @@ export function TechSheetDialog({
                 <span className="w-16 text-right text-xs tabular-nums text-muted-foreground">
                   {lineCost != null ? formatCostCents(lineCost) : "—"}
                 </span>
+                {!line.ingredientId && line.estCost && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-2 text-xs"
+                    disabled={createIngredient.isPending}
+                    title={`Criar na despensa a ${formatCostCents(line.estCost.cents)} / ${line.estCost.unit} (custo estimado pela IA — confirmar depois)`}
+                    onClick={() => addLineToPantry(line)}
+                  >
+                    + Despensa
+                  </Button>
+                )}
                 <Button
                   size="icon"
                   variant="ghost"

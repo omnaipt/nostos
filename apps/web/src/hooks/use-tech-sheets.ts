@@ -127,10 +127,15 @@ export function useDeleteTechSheet(restaurantId: string | undefined) {
 }
 
 // ── IA: rascunho da ficha via edge function (gated na ANTHROPIC_API_KEY) ────
+// v3 (S2): a função valida a membership do restaurante, aplica o limite
+// diário e devolve custo de compra estimado por ingrediente (est_cost) para
+// semear a despensa com um clique. Enviamos a despensa actual para a IA
+// reutilizar os nomes exactos (auto-match).
 export interface DraftIngredient {
   name: string;
   qty: number;
   unit: string;
+  est_cost: { unit: string; cents: number } | null;
 }
 
 export interface SheetDraft {
@@ -145,20 +150,25 @@ export interface GenerateResult {
   generated: boolean;
   reason?: string;
   sheet?: SheetDraft;
+  remaining?: number;
 }
 
 export function useGenerateTechSheet() {
   return useMutation({
     mutationFn: async (input: {
+      restaurantId: string;
       dishName: string;
       description: string | null;
       servings: number;
+      pantry: string[];
     }): Promise<GenerateResult> => {
       const { data, error } = await supabase.functions.invoke("generate-tech-sheet", {
         body: {
+          restaurantId: input.restaurantId,
           dishName: input.dishName,
           description: input.description,
           servings: input.servings,
+          pantry: input.pantry,
         },
       });
       if (error) throw error;
