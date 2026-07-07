@@ -160,6 +160,42 @@ export type Database = {
           },
         ]
       }
+      leads: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          message: string | null
+          name: string
+          phone: string | null
+          restaurant_name: string
+          source: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          message?: string | null
+          name: string
+          phone?: string | null
+          restaurant_name: string
+          source?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          message?: string | null
+          name?: string
+          phone?: string | null
+          restaurant_name?: string
+          source?: string
+          status?: string
+        }
+        Relationships: []
+      }
       menu_categories: {
         Row: {
           active: boolean
@@ -679,6 +715,16 @@ export type Database = {
     }
     Functions: {
       is_restaurant_member: { Args: { target: string }; Returns: boolean }
+      public_create_lead: {
+        Args: {
+          p_email: string
+          p_message: string
+          p_name: string
+          p_phone: string
+          p_restaurant_name: string
+        }
+        Returns: string
+      }
       public_create_reservation: {
         Args: {
           p_email: string
