@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePublicRestaurant } from "@/hooks/use-public-booking";
 import { usePublicMenu } from "@/hooks/use-public-menu";
+import { SommelierWidget } from "@/components/public/SommelierWidget";
+import { isWineCategory } from "@/lib/sommelier";
 import { ALLERGEN_LABEL, formatPriceCents } from "@/lib/types";
 
 // Menu público (/m/{slug}). Só leitura, anónimo, via RPC. Sem preços em falta
@@ -51,6 +53,14 @@ export default function PublicMenu() {
 
   const restaurant = restaurantQuery.data!;
   const categories = (menuQuery.data ?? []).filter((c) => c.items.length > 0);
+
+  // Sommelier Virtual: só aparece se a carta tiver vinhos disponíveis.
+  const hasWines = categories.some(
+    (c) => isWineCategory(c.label) && c.items.some((i) => i.available),
+  );
+  const dishNames = categories
+    .filter((c) => !isWineCategory(c.label))
+    .flatMap((c) => c.items.filter((i) => i.available).map((i) => i.name));
 
   return (
     <MenuShell>
@@ -118,6 +128,8 @@ export default function PublicMenu() {
             </ul>
           </section>
         ))}
+
+        {slug && hasWines && <SommelierWidget slug={slug} dishNames={dishNames} />}
       </div>
     </MenuShell>
   );
