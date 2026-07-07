@@ -98,7 +98,7 @@ Regras:
       },
       body: JSON.stringify({
         model: "claude-sonnet-5",
-        max_tokens: 1500,
+        max_tokens: 2500,
         system,
         messages: [{ role: "user", content: user }],
       }),
@@ -111,10 +111,17 @@ Regras:
     }
 
     const data = await res.json();
-    const text: string = data?.content?.[0]?.text ?? "";
+    // O content pode trazer blocos não-texto (ex.: thinking) antes do texto:
+    // procurar explicitamente o primeiro bloco type==="text".
+    const blocks: { type?: string; text?: string }[] = Array.isArray(data?.content)
+      ? data.content
+      : [];
+    const text = blocks.find((b) => b?.type === "text")?.text ?? "";
     const draft = parseDraft(text, servings);
     if (!draft) {
-      console.error(`[generate-tech-sheet] resposta não-parseável: ${text.slice(0, 200)}`);
+      console.error(
+        `[generate-tech-sheet] resposta não-parseável (stop=${data?.stop_reason}): ${text.slice(0, 300)}`,
+      );
       return json({ generated: false, reason: "resposta da IA não-parseável" });
     }
     return json({ generated: true, sheet: draft });
