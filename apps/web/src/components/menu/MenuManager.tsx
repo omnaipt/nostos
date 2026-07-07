@@ -1,6 +1,6 @@
 import * as React from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2, Pencil, NotebookPen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,12 +14,25 @@ import {
   useUpdateCategory,
   useUpdateItem,
 } from "@/hooks/use-menu";
+import { useIngredients } from "@/hooks/use-ingredients";
+import { useTechSheetLines, useTechSheets } from "@/hooks/use-tech-sheets";
+import { TechSheetDialog } from "@/components/menu/TechSheetDialog";
+import { formatCostCents } from "@/components/menu/PantryManager";
 import {
   ALLERGENS,
+  computeFoodCost,
+  computeMarginPct,
   formatPriceCents,
   parsePriceToCents,
   type MenuItem,
 } from "@/lib/types";
+
+// Resumo da ficha técnica de um prato para a lista do menu.
+export interface SheetSummary {
+  costCents: number;
+  marginPct: number | null;
+  complete: boolean;
+}
 
 // Gestão de menu (self-contained): categorias e pratos, tenant-scoped via RLS.
 // Cada mutação invalida a cache do menu. v0 sem reordenação drag (sort_order
@@ -131,7 +144,17 @@ function draftFromItem(item: MenuItem): ItemDraft {
   };
 }
 
-function ItemRow({ restaurantId, item }: { restaurantId: string; item: MenuItem }) {
+function ItemRow({
+  restaurantId,
+  item,
+  sheetSummary,
+  onOpenSheet,
+}: {
+  restaurantId: string;
+  item: MenuItem;
+  sheetSummary: SheetSummary | null;
+  onOpenSheet: () => void;
+}) {
   const [editing, setEditing] = React.useState(false);
   const update = useUpdateItem(restaurantId);
   const remove = useDeleteItem(restaurantId);
@@ -185,6 +208,13 @@ function ItemRow({ restaurantId, item }: { restaurantId: string; item: MenuItem 
               .join(", ")}
           </p>
         )}
+        {sheetSummary && (
+          <p className="text-[11px] text-muted-foreground">
+            Food cost {formatCostCents(sheetSummary.costCents)}
+            {sheetSummary.marginPct != null && <> · margem {sheetSummary.marginPct.toFixed(0)}%</>}
+            {!sheetSummary.complete && " (parcial)"}
+          </p>
+        )}
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <span className="mr-1 tabular-nums text-sm text-muted-foreground">
@@ -203,6 +233,15 @@ function ItemRow({ restaurantId, item }: { restaurantId: string; item: MenuItem 
           />
           Disponível
         </label>
+        <Button
+          size="icon"
+          variant="ghost"
+          aria-label="Ficha técnica"
+          title={sheetSummary ? "Ficha técnica (existe)" : "Criar ficha técnica"}
+          onClick={onOpenSheet}
+        >
+          <NotebookPen className={sheetSummary ? "h-4 w-4 text-primary" : "h-4 w-4"} />
+        </Button>
         <Button size="icon" variant="ghost" aria-label="Editar prato" onClick={() => setEditing(true)}>
           <Pencil className="h-4 w-4" />
         </Button>
@@ -229,11 +268,15 @@ function CategoryBlock({
   category,
   items,
   nextItemSort,
+  sheetInfoByItem,
+  onOpenSheet,
 }: {
   restaurantId: string;
   category: { id: string; label: string; active: boolean };
   items: MenuItem[];
   nextItemSort: number;
+  sheetInfoByItem: Map<string, SheetSummary>;
+  onOpenSheet: (item: MenuItem) => void;
 }) {
   const [label, setLabel] = React.useState(category.label);
   const [adding, setAdding] = React.useState(false);
@@ -295,7 +338,13 @@ function CategoryBlock({
 
       <div className="divide-y divide-border">
         {items.map((item) => (
-          <ItemRow key={item.id} restaurantId={restaurantId} item={item} />
+          <ItemRow
+            key={item.id}
+            restaurantId={restaurantId}
+            item={item}
+            sheetSummary={sheetInfoByItem.get(item.id) ?? null}
+            onOpenSheet={() => onOpenSheet(item)}
+          />
         ))}
       </div>
 
@@ -338,9 +387,44 @@ export function MenuManager({ restaurantId }: { restaurantId: string }) {
   const itemsQuery = useMenuItems(restaurantId);
   const createCategory = useCreateCategory(restaurantId);
   const [newCat, setNewCat] = React.useState("");
+  const [sheetItem, setSheetItem] = React.useState<MenuItem | null>(null);
+
+  // Fichas técnicas: custo/margem por prato para a lista (0006).
+  const sheetsQuery = useTechSheets(restaurantId);
+  const sheetLinesQuery = useTechSheetLines(restaurantId);
+  const ingredientsQuery = useIngredients(restaurantId);
 
   const categories = categoriesQuery.data ?? [];
   const items = itemsQuery.data ?? [];
+
+  const sheetInfoByItem = React.useMemo(() => {
+    const map = new Map<string, SheetSummary>();
+    const sheets = sheetsQuery.data ?? [];
+    const lines = sheetLinesQuery.data ?? [];
+    const ings = new Map(
+      (ingredientsQuery.data ?? []).map((i) => [
+        i.id,
+        { unit: i.unit, cost_per_unit_cents: i.cost_per_unit_cents },
+      ]),
+    );
+    const linesBySheet = new Map<string, typeof lines>();
+    for (const l of lines) {
+      const arr = linesBySheet.get(l.tech_sheet_id) ?? [];
+      arr.push(l);
+      linesBySheet.set(l.tech_sheet_id, arr);
+    }
+    const itemById = new Map(items.map((i) => [i.id, i]));
+    for (const s of sheets) {
+      const summary = computeFoodCost(linesBySheet.get(s.id) ?? [], ings);
+      const item = itemById.get(s.menu_item_id);
+      map.set(s.menu_item_id, {
+        costCents: summary.costCents,
+        marginPct: computeMarginPct(item?.price_cents ?? null, summary.costCents),
+        complete: summary.total > 0 && summary.costed === summary.total,
+      });
+    }
+    return map;
+  }, [sheetsQuery.data, sheetLinesQuery.data, ingredientsQuery.data, items]);
 
   const itemsByCat = React.useMemo(() => {
     const m = new Map<string, MenuItem[]>();
@@ -400,8 +484,21 @@ export function MenuManager({ restaurantId }: { restaurantId: string }) {
           category={{ id: cat.id, label: cat.label, active: cat.active }}
           items={itemsByCat.get(cat.id) ?? []}
           nextItemSort={(itemsByCat.get(cat.id) ?? []).length}
+          sheetInfoByItem={sheetInfoByItem}
+          onOpenSheet={setSheetItem}
         />
       ))}
+
+      {sheetItem && (
+        <TechSheetDialog
+          restaurantId={restaurantId}
+          item={sheetItem}
+          open={!!sheetItem}
+          onOpenChange={(o) => {
+            if (!o) setSheetItem(null);
+          }}
+        />
+      )}
 
       <div className="flex gap-2">
         <Input

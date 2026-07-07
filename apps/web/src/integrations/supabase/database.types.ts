@@ -1,3 +1,7 @@
+﻿// Gerado por `supabase gen types typescript --project-id emuwqkdummdmacnkltte`.
+// TWEAK MANUAL (manter ao regenerar): restaurants.Insert.slug é opcional —
+// o slug é preenchido pelo trigger set_restaurant_slug (migration 0004);
+// o gerador marca-o required por ser NOT NULL sem default.
 export type Json =
   | string
   | number
@@ -11,6 +15,31 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -45,6 +74,145 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "customers_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingredients: {
+        Row: {
+          active: boolean
+          cost_per_unit_cents: number | null
+          created_at: string
+          id: string
+          name: string
+          restaurant_id: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          cost_per_unit_cents?: number | null
+          created_at?: string
+          id?: string
+          name: string
+          restaurant_id: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          cost_per_unit_cents?: number | null
+          created_at?: string
+          id?: string
+          name?: string
+          restaurant_id?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredients_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_categories: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          label: string
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          label: string
+          restaurant_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          label?: string
+          restaurant_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_categories_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_items: {
+        Row: {
+          active: boolean
+          allergens: string[]
+          available: boolean
+          category_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          price_cents: number | null
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          allergens?: string[]
+          available?: boolean
+          category_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          price_cents?: number | null
+          restaurant_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          allergens?: string[]
+          available?: boolean
+          category_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          price_cents?: number | null
+          restaurant_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_items_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
@@ -238,7 +406,7 @@ export type Database = {
           name: string
           owner_id: string
           phone: string | null
-          slug: string | null
+          slug: string
           timezone: string
           vertical: string
         }
@@ -251,7 +419,7 @@ export type Database = {
           name: string
           owner_id: string
           phone?: string | null
-          slug?: string | null
+          slug?: string
           timezone?: string
           vertical?: string
         }
@@ -264,7 +432,7 @@ export type Database = {
           name?: string
           owner_id?: string
           phone?: string | null
-          slug?: string | null
+          slug?: string
           timezone?: string
           vertical?: string
         }
@@ -311,97 +479,111 @@ export type Database = {
           },
         ]
       }
-      menu_categories: {
+      tech_sheet_ingredients: {
         Row: {
-          active: boolean
           created_at: string
           id: string
-          label: string
+          ingredient_id: string | null
+          name: string
+          qty: number
           restaurant_id: string
           sort_order: number
-          updated_at: string
+          tech_sheet_id: string
+          unit: string
         }
         Insert: {
-          active?: boolean
           created_at?: string
           id?: string
-          label: string
+          ingredient_id?: string | null
+          name: string
+          qty: number
           restaurant_id: string
           sort_order?: number
-          updated_at?: string
+          tech_sheet_id: string
+          unit: string
         }
         Update: {
-          active?: boolean
           created_at?: string
           id?: string
-          label?: string
+          ingredient_id?: string | null
+          name?: string
+          qty?: number
           restaurant_id?: string
           sort_order?: number
-          updated_at?: string
+          tech_sheet_id?: string
+          unit?: string
         }
         Relationships: [
           {
-            foreignKeyName: "menu_categories_restaurant_id_fkey"
+            foreignKeyName: "tech_sheet_ingredients_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tech_sheet_ingredients_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "tech_sheet_ingredients_tech_sheet_id_fkey"
+            columns: ["tech_sheet_id"]
+            isOneToOne: false
+            referencedRelation: "tech_sheets"
+            referencedColumns: ["id"]
+          },
         ]
       }
-      menu_items: {
+      tech_sheets: {
         Row: {
-          active: boolean
-          allergens: string[]
-          available: boolean
-          category_id: string
+          ai_generated: boolean
           created_at: string
-          description: string | null
           id: string
-          name: string
-          price_cents: number | null
+          menu_item_id: string
+          notes: string | null
           restaurant_id: string
-          sort_order: number
+          servings: number
+          status: string
+          steps: string[]
           updated_at: string
         }
         Insert: {
-          active?: boolean
-          allergens?: string[]
-          available?: boolean
-          category_id: string
+          ai_generated?: boolean
           created_at?: string
-          description?: string | null
           id?: string
-          name: string
-          price_cents?: number | null
+          menu_item_id: string
+          notes?: string | null
           restaurant_id: string
-          sort_order?: number
+          servings?: number
+          status?: string
+          steps?: string[]
           updated_at?: string
         }
         Update: {
-          active?: boolean
-          allergens?: string[]
-          available?: boolean
-          category_id?: string
+          ai_generated?: boolean
           created_at?: string
-          description?: string | null
           id?: string
-          name?: string
-          price_cents?: number | null
+          menu_item_id?: string
+          notes?: string | null
           restaurant_id?: string
-          sort_order?: number
+          servings?: number
+          status?: string
+          steps?: string[]
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "menu_items_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "menu_categories"
+            foreignKeyName: "tech_sheets_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: true
+            referencedRelation: "menu_items"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "menu_items_restaurant_id_fkey"
+            foreignKeyName: "tech_sheets_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
@@ -631,6 +813,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
