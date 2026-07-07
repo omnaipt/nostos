@@ -2,6 +2,7 @@ import * as React from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import {
+  ArrowDown,
   ArrowRight,
   CalendarCheck,
   ChefHat,
@@ -123,9 +124,9 @@ export default function Landing() {
           O sistema operativo do teu <em className="italic">restaurante</em>.
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[hsl(var(--brand-pine-soft))]">
-          Da despensa à reserva, num só sítio. Sem comissões por reserva.
-          <br className="hidden sm:block" />
-          Feito para quem gere a casa, não para engenheiros.
+          <span className="block sm:inline">Da despensa à reserva, num só sítio.</span>{" "}
+          <span className="block sm:inline">Sem comissões por reserva.</span>{" "}
+          <span className="block sm:inline">Feito para quem gere a casa, não para engenheiros.</span>
         </p>
         <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
           <CtaPrimary href="#fundador">Quero ser restaurante fundador</CtaPrimary>
@@ -144,24 +145,24 @@ export default function Landing() {
           <h2 className={"text-center text-xs font-bold uppercase tracking-[0.3em] " + terra}>
             A linha completa
           </h2>
-          <div className="mt-8 flex flex-wrap items-stretch justify-center gap-2 sm:gap-3">
+          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:items-stretch sm:justify-center sm:gap-3">
             {LINE.map((step, i) => (
               <React.Fragment key={step.label}>
-                <div className="w-[104px] rounded-xl border border-[hsl(var(--brand-pine)/0.14)] bg-[hsl(var(--brand-cream))] px-3 py-4 text-center shadow-[0_1px_2px_hsl(var(--brand-pine)/0.06)] sm:w-32">
+                <div className="w-full max-w-[15rem] rounded-xl border border-[hsl(var(--brand-pine)/0.14)] bg-[hsl(var(--brand-cream))] px-3 py-4 text-center shadow-[0_1px_2px_hsl(var(--brand-pine)/0.06)] sm:w-32 sm:max-w-none">
                   <p className={"font-display text-base font-semibold " + pine}>{step.label}</p>
                   <p className="mt-0.5 text-xs text-[hsl(var(--brand-pine-soft))]">{step.sub}</p>
                 </div>
                 {i < LINE.length - 1 && (
-                  <ArrowRight
-                    className={"h-4 w-4 shrink-0 self-center " + terra}
-                    aria-hidden
-                  />
+                  <>
+                    <ArrowDown className={"h-5 w-5 shrink-0 sm:hidden " + terra} aria-hidden />
+                    <ArrowRight className={"hidden h-4 w-4 shrink-0 self-center sm:block " + terra} aria-hidden />
+                  </>
                 )}
               </React.Fragment>
             ))}
           </div>
           <p className="mx-auto mt-7 max-w-2xl text-center leading-relaxed text-[hsl(var(--brand-pine-soft))]">
-            Cada peça alimenta a seguinte. A ficha técnica é o elo que quase ninguém tem:
+            Cada peça alimenta a seguinte. A ficha técnica é o elo que fecha o ciclo:
             transforma o menu de uma lista de preços num sistema que sabe{" "}
             <strong className={pine}>quanto custa e quanto rende cada prato</strong>.
           </p>
