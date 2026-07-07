@@ -1,7 +1,18 @@
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowRight, CalendarCheck, ChefHat, LineChart, QrCode, Users } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarCheck,
+  ChefHat,
+  LineChart,
+  Package,
+  QrCode,
+  ShieldCheck,
+  ShoppingBag,
+  Users,
+  Wine,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 // Landing pública de nostos.pt — identidade Pinho & Tinta (Zé, 07-Jul).
@@ -224,7 +235,7 @@ export default function Landing() {
           <h2 className={"font-display text-center text-3xl font-semibold " + pine}>
             Já a funcionar, sem comissões
           </h2>
-          <div className="mt-10 grid gap-5 sm:grid-cols-3">
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <Feature
               icon={<CalendarCheck className="h-5 w-5" aria-hidden />}
               title="Reservas com link próprio"
@@ -236,11 +247,41 @@ export default function Landing() {
               text="O menu numa página, QR para as mesas, alergénios declarados e esgotado em tempo real. Acabou o PDF desactualizado."
             />
             <Feature
+              icon={<Wine className="h-5 w-5" aria-hidden />}
+              title="Sommelier virtual"
+              text="No menu QR, o cliente responde a duas perguntas (preço e gosto) e recebe sugestões da TUA carta de vinhos, com justificação de sommelier."
+            />
+            <Feature
               icon={<Users className="h-5 w-5" aria-hidden />}
               title="Clientes que voltam"
               text="O nostos lembra-se por ti: aniversários, alergias, mesa preferida, no-shows. Nostos é o regresso, em grego, e é isso que vendemos."
             />
           </div>
+        </div>
+      </section>
+
+      {/* O que aí vem (pedido David 07-Jul) */}
+      <section className="container py-16">
+        <h2 className={"font-display text-center text-3xl font-semibold " + pine}>O que aí vem</h2>
+        <p className="mx-auto mt-3 max-w-xl text-center text-[hsl(var(--brand-pine-soft))]">
+          Os restaurantes fundadores recebem tudo isto à medida que sai, sem pagar mais por módulo.
+        </p>
+        <div className="mt-9 grid gap-5 sm:grid-cols-3">
+          <Upcoming
+            icon={<Package className="h-5 w-5" aria-hidden />}
+            title="Stock a sério"
+            text="Dedução automática na venda a partir das fichas técnicas, com ligação ao teu POS."
+          />
+          <Upcoming
+            icon={<ShieldCheck className="h-5 w-5" aria-hidden />}
+            title="Reputação e escudo anti no-show"
+            text="Reviews num só sítio e protecção contra mesas vazias que ninguém avisou."
+          />
+          <Upcoming
+            icon={<ShoppingBag className="h-5 w-5" aria-hidden />}
+            title="Take-away sem comissões"
+            text="Encomendas directas no teu link, sem plataformas a levar percentagem."
+          />
         </div>
       </section>
 
@@ -299,6 +340,25 @@ function Feature({ icon, title, text }: { icon: React.ReactNode; title: string; 
     <div className="rounded-2xl border border-[hsl(var(--brand-pine)/0.12)] bg-[hsl(var(--brand-cream))] p-6 shadow-[0_1px_2px_hsl(var(--brand-pine)/0.05)] transition-shadow hover:shadow-[0_6px_20px_hsl(var(--brand-pine)/0.10)]">
       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[hsl(var(--brand-terracotta)/0.12)] text-[hsl(var(--brand-terracotta))]">
         {icon}
+      </div>
+      <h3 className={"font-display mt-4 text-xl font-semibold " + pine}>{title}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-[hsl(var(--brand-pine-soft))]">{text}</p>
+    </div>
+  );
+}
+
+// Card de funcionalidade futura ("O que aí vem"): mesmo DNA visual dos
+// Feature, mas tracejado e com selo "em breve" para não vender como actual.
+function Upcoming({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
+  return (
+    <div className="rounded-2xl border-2 border-dashed border-[hsl(var(--brand-pine)/0.2)] bg-[hsl(var(--brand-cream))] p-6">
+      <div className="flex items-center justify-between">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[hsl(var(--brand-pine)/0.08)] text-[hsl(var(--brand-pine-soft))]">
+          {icon}
+        </div>
+        <span className="rounded-full bg-[hsl(var(--brand-terracotta)/0.12)] px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-[hsl(var(--brand-terracotta))]">
+          em breve
+        </span>
       </div>
       <h3 className={"font-display mt-4 text-xl font-semibold " + pine}>{title}</h3>
       <p className="mt-2 text-sm leading-relaxed text-[hsl(var(--brand-pine-soft))]">{text}</p>
