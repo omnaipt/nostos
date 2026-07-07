@@ -20,6 +20,32 @@ const LINE = [
 const pine = "text-[hsl(var(--brand-pine))]";
 const terra = "text-[hsl(var(--brand-terracotta))]";
 
+// Símbolo da marca (o meandro do favicon), como glifo único e nítido.
+function Mark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="20 20 88 88" className={className} aria-hidden="true">
+      <path
+        d="M 32 96 L 32 32 L 96 32 L 96 73.41 L 54.59 73.41 L 54.59 54.59 L 77.18 54.59"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="11.29"
+      />
+    </svg>
+  );
+}
+
+// Separador de secção: linha fina · símbolo · linha fina. Um ornamento, não
+// um friso repetido (feedback David 07-Jul).
+function Ornament() {
+  return (
+    <div className="flex items-center justify-center gap-5 py-3" aria-hidden="true">
+      <span className="h-px w-16 bg-[hsl(var(--brand-pine)/0.18)] sm:w-24" />
+      <Mark className="h-6 w-6 text-[hsl(var(--brand-terracotta))]" />
+      <span className="h-px w-16 bg-[hsl(var(--brand-pine)/0.18)] sm:w-24" />
+    </div>
+  );
+}
+
 function CtaPrimary({
   href,
   children,
@@ -68,7 +94,7 @@ export default function Landing() {
     <div className="landing min-h-screen bg-[hsl(var(--brand-cream))] text-[hsl(var(--brand-pine))] antialiased">
       {/* Header */}
       <header className="container flex items-center justify-between py-6">
-        <img src="/brand/nostos-restaurantes.svg" alt="nostos restaurantes" className="h-11" />
+        <img src="/brand/nostos-restaurantes.svg" alt="nostos restaurantes" className="h-14 sm:h-[4.5rem]" />
         <Link
           to="/login"
           className="rounded-full px-4 py-2 text-sm font-medium text-[hsl(var(--brand-pine-soft))] transition-colors hover:bg-[hsl(var(--brand-pine)/0.06)] hover:text-[hsl(var(--brand-pine))]"
@@ -99,7 +125,7 @@ export default function Landing() {
         </p>
       </section>
 
-      <div className="greca" aria-hidden="true" />
+      <Ornament />
 
       {/* A linha completa */}
       <section className="bg-[hsl(var(--brand-paper))] py-14">
@@ -163,8 +189,7 @@ export default function Landing() {
           {/* Card "ficha de papel" — o herói visual */}
           <div className="relative mx-auto w-full max-w-md">
             <div className="absolute inset-0 translate-x-2 translate-y-2 rounded-2xl bg-[hsl(var(--brand-pine)/0.10)]" aria-hidden />
-            <div className="relative rounded-2xl border border-[hsl(var(--brand-pine)/0.15)] bg-[hsl(var(--brand-paper))] p-7 shadow-sm">
-              <div className="greca -mx-7 -mt-7 mb-6 rounded-t-2xl" aria-hidden />
+            <div className="relative rounded-2xl border border-[hsl(var(--brand-pine)/0.15)] border-t-4 border-t-[hsl(var(--brand-terracotta))] bg-[hsl(var(--brand-paper))] p-7 shadow-sm">
               <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[hsl(var(--brand-pine-soft))]">
                 Ficha técnica · exemplo real
               </p>
@@ -191,7 +216,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <div className="greca" aria-hidden="true" />
+      <Ornament />
 
       {/* Já a funcionar */}
       <section className="bg-[hsl(var(--brand-paper))] py-16">
@@ -236,7 +261,7 @@ export default function Landing() {
 
       <footer className="border-t border-[hsl(var(--brand-pine)/0.12)] py-10">
         <div className="container flex flex-col items-center gap-3">
-          <div className="greca w-40" aria-hidden="true" />
+          <Mark className="h-8 w-8 text-[hsl(var(--brand-terracotta))]" aria-hidden="true" />
           <p className="text-sm text-[hsl(var(--brand-pine-soft))]">
             nostos.pt · uma plataforma OMNAI · reservas@nostos.pt
           </p>

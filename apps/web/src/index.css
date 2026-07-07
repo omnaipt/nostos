@@ -56,10 +56,6 @@
   font-family: "Fraunces", Georgia, "Times New Roman", serif;
   letter-spacing: -0.015em;
 }
-/* Greca (meandro) da identidade: friso repetível em SVG inline. */
-.landing .greca {
-  height: 10px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='10' viewBox='0 0 40 10'%3E%3Cpath d='M0 10V2h18v4h-8V4h-4v6h14V0H0m40 10V2H22v4h8V4h4v6H20' fill='none' stroke='%23B0461F' stroke-width='1.4' opacity='0.55'/%3E%3C/svg%3E");
-  background-repeat: repeat-x;
-  background-size: 40px 10px;
-}
+/* Ornamento de secção: o SÍMBOLO da marca (meandro único, o mesmo do
+   favicon), não friso repetido — decisão David 07-Jul ("não gosto destes
+   traços"). Implementado como componente <Ornament/> na Landing. */
