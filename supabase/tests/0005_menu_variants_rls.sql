@@ -1,13 +1,13 @@
 -- STOA/Nostos — Testes RLS + coerência do Menu v2 (migration 0010).
--- Valida: isolamento multi-tenant de menu_item_variants, o trigger que impede
--- variante com item de outro restaurante, a coerência price_type x price_cents,
--- e que public_menu_by_slug devolve as variantes agregadas.
+-- Valida: isolamento multi-tenant de menu_item_variants e menu_imports, o
+-- trigger que impede variante com item de outro restaurante, a coerência
+-- price_type x price_cents, e que public_menu_by_slug devolve as variantes.
 --
 -- Correr com: supabase test db (pgTAP). Requer 0001_init + 0005_menu_digital + 0010.
 
 begin;
 
-select plan(7);
+select plan(11);
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('11111111-1111-1111-1111-111111111111', 'ownerA@stoa.test', '{"full_name":"Owner A"}'),
@@ -39,14 +39,12 @@ select lives_ok($$
   values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110001-0000-0000-0000-000000000001', '½ dose', 1550, 'dose')
 $$, 'Owner A cria variante no seu item');
 
--- Guarda de coerência: variante com item de OUTRO restaurante é rejeitada.
 select throws_ok($$
   insert into public.menu_item_variants (restaurant_id, item_id, label, price_cents)
   values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '22220002-0000-0000-0000-000000000002', 'dose', 3100)
 $$, 'variante_de_outro_restaurante', null,
    'Variante com item de outro restaurante é rejeitada pelo trigger');
 
--- Coerência price_type x price_cents (check constraint 23514).
 select throws_ok($$
   insert into public.menu_items (restaurant_id, category_id, name, price_type, price_cents)
   values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111111', 'Sem preço mas fixo', 'fixed', null)
@@ -59,7 +57,16 @@ select throws_ok($$
 $$, '23514', null,
    'price_type=market com price_cents é rejeitado');
 
--- ── Cenário 2: Owner B não escreve variantes no tenant A ────────────────────
+select lives_ok($$
+  insert into public.menu_imports (restaurant_id, source_kind, status, unparsed_note)
+  values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'photo', 'review', '1 linha ilegível (tapada)')
+$$, 'Owner A cria import no seu tenant');
+
+select is(
+  (select count(*)::int from public.menu_imports),
+  1, 'Owner A vê o seu import');
+
+-- ── Cenário 2: Owner B não escreve nem vê no tenant A ───────────────────────
 set local request.jwt.claims = '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}';
 
 select throws_ok($$
@@ -67,6 +74,16 @@ select throws_ok($$
   values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110001-0000-0000-0000-000000000001', 'intrusa', 999)
 $$, '42501', null,
    'Owner B não insere variante no tenant A (with check)');
+
+select is(
+  (select count(*)::int from public.menu_imports),
+  0, 'Owner B não vê imports do tenant A');
+
+select throws_ok($$
+  insert into public.menu_imports (restaurant_id, source_kind)
+  values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'pdf')
+$$, '42501', null,
+   'Owner B não cria import no tenant A (with check)');
 
 -- ── Cenário 3: RPC pública devolve variantes agregadas ──────────────────────
 reset role;

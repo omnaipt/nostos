@@ -1,11 +1,33 @@
--- 0010 — Menu v2: variantes, unidades e metadados de revisão. Evolui o 0005.
--- Modelo HÍBRIDO (decisão David, 08-07-2026): o item simples mantém o preço em
--- menu_items.price_cents; só o caso com doses/porções usa menu_item_variants.
--- price_type distingue: fixed | per_kg | market | variants.
--- Acrescenta rasto de parse/revisão para o enrollment (source, needs_review,
--- allergens_confirmed). Aditivo e retrocompatível com o menu público.
+-- 0010 — Menu v2: variantes, unidades, metadados de revisão e importações.
+-- Evolui o 0005. Modelo HÍBRIDO (decisão David, 08-07-2026): o item simples
+-- mantém o preço em menu_items.price_cents; só o caso com doses/porções usa
+-- menu_item_variants. Acrescenta:
+--   • price_type (fixed|per_kg|market|variants), serves, external_ref;
+--   • rasto de revisão do enrollment: source, needs_review, review_note,
+--     allergens_confirmed;
+--   • menu_imports: um lote de importação (foto/pdf/manual) com estado e nota
+--     de linhas ilegíveis; menu_items.import_id liga o item ao lote.
+-- Aditivo e retrocompatível com o menu público.
 
--- ── 1) Campos novos no item ─────────────────────────────────────────────────
+-- ── 1) Importações (lote de enrollment) ─────────────────────────────────────
+create table if not exists public.menu_imports (
+  id            uuid primary key default gen_random_uuid(),
+  restaurant_id uuid not null references public.restaurants(id) on delete cascade,
+  source_kind   text not null default 'photo'
+    check (source_kind in ('photo','pdf','manual')),
+  source_ref    text,                           -- nome do ficheiro / ref de storage
+  status        text not null default 'parsing'
+    check (status in ('parsing','review','published','failed')),
+  items_count   int  not null default 0,
+  flagged_count int  not null default 0,
+  unparsed_note text,                            -- linhas ilegíveis, para o dono ver
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+create index if not exists menu_imports_restaurant_idx
+  on public.menu_imports(restaurant_id);
+
+-- ── 2) Campos novos no item ─────────────────────────────────────────────────
 alter table public.menu_items
   add column if not exists price_type text not null default 'fixed'
     check (price_type in ('fixed','per_kg','market','variants')),
@@ -14,7 +36,11 @@ alter table public.menu_items
   add column if not exists source text not null default 'manual'
     check (source in ('manual','parsed')),
   add column if not exists needs_review boolean not null default false,
-  add column if not exists allergens_confirmed boolean not null default false;
+  add column if not exists review_note text,                  -- porquê do aviso (ecrã de revisão)
+  add column if not exists allergens_confirmed boolean not null default false,
+  add column if not exists import_id uuid references public.menu_imports(id) on delete set null;
+-- Nota: import_id não é tenant-guarded por trigger (é definido pela app sob RLS).
+-- Para o mesmo rigor da guarda de categoria, acrescenta-se um trigger análogo.
 
 -- Itens legados sem preço passam a 'market' (no 0005 price_cents podia ser null).
 update public.menu_items set price_type = 'market' where price_cents is null;
@@ -29,7 +55,7 @@ alter table public.menu_items
   ) not valid;
 alter table public.menu_items validate constraint menu_items_price_type_coherent;
 
--- ── 2) Variantes de preço (½ dose/dose, 2 pax/½ dose, etc.) ──────────────────
+-- ── 3) Variantes de preço (½ dose/dose, 2 pax/½ dose, etc.) ──────────────────
 create table if not exists public.menu_item_variants (
   id            uuid primary key default gen_random_uuid(),
   restaurant_id uuid not null references public.restaurants(id) on delete cascade,
@@ -69,16 +95,25 @@ create trigger menu_item_variants_tenant_guard
 create trigger menu_item_variants_touch before update on public.menu_item_variants
   for each row execute function public.touch_updated_at();
 
--- ── 3) RLS (mesmo padrão *_member_all das outras tabelas de negócio) ─────────
+-- ── 4) RLS e touch (mesmo padrão *_member_all das outras tabelas) ────────────
+create trigger menu_imports_touch before update on public.menu_imports
+  for each row execute function public.touch_updated_at();
+
+alter table public.menu_imports enable row level security;
+create policy menu_imports_member_all on public.menu_imports
+  for all using (public.is_restaurant_member(restaurant_id))
+  with check (public.is_restaurant_member(restaurant_id));
+
 alter table public.menu_item_variants enable row level security;
 create policy menu_item_variants_member_all on public.menu_item_variants
   for all using (public.is_restaurant_member(restaurant_id))
   with check (public.is_restaurant_member(restaurant_id));
 
--- ── 4) RPC pública: tipo de preço, serve e variantes agregadas ──────────────
+-- ── 5) RPC pública: tipo de preço, serve e variantes agregadas ──────────────
 -- A assinatura de saída muda, logo DROP + CREATE (CREATE OR REPLACE não deixa
--- alterar as colunas de retorno). Re-concede EXECUTE para o público anónimo do
--- menu por QR não partir com o drop.
+-- alterar as colunas de retorno). Re-concede EXECUTE ao público anónimo do
+-- menu por QR para não partir com o drop. review_note/import_id são internos,
+-- não saem na RPC pública.
 drop function if exists public.public_menu_by_slug(text);
 create function public.public_menu_by_slug(p_slug text)
 returns table (
