@@ -50,7 +50,7 @@ $$, 'Owner A cria prato no seu tenant');
 select throws_ok($$
   insert into public.menu_items (restaurant_id, category_id, name)
   values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'c2111111-1111-1111-1111-111111111111', 'Cruzado')
-$$, 'categoria_de_outro_restaurante', null,
+$$, 'P0001', 'categoria_de_outro_restaurante',
    'Item com categoria de outro restaurante é rejeitado');
 
 select is(

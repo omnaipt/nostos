@@ -4,7 +4,7 @@ import { UtensilsCrossed } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePublicRestaurant } from "@/hooks/use-public-booking";
-import { usePublicMenu } from "@/hooks/use-public-menu";
+import { usePublicMenu, type PublicMenuItem } from "@/hooks/use-public-menu";
 import { SommelierWidget } from "@/components/public/SommelierWidget";
 import { isWineCategory } from "@/lib/sommelier";
 import { ALLERGEN_LABEL, formatPriceCents } from "@/lib/types";
@@ -106,9 +106,7 @@ export default function PublicMenu() {
                         </span>
                       )}
                     </span>
-                    <span className="shrink-0 tabular-nums text-muted-foreground">
-                      {formatPriceCents(item.priceCents)}
-                    </span>
+                    <ItemPrice item={item} />
                   </div>
                   {item.description && (
                     <p className="mt-0.5 text-sm text-muted-foreground">
@@ -132,6 +130,49 @@ export default function PublicMenu() {
         {slug && hasWines && <SommelierWidget slug={slug} dishNames={dishNames} />}
       </div>
     </MenuShell>
+  );
+}
+
+// Preço conforme o price_type (0010): fixed normal; per_kg com sufixo "/kg";
+// market em "preço do dia"; variants empilha "label · preço" (ex.: 2 pax,
+// ½ dose). Variante sem preço cai para "preço do dia".
+function ItemPrice({ item }: { item: PublicMenuItem }) {
+  if (item.priceType === "market") {
+    return (
+      <span className="shrink-0 text-sm italic text-muted-foreground">
+        preço do dia
+      </span>
+    );
+  }
+  if (item.priceType === "per_kg") {
+    return (
+      <span className="shrink-0 tabular-nums text-muted-foreground">
+        {formatPriceCents(item.priceCents)}
+        <span className="text-xs"> /kg</span>
+      </span>
+    );
+  }
+  if (item.priceType === "variants" && item.variants.length > 0) {
+    return (
+      <span className="flex shrink-0 flex-col items-end gap-0.5 text-sm tabular-nums text-muted-foreground">
+        {item.variants.map((v) => (
+          <span key={v.label}>
+            {v.label} ·{" "}
+            {v.priceCents == null ? (
+              <span className="italic">preço do dia</span>
+            ) : (
+              formatPriceCents(v.priceCents)
+            )}
+            {v.unit === "kg" && <span className="text-xs"> /kg</span>}
+          </span>
+        ))}
+      </span>
+    );
+  }
+  return (
+    <span className="shrink-0 tabular-nums text-muted-foreground">
+      {formatPriceCents(item.priceCents)}
+    </span>
   );
 }
 
