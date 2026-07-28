@@ -5,11 +5,23 @@ import { supabase } from "@/integrations/supabase/client";
 // public_menu_by_slug (0005): só categorias/itens ACTIVOS. A existência e o
 // nome do restaurante vêm de usePublicRestaurant (use-public-booking).
 
+export type PublicPriceType = "fixed" | "per_kg" | "market" | "variants";
+
+export interface PublicMenuVariant {
+  label: string;
+  priceCents: number | null;
+  unit: string;
+  serves: number | null;
+}
+
 export interface PublicMenuItem {
   id: string;
   name: string;
   description: string | null;
   priceCents: number | null;
+  priceType: PublicPriceType;
+  serves: number | null;
+  variants: PublicMenuVariant[];
   allergens: string[];
   available: boolean;
 }
@@ -31,9 +43,37 @@ interface MenuRow {
   item_name: string | null;
   item_description: string | null;
   price_cents: number | null;
+  price_type: string | null;
+  serves: number | null;
   allergens: string[] | null;
+  variants: unknown;
   item_sort: number | null;
   available: boolean | null;
+}
+
+const PRICE_TYPES: readonly PublicPriceType[] = [
+  "fixed",
+  "per_kg",
+  "market",
+  "variants",
+];
+
+// O jsonb da RPC chega sem tipo; validamos a forma antes de usar.
+function parseVariants(raw: unknown): PublicMenuVariant[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((v) => {
+    if (typeof v !== "object" || v === null) return [];
+    const o = v as Record<string, unknown>;
+    if (typeof o.label !== "string") return [];
+    return [
+      {
+        label: o.label,
+        priceCents: typeof o.price_cents === "number" ? o.price_cents : null,
+        unit: typeof o.unit === "string" ? o.unit : "dose",
+        serves: typeof o.serves === "number" ? o.serves : null,
+      },
+    ];
+  });
 }
 
 export function usePublicMenu(slug: string | undefined) {
@@ -58,6 +98,11 @@ export function usePublicMenu(slug: string | undefined) {
             name: r.item_name ?? "",
             description: r.item_description,
             priceCents: r.price_cents,
+            priceType: PRICE_TYPES.includes(r.price_type as PublicPriceType)
+              ? (r.price_type as PublicPriceType)
+              : "fixed",
+            serves: r.serves,
+            variants: parseVariants(r.variants),
             allergens: r.allergens ?? [],
             available: r.available ?? true,
           });
