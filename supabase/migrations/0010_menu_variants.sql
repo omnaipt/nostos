@@ -14,7 +14,7 @@ create table if not exists public.menu_imports (
   id            uuid primary key default gen_random_uuid(),
   restaurant_id uuid not null references public.restaurants(id) on delete cascade,
   source_kind   text not null default 'photo'
-    check (source_kind in ('photo','pdf','manual')),
+    check (source_kind in ('photo','pdf','manual','wine_list')),
   source_ref    text,                           -- nome do ficheiro / ref de storage
   status        text not null default 'parsing'
     check (status in ('parsing','review','published','failed')),
@@ -38,7 +38,19 @@ alter table public.menu_items
   add column if not exists needs_review boolean not null default false,
   add column if not exists review_note text,                  -- porquê do aviso (ecrã de revisão)
   add column if not exists allergens_confirmed boolean not null default false,
-  add column if not exists import_id uuid references public.menu_imports(id) on delete set null;
+  add column if not exists import_id uuid references public.menu_imports(id) on delete set null,
+  -- Pratos do dia (decisão David 28-07): um prato 'daily' pertence a UM dia
+  -- (service_date) e esconde-se sozinho do menu público quando o dia passa.
+  -- O ritmo diário resolve-se no editor com "duplicar os de ontem".
+  add column if not exists kind text not null default 'standard'
+    check (kind in ('standard','daily')),
+  add column if not exists service_date date;
+
+alter table public.menu_items
+  add constraint menu_items_daily_coherent check (
+    (kind = 'standard' and service_date is null) or
+    (kind = 'daily'    and service_date is not null)
+  );
 -- Nota: import_id não é tenant-guarded por trigger (é definido pela app sob RLS).
 -- Para o mesmo rigor da guarda de categoria, acrescenta-se um trigger análogo.
 
@@ -148,6 +160,8 @@ language sql security definer stable set search_path = public as $$
   from public.restaurants r
   join public.menu_categories c on c.restaurant_id = r.id and c.active
   left join public.menu_items i on i.category_id = c.id and i.active
+    -- pratos do dia: só saem no próprio dia (fuso PT; v0 sem timezone por tenant)
+    and (i.kind = 'standard' or i.service_date = (now() at time zone 'Europe/Lisbon')::date)
   where r.slug = p_slug
   order by c.sort_order, c.label, i.sort_order nulls last, i.name nulls last;
 $$;

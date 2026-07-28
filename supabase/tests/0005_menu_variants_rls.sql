@@ -7,7 +7,7 @@
 
 begin;
 
-select plan(11);
+select plan(13);
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('11111111-1111-1111-1111-111111111111', 'ownerA@stoa.test', '{"full_name":"Owner A"}'),
@@ -98,6 +98,19 @@ select is(
      from public.public_menu_by_slug('tasca-a')
     where item_name = 'Bacalhau à casa'),
   'variants', 'RPC pública devolve o price_type do item');
+
+-- ── Cenário 4: pratos do dia só saem no próprio dia ─────────────────────────
+insert into public.menu_items (restaurant_id, category_id, name, price_type, price_cents, kind, service_date, active) values
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111111', 'Prato do dia HOJE',  'fixed', 1200, 'daily', (now() at time zone 'Europe/Lisbon')::date, true),
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111111', 'Prato do dia ONTEM', 'fixed', 1100, 'daily', (now() at time zone 'Europe/Lisbon')::date - 1, true);
+
+select is(
+  (select count(*)::int from public.public_menu_by_slug('tasca-a') where item_name = 'Prato do dia HOJE'),
+  1, 'Prato do dia de hoje aparece no menu público');
+
+select is(
+  (select count(*)::int from public.public_menu_by_slug('tasca-a') where item_name = 'Prato do dia ONTEM'),
+  0, 'Prato do dia de ontem escondeu-se sozinho');
 
 select * from finish();
 rollback;
