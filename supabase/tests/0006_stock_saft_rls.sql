@@ -8,7 +8,7 @@
 
 begin;
 
-select plan(13);
+select plan(16);
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('11111111-1111-1111-1111-111111111111', 'ownerA@stoa.test', '{"full_name":"Owner A"}'),
@@ -23,10 +23,12 @@ insert into public.restaurant_members (restaurant_id, user_id, role) values
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '22222222-2222-2222-2222-222222222222', 'owner');
 
 insert into public.menu_categories (id, restaurant_id, label) values
-  ('c1111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Peixe');
+  ('c1111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Peixe'),
+  ('c2222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Pratos B');
 
 insert into public.menu_items (id, restaurant_id, category_id, name, price_cents) values
-  ('11110001-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111111', 'Polvo à lagareiro', 1800);
+  ('11110001-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111111', 'Polvo à lagareiro', 1800),
+  ('22220002-0000-0000-0000-000000000002', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'c2222222-2222-2222-2222-222222222222', 'Prato alheio', 1000);
 
 insert into public.ingredients (id, restaurant_id, name, unit, cost_per_unit_cents, stock_qty, low_stock_threshold) values
   ('a1110001-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Polvo fresco', 'kg', 890, 0, 5),
@@ -68,18 +70,35 @@ $$, '23514', null, 'purchase com qty negativa é rejeitada');
 select throws_ok($$
   insert into public.stock_movements (restaurant_id, ingredient_id, kind, qty, unit)
   values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'a1110001-0000-0000-0000-000000000001', 'purchase', 1.000, 'l')
-$$, 'unidade_diferente_do_ingrediente', null, 'Unidade incoerente é rejeitada');
+$$, 'P0001', 'unidade_diferente_do_ingrediente', 'Unidade incoerente é rejeitada');
 
 -- Imutabilidade.
 select throws_ok($$
   update public.stock_movements set qty = -6.000 where source_ref = 'FS A/0001'
-$$, 'movimento_imutavel_corrigir_com_adjustment', null, 'Movimento não se edita');
+$$, 'P0001', 'movimento_imutavel_corrigir_com_adjustment', 'Movimento não se edita');
+
+-- Delete reverte o saldo (decisão v0: necessário para a idempotência da edge
+-- import-saft, que limpa os movimentos de um import antes de reescrever).
+select lives_ok($$
+  delete from public.stock_movements
+   where kind = 'sale_depletion' and source_ref = 'FS A/0001'
+$$, 'Delete de movimento é permitido (limpeza administrativa)');
+
+select is(
+  (select stock_qty from public.ingredients where id = 'a1110001-0000-0000-0000-000000000001'),
+  12.000::numeric, 'Delete reverteu o saldo (5 → 12)');
 
 -- Mapa POS: prato de outro tenant é rejeitado.
 select lives_ok($$
   insert into public.pos_product_map (restaurant_id, pos_code, pos_description, menu_item_id, confirmed)
   values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '401', 'POLVO LAGAR.', '11110001-0000-0000-0000-000000000001', true)
 $$, 'Mapa POS→prato criado');
+
+select throws_ok($$
+  insert into public.pos_product_map (restaurant_id, pos_code, menu_item_id)
+  values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '999', '22220002-0000-0000-0000-000000000002')
+$$, 'P0001', 'prato_de_outro_restaurante',
+   'Mapa POS com prato de outro restaurante é rejeitado');
 
 -- ── Cenário 2: SAF-T imports ────────────────────────────────────────────────
 select lives_ok($$
