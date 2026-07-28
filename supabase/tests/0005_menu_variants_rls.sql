@@ -7,7 +7,7 @@
 
 begin;
 
-select plan(13);
+select plan(17);
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('11111111-1111-1111-1111-111111111111', 'ownerA@stoa.test', '{"full_name":"Owner A"}'),
@@ -30,6 +30,10 @@ insert into public.menu_items (id, restaurant_id, category_id, name, price_type,
   ('11110001-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111111', 'Bacalhau à casa', 'variants', null, true),
   ('22220002-0000-0000-0000-000000000002', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'c2111111-1111-1111-1111-111111111111', 'Polvo à lagareiro', 'fixed', 1800, true);
 
+-- Import no tenant B (setup como postgres) para testar a guarda de import_id.
+insert into public.menu_imports (id, restaurant_id, source_kind) values
+  ('99990001-0000-0000-0000-000000000099', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'pdf');
+
 -- ── Cenário 1: Owner A no seu tenant ────────────────────────────────────────
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
@@ -42,8 +46,19 @@ $$, 'Owner A cria variante no seu item');
 select throws_ok($$
   insert into public.menu_item_variants (restaurant_id, item_id, label, price_cents)
   values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '22220002-0000-0000-0000-000000000002', 'dose', 3100)
-$$, 'variante_de_outro_restaurante', null,
+$$, 'P0001', 'variante_de_outro_restaurante',
    'Variante com item de outro restaurante é rejeitada pelo trigger');
+
+select lives_ok($$
+  update public.menu_item_variants set is_default = true
+  where item_id = '11110001-0000-0000-0000-000000000001' and label = '½ dose'
+$$, 'Owner A marca a variante como default');
+
+select throws_ok($$
+  insert into public.menu_item_variants (restaurant_id, item_id, label, price_cents, is_default)
+  values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110001-0000-0000-0000-000000000001', 'dose', 2900, true)
+$$, '23505', null,
+   'Segunda variante default no mesmo item viola o índice único parcial');
 
 select throws_ok($$
   insert into public.menu_items (restaurant_id, category_id, name, price_type, price_cents)
@@ -66,17 +81,35 @@ select is(
   (select count(*)::int from public.menu_imports),
   1, 'Owner A vê o seu import');
 
+select lives_ok($$
+  update public.menu_items
+     set import_id = (select id from public.menu_imports
+                       where restaurant_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' limit 1)
+   where id = '11110001-0000-0000-0000-000000000001'
+$$, 'Owner A liga o item ao seu próprio import');
+
+select throws_ok($$
+  update public.menu_items
+     set import_id = '99990001-0000-0000-0000-000000000099'
+   where id = '11110001-0000-0000-0000-000000000001'
+$$, 'P0001', 'import_de_outro_restaurante',
+   'Item ligado a import de outro restaurante é rejeitado pela guarda');
+
 -- ── Cenário 2: Owner B não escreve nem vê no tenant A ───────────────────────
 set local request.jwt.claims = '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}';
 
+-- Nota: o trigger BEFORE corre antes do WITH CHECK do RLS; sob o RLS do B o
+-- item do tenant A é invisível, logo o erro é o do trigger, não 42501.
+-- O insert fica bloqueado na mesma (defesa em profundidade).
 select throws_ok($$
   insert into public.menu_item_variants (restaurant_id, item_id, label, price_cents)
   values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110001-0000-0000-0000-000000000001', 'intrusa', 999)
-$$, '42501', null,
-   'Owner B não insere variante no tenant A (with check)');
+$$, 'P0001', 'variante_de_outro_restaurante',
+   'Owner B não insere variante no tenant A (bloqueado pelo trigger antes do RLS)');
 
 select is(
-  (select count(*)::int from public.menu_imports),
+  (select count(*)::int from public.menu_imports
+    where restaurant_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
   0, 'Owner B não vê imports do tenant A');
 
 select throws_ok($$

@@ -51,8 +51,24 @@ alter table public.menu_items
     (kind = 'standard' and service_date is null) or
     (kind = 'daily'    and service_date is not null)
   );
--- Nota: import_id não é tenant-guarded por trigger (é definido pela app sob RLS).
--- Para o mesmo rigor da guarda de categoria, acrescenta-se um trigger análogo.
+-- Guarda de tenant no import_id (mesmo rigor da guarda de categoria): a FK não
+-- passa pelo RLS, logo sem isto um membro podia ligar o item a um import de
+-- outro restaurante.
+create or replace function public.menu_item_import_same_restaurant()
+returns trigger language plpgsql set search_path = public as $$
+begin
+  if new.import_id is not null and not exists (
+    select 1 from public.menu_imports m
+     where m.id = new.import_id and m.restaurant_id = new.restaurant_id
+  ) then
+    raise exception 'import_de_outro_restaurante';
+  end if;
+  return new;
+end $$;
+
+create trigger menu_items_import_guard
+  before insert or update on public.menu_items
+  for each row execute function public.menu_item_import_same_restaurant();
 
 -- Itens legados sem preço passam a 'market' (no 0005 price_cents podia ser null).
 update public.menu_items set price_type = 'market' where price_cents is null;
@@ -86,6 +102,9 @@ create index if not exists menu_item_variants_item_idx
   on public.menu_item_variants(item_id);
 create index if not exists menu_item_variants_restaurant_idx
   on public.menu_item_variants(restaurant_id);
+-- No máximo uma variante por defeito por item (na BD, não na app).
+create unique index if not exists menu_item_variants_one_default
+  on public.menu_item_variants(item_id) where is_default;
 
 -- Guarda multi-tenant: a variante e o item têm de ser do mesmo restaurante.
 create or replace function public.menu_variant_item_same_restaurant()

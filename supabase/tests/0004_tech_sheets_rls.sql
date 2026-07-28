@@ -58,20 +58,20 @@ $$, 'Linha livre (sem ingrediente) é permitida');
 select throws_ok($$
   insert into public.tech_sheets (restaurant_id, menu_item_id)
   values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'd0000000-0000-0000-0000-00000000000b')
-$$, 'prato_de_outro_restaurante', null,
+$$, 'P0001', 'prato_de_outro_restaurante',
    'Ficha para prato de outro restaurante é rejeitada');
 
 select throws_ok($$
   insert into public.tech_sheet_ingredients (restaurant_id, tech_sheet_id, ingredient_id, name, qty, unit)
   values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'f0000000-0000-0000-0000-00000000000a',
           'e0000000-0000-0000-0000-00000000000b', 'Cruzado', 1, 'g')
-$$, 'ingrediente_de_outro_restaurante', null,
+$$, 'P0001', 'ingrediente_de_outro_restaurante',
    'Linha com ingrediente de outro restaurante é rejeitada');
 
 select throws_ok($$
   insert into public.tech_sheets (restaurant_id, menu_item_id)
   values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'd0000000-0000-0000-0000-00000000000a')
-$$, 23505, null, 'Segunda ficha para o mesmo prato viola o unique 1:1');
+$$, '23505', null, 'Segunda ficha para o mesmo prato viola o unique 1:1');
 
 -- ── Cenário 2: Owner B não vê nem escreve no tenant A ───────────────────────
 set local request.jwt.claims = '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}';
