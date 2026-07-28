@@ -36,4 +36,17 @@ export const queryKeys = {
     ["fichas", restaurantId, "sheets"] as const,
   techSheetLines: (restaurantId: string | undefined) =>
     ["fichas", restaurantId, "lines"] as const,
+  // Stock (0011). stockRoot invalida movimentos de qualquer ingrediente.
+  stockRoot: ["stock"] as const,
+  stockMovements: (restaurantId: string | undefined, ingredientId: string | undefined) =>
+    ["stock", restaurantId, "movements", ingredientId] as const,
+  lastPurchases: (restaurantId: string | undefined) =>
+    ["stock", restaurantId, "last-purchases"] as const,
+  // Imports SAF-T (0012). saftRoot invalida lotes + linhas + último fecho.
+  saftRoot: ["saft"] as const,
+  saftImports: (restaurantId: string | undefined) => ["saft", restaurantId, "imports"] as const,
+  saftUnmatchedLines: (importId: string | undefined) =>
+    ["saft", "unmatched", importId] as const,
+  lastAppliedImport: (restaurantId: string | undefined) =>
+    ["saft", restaurantId, "last-applied"] as const,
 };

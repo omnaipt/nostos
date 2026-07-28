@@ -6,7 +6,9 @@ import { useOwnerSummary, type WeekSummary } from "@/hooks/use-owner-summary";
 import { useIngredients } from "@/hooks/use-ingredients";
 import { useMenuItems } from "@/hooks/use-menu";
 import { useTechSheetLines, useTechSheets } from "@/hooks/use-tech-sheets";
+import { useLastAppliedImport } from "@/hooks/use-saft";
 import { computeMenuMargins } from "@/lib/types";
+import { computePantrySummary } from "@/lib/stock";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +39,13 @@ export default function Dashboard() {
       restaurant.target_margin_pct ?? 65,
     );
   }, [itemsQuery.data, sheetsQuery.data, sheetLinesQuery.data, ingredientsQuery.data, restaurant]);
+
+  // Despensa + fecho SAF-T (0011/0012): alerta de reposição e último fecho.
+  const pantry = React.useMemo(
+    () => (ingredientsQuery.data ? computePantrySummary(ingredientsQuery.data) : null),
+    [ingredientsQuery.data],
+  );
+  const lastAppliedQuery = useLastAppliedImport(restaurant?.id);
   return (
     <div className="container py-8">
       <header className="mb-8 flex items-center justify-between">
@@ -169,6 +178,46 @@ export default function Dashboard() {
               )}
             >
               Abrir margens
+            </Link>
+          </CardContent>
+        </Card>
+        <Card className={pantry && pantry.belowMinCount > 0 ? "border-destructive/50" : undefined}>
+          <CardHeader><CardTitle>Despensa</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {pantry && pantry.belowMinCount > 0 ? (
+                <strong className="text-destructive">
+                  {pantry.belowMinCount} ingrediente{pantry.belowMinCount > 1 ? "s" : ""} abaixo do
+                  mínimo
+                </strong>
+              ) : (
+                "Saldos, alertas de reposição e rasto de movimentos."
+              )}
+            </p>
+            <Link
+              to="/despensa"
+              className={buttonVariants(
+                pantry && pantry.belowMinCount > 0 ? {} : { variant: "outline" },
+              )}
+            >
+              Abrir despensa
+            </Link>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Fecho do dia (SAF-T)</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {lastAppliedQuery.data
+                ? `Último fecho: ${new Date(
+                    lastAppliedQuery.data.applied_at ?? lastAppliedQuery.data.created_at,
+                  ).toLocaleDateString("pt-PT", { day: "numeric", month: "short" })} · ${
+                    lastAppliedQuery.data.invoices_count
+                  } faturas`
+                : "Importa o SAF-T do dia; as vendas abatem a despensa pelas fichas."}
+            </p>
+            <Link to="/fecho-dia" className={buttonVariants({ variant: "outline" })}>
+              Abrir fecho do dia
             </Link>
           </CardContent>
         </Card>

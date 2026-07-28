@@ -153,6 +153,13 @@ export type TechSheetUpdate = TablesUpdate<"tech_sheets">;
 export type TechSheetIngredient = Tables<"tech_sheet_ingredients">;
 export type TechSheetIngredientInsert = TablesInsert<"tech_sheet_ingredients">;
 
+// ── Stock + Imports SAF-T (migrations 0011/0012) ─────────────────────────────
+export type StockMovement = Tables<"stock_movements">;
+export type StockMovementInsert = TablesInsert<"stock_movements">;
+export type SaftImport = Tables<"saft_imports">;
+export type SaftImportLine = Tables<"saft_import_lines">;
+export type PosProductMap = Tables<"pos_product_map">;
+
 export const UNIT_OPTIONS = [
   { code: "g", label: "g" },
   { code: "kg", label: "kg" },

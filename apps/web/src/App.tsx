@@ -12,6 +12,8 @@ import Availability from "@/pages/Availability";
 import Settings from "@/pages/Settings";
 import Customers from "@/pages/Customers";
 import Margins from "@/pages/Margins";
+import Pantry from "@/pages/Pantry";
+import SaftClose from "@/pages/SaftClose";
 import KitchenSheet from "@/pages/KitchenSheet";
 import PublicBooking from "@/pages/PublicBooking";
 import PublicMenu from "@/pages/PublicMenu";
@@ -72,6 +74,22 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Margins />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/despensa"
+              element={
+                <ProtectedRoute>
+                  <Pantry />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/fecho-dia"
+              element={
+                <ProtectedRoute>
+                  <SaftClose />
                 </ProtectedRoute>
               }
             />
