@@ -230,6 +230,7 @@ export type Database = {
           flagged_count: number
           id: string
           items_count: number
+          payload: Json | null
           restaurant_id: string
           source_kind: string
           source_ref: string | null
@@ -242,6 +243,7 @@ export type Database = {
           flagged_count?: number
           id?: string
           items_count?: number
+          payload?: Json | null
           restaurant_id: string
           source_kind?: string
           source_ref?: string | null
@@ -254,6 +256,7 @@ export type Database = {
           flagged_count?: number
           id?: string
           items_count?: number
+          payload?: Json | null
           restaurant_id?: string
           source_kind?: string
           source_ref?: string | null
@@ -1173,6 +1176,10 @@ export type Database = {
       ingredient_avg_cost: {
         Args: { p_ingredient_id: string }
         Returns: number
+      }
+      publish_menu_import: {
+        Args: { p_import_id: string; p_menu: Json; p_restaurant_id: string }
+        Returns: Json
       }
       is_restaurant_member: { Args: { target: string }; Returns: boolean }
       public_create_lead: {
