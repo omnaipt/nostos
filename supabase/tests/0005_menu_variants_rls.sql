@@ -3,11 +3,11 @@
 -- trigger que impede variante com item de outro restaurante, a coerência
 -- price_type x price_cents, e que public_menu_by_slug devolve as variantes.
 --
--- Correr com: supabase test db (pgTAP). Requer 0001_init + 0005_menu_digital + 0010 + 0013.
+-- Correr com: supabase test db (pgTAP). Requer 0001_init + 0005_menu_digital + 0010 + 0013 + 0014.
 
 begin;
 
-select plan(19);
+select plan(21);
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('11111111-1111-1111-1111-111111111111', 'ownerA@stoa.test', '{"full_name":"Owner A"}'),
@@ -156,6 +156,15 @@ select is(
 select is(
   (select by_order from public.public_menu_by_slug('tasca-a') where item_name = 'Bacalhau à casa'),
   false, 'Item normal sai com by_order=false por omissão');
+
+-- ── Cenário 6: kind (0014) exposto pela RPC pública ─────────────────────────
+select is(
+  (select kind from public.public_menu_by_slug('tasca-a') where item_name = 'Prato do dia HOJE'),
+  'daily', 'Prato do dia sai com kind=daily na RPC pública');
+
+select is(
+  (select kind from public.public_menu_by_slug('tasca-a') where item_name = 'Bacalhau à casa'),
+  'standard', 'Item normal sai com kind=standard');
 
 select * from finish();
 rollback;
