@@ -5,7 +5,10 @@ import type {
   MenuCategory,
   MenuCategoryUpdate,
   MenuItem,
+  MenuItemInsert,
   MenuItemUpdate,
+  MenuItemVariant,
+  MenuItemVariantUpdate,
 } from "@/lib/types";
 
 // Menu Digital — CRUD tenant-scoped via RLS (menu_*_member_all). Nunca
@@ -55,6 +58,7 @@ function useInvalidateMenu(restaurantId: string | undefined) {
   return () => {
     qc.invalidateQueries({ queryKey: queryKeys.menuCategories(restaurantId) });
     qc.invalidateQueries({ queryKey: queryKeys.menuItems(restaurantId) });
+    qc.invalidateQueries({ queryKey: queryKeys.menuItemVariants(restaurantId) });
   };
 }
 
@@ -141,6 +145,48 @@ export function useDeleteItem(restaurantId: string | undefined) {
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("menu_items").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+// Insert em lote para os pratos do dia ("Duplicar os de ontem" e afins).
+export function useCreateDailyItems(restaurantId: string | undefined) {
+  const invalidate = useInvalidateMenu(restaurantId);
+  return useMutation({
+    mutationFn: async (rows: MenuItemInsert[]): Promise<number> => {
+      if (rows.length === 0) return 0;
+      const { error } = await supabase.from("menu_items").insert(rows);
+      if (error) throw error;
+      return rows.length;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+// ── Variantes (0010): preços por dose editáveis na linha do editor ──────────
+export function useItemVariants(restaurantId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.menuItemVariants(restaurantId),
+    queryFn: async (): Promise<MenuItemVariant[]> => {
+      const { data, error } = await supabase
+        .from("menu_item_variants")
+        .select("*")
+        .eq("restaurant_id", restaurantId as string)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as MenuItemVariant[];
+    },
+    enabled: !!restaurantId,
+  });
+}
+
+export function useUpdateVariant(restaurantId: string | undefined) {
+  const invalidate = useInvalidateMenu(restaurantId);
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: MenuItemVariantUpdate }) => {
+      const { error } = await supabase.from("menu_item_variants").update(patch).eq("id", id);
       if (error) throw error;
     },
     onSuccess: invalidate,

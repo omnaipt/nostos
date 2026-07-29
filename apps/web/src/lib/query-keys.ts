@@ -28,6 +28,8 @@ export const queryKeys = {
     ["menu", restaurantId, "categories"] as const,
   menuItems: (restaurantId: string | undefined) =>
     ["menu", restaurantId, "items"] as const,
+  menuItemVariants: (restaurantId: string | undefined) =>
+    ["menu", restaurantId, "variants"] as const,
   // Ficha Técnica + Despensa (0006). fichasRoot invalida despensa + fichas + linhas.
   fichasRoot: ["fichas"] as const,
   ingredients: (restaurantId: string | undefined) =>
