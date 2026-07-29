@@ -101,6 +101,9 @@ export type MenuItem = Tables<"menu_items">;
 export type MenuItemInsert = TablesInsert<"menu_items">;
 export type MenuItemUpdate = TablesUpdate<"menu_items">;
 
+export type MenuItemVariant = Tables<"menu_item_variants">;
+export type MenuItemVariantUpdate = TablesUpdate<"menu_item_variants">;
+
 // Alergénios de declaração obrigatória na UE (Reg. 1169/2011, anexo II).
 export const ALLERGENS: { code: string; label: string }[] = [
   { code: "gluten", label: "Glúten" },
