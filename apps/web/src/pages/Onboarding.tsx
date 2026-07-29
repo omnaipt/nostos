@@ -9,7 +9,7 @@ export default function Onboarding() {
   return (
     <div className="container max-w-2xl py-8">
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold">Criar restaurante</h1>
+        <h1 className="font-display text-2xl font-semibold text-atlantico-900">Criar restaurante</h1>
         <p className="text-sm text-muted-foreground">
           Regista o teu restaurante, as tuas mesas e os teus turnos para começares a aceitar reservas.
         </p>

@@ -177,7 +177,7 @@ export default function Availability() {
     <div className="container py-6">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Disponibilidade</h1>
+          <h1 className="font-display text-2xl font-semibold text-atlantico-900">Disponibilidade</h1>
           <p className="text-sm capitalize text-muted-foreground">{formatDateLabel(date)}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -480,7 +480,7 @@ function SummaryStat({
           {icon}
           {label}
         </span>
-        <span className={cn("text-xl font-semibold", highlight && "text-[hsl(var(--status-pending-fg))]")}>
+        <span className={cn("font-display text-xl font-semibold", highlight && "text-[hsl(var(--status-pending-fg))]")}>
           {value}
         </span>
       </CardContent>

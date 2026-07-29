@@ -63,7 +63,7 @@ export default function Margins() {
     <div className="container max-w-3xl py-8">
       <header className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Margens do menu</h1>
+          <h1 className="font-display text-2xl font-semibold text-atlantico-900">Margens do menu</h1>
           <p className="text-sm text-muted-foreground">
             Margem alvo: {targetPct}% (muda nas Definições)
           </p>
@@ -135,7 +135,7 @@ function StatBox({ label, value, bad }: { label: string; value: string; bad?: bo
       }
     >
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={"mt-1 text-2xl font-semibold " + (bad ? "text-destructive" : "")}>{value}</p>
+      <p className={"mt-1 font-display text-2xl font-semibold " + (bad ? "text-destructive" : "text-atlantico-900")}>{value}</p>
     </div>
   );
 }

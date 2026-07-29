@@ -3,39 +3,48 @@
 @tailwind utilities;
 
 @layer base {
+  /* ── Direcção "Costeiro quente" (David 29-07; mockup Cowork como referência,
+     tokens do prompt como fonte de verdade). Fundo areia, estrutura atlântico,
+     terracota SÓ na acção, semânticos alga/âmbar/coral. HSL derivado dos hex:
+     areia-100 #FAF5EC · atlantico-900 #16303F · terracota-600 #B4502A ·
+     ink #2A2723 · line #E4DACA. */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --background: 39 58% 95%;          /* areia-100 */
+    --foreground: 34 9% 15%;           /* ink */
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --primary: 222 47% 11%;
-    --primary-foreground: 210 40% 98%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 222 47% 11%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
-    --radius: 0.6rem;
+    --card-foreground: 34 9% 15%;
+    --primary: 17 62% 44%;             /* terracota-600 (acção) */
+    --primary-foreground: 43 64% 98%;  /* areia-50 */
+    --muted: 39 47% 90%;               /* areia-200 */
+    --muted-foreground: 30 9% 40%;     /* ink-muted */
+    --destructive: 7 56% 42%;          /* coral-600 */
+    --destructive-foreground: 43 64% 98%;
+    --border: 37 32% 84%;              /* line */
+    --input: 37 32% 84%;
+    --ring: 200 27% 60%;               /* atlantico-300 (focus) */
+    --accent: 39 47% 90%;
+    --accent-foreground: 34 9% 15%;
+    --radius: 0.875rem;                /* card 14px; inputs afinam a 9px */
 
-    /* Estados de reserva — pares bg/fg verificados para contraste AA.
-       Fallback alinhado ao palette neutro do repo (sem brand HTML disponível). */
-    --status-confirmed-bg: 142 60% 92%;
-    --status-confirmed-fg: 142 72% 22%;
-    --status-seated-bg: 217 91% 93%;
-    --status-seated-fg: 222 75% 33%;
-    --status-pending-bg: 38 96% 90%;
-    --status-pending-fg: 30 80% 28%;
-    --status-cancelled-bg: 210 40% 94%;
-    --status-cancelled-fg: 215 20% 38%;
-    --status-noshow-bg: 0 80% 94%;
-    --status-noshow-fg: 0 68% 38%;
+    /* Estados de reserva — remapeados aos semânticos costeiros (AA verificado:
+       fg -600 sobre bg -100). */
+    --status-confirmed-bg: 143 29% 91%;  /* alga-100 */
+    --status-confirmed-fg: 148 30% 30%;  /* alga-600 (escurecida p/ AA) */
+    --status-seated-bg: 200 30% 92%;     /* atlantico claro */
+    --status-seated-fg: 202 49% 25%;     /* atlantico-700 */
+    --status-pending-bg: 41 66% 91%;     /* ambar-100 */
+    --status-pending-fg: 37 69% 32%;     /* ambar-600 (escurecida p/ AA) */
+    --status-cancelled-bg: 39 47% 90%;   /* areia-200 */
+    --status-cancelled-fg: 30 9% 38%;    /* ink-muted */
+    --status-noshow-bg: 10 56% 91%;      /* coral-100 */
+    --status-noshow-fg: 7 56% 38%;       /* coral-600 */
   }
   * { @apply border-border; }
-  body { @apply bg-background text-foreground; }
+  body { @apply bg-background font-sans text-foreground; }
+  .font-display {
+    font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    letter-spacing: -0.01em;
+  }
 }
 
 /* ── Identidade Pinho & Tinta (landing pública) ──────────────────────────────
