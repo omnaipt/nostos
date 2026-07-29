@@ -77,13 +77,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </NavLink>
             ))}
           </nav>
-          <div className="flex shrink-0 items-center gap-2">
-            <span className="hidden max-w-44 truncate text-xs text-atlantico-300 md:inline">
-              {user?.email}
-            </span>
+          <div className="flex shrink-0 items-center">
+            {/* O email saiu da barra (ocupava ~180px e empurrava as Definições
+                para o overflow invisível — David 29-07); fica no tooltip. */}
             <button
               type="button"
               onClick={signOut}
+              title={user?.email ?? undefined}
               className="rounded-full px-3 py-1.5 text-sm text-atlantico-300 transition-colors hover:bg-atlantico-700 hover:text-areia-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-atlantico-300"
             >
               Sair
