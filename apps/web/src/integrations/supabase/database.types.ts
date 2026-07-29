@@ -916,6 +916,51 @@ export type Database = {
           },
         ]
       }
+      supplier_product_aliases: {
+        Row: {
+          created_at: string
+          id: string
+          ingredient_id: string
+          raw_name_norm: string
+          restaurant_id: string
+          supplier_norm: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ingredient_id: string
+          raw_name_norm: string
+          restaurant_id: string
+          supplier_norm: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ingredient_id?: string
+          raw_name_norm?: string
+          restaurant_id?: string
+          supplier_norm?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_product_aliases_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_product_aliases_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tables: {
         Row: {
           active: boolean

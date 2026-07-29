@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Camera, Loader2, Plus, Trash2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -17,22 +17,35 @@ import {
   type PurchaseEntryLine,
 } from "@/hooks/use-entries";
 import { useShelfLifeDefaults } from "@/hooks/use-inventory";
+import { useParseInvoice, type ParseInvoiceResult } from "@/hooks/use-parse-invoice";
 import { formatCostCents } from "@/components/menu/PantryManager";
 import { todayServiceDate } from "@/lib/service-date";
 import { estimateExpiryDate, resolveShelfLifeDays } from "@/lib/expiry";
 import { parsePriceToCents, type Ingredient } from "@/lib/types";
+// Módulo puro partilhado com a edge parse-invoice (norma da aprendizagem).
+import { norm } from "../../../../supabase/functions/parse-invoice/match";
 
 // Entradas de compra (Gap A): fornecedor + nº fatura + data + linhas
 // (ingrediente do catálogo, qtd, custo unitário s/IVA) → stock_movements
 // purchase por linha. O trigger 0011/0016 aplica saldo e custo MÉDIO; o rasto
 // aparece na /despensa de borla (note "Fatura {fornecedor} {nº}").
-// Leitura automática da fatura por foto fica no roadmap; o manual é o essencial.
+//
+// Parse de fatura (PDF/foto): pré-preenche ESTE formulário — o form manual É o
+// ecrã de revisão, e "Registar entrada" continua a ser o único botão que
+// escreve. Progressive enhancement: sem rede/edge, o manual funciona como
+// sempre. Ao registar, as escolhas do dono em linhas vindas do parse ensinam
+// os aliases do fornecedor (0018) para a próxima fatura casar sozinha.
 
 interface LineDraft {
   ingredientId: string;
   qty: string;
   cost: string; // €/unidade s/IVA, texto livre ("9,80")
   expires: string; // validade estimada (YYYY-MM-DD), editável; "" = sem estimativa
+  // Metadados do parse (ausentes em linhas manuais):
+  fromParse?: boolean;
+  rawName?: string; // descrição exacta na fatura (visível; chave da aprendizagem)
+  grade?: "verde" | "ambar" | null;
+  parseNote?: string | null; // note da IA + aviso de unidade, quando existirem
 }
 
 const EMPTY_LINE: LineDraft = { ingredientId: "", qty: "", cost: "", expires: "" };
@@ -51,9 +64,15 @@ export default function Entradas() {
   const [invoiceDate, setInvoiceDate] = React.useState(todayServiceDate());
   const [lines, setLines] = React.useState<LineDraft[]>([{ ...EMPTY_LINE }]);
   const [formError, setFormError] = React.useState<string>();
+  // supplier_norm do PARSE (chave da aprendizagem de aliases; estável entre
+  // faturas do mesmo fornecedor mesmo que o dono corrija o campo visível).
+  const [parsedSupplierNorm, setParsedSupplierNorm] = React.useState<string | null>(null);
+  const [dragOver, setDragOver] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const ingredients = (ingredientsQuery.data ?? []).filter((i) => i.active !== false);
   const ingredientById = new Map(ingredients.map((i) => [i.id, i]));
+  const parse = useParseInvoice(restaurantId, ingredients);
 
   function setLine(idx: number, patch: Partial<LineDraft>) {
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
@@ -63,6 +82,53 @@ export default function Entradas() {
   // do ingrediente > categoria > fallback do storage_mode). Campos category/
   // storage_mode podem não existir em runtime antes da 0017 — defensivo.
   function estimateFor(ing: Ingredient): string {
+    return estimateForDate(ing, invoiceDate);
+  }
+
+  // ── Parse da fatura: pré-preenche o formulário; nada é registado ──────────
+  function applyParseResult(result: ParseInvoiceResult) {
+    if (!result.parsed) {
+      toast.error(result.reason ?? "Não foi possível ler a fatura. Regista à mão.");
+      return;
+    }
+    const parsedLines = result.lines ?? [];
+    const date =
+      result.invoice_date && /^\d{4}-\d{2}-\d{2}$/.test(result.invoice_date)
+        ? result.invoice_date
+        : invoiceDate;
+    const drafts: LineDraft[] = parsedLines.map((l) => {
+      const ing = l.ingredient_id ? ingredientById.get(l.ingredient_id) : undefined;
+      const noteParts = [l.note, l.unit_warning].filter(Boolean) as string[];
+      return {
+        ingredientId: ing?.id ?? "",
+        qty: l.fill_qty != null ? String(l.fill_qty) : l.qty != null ? String(l.qty) : "",
+        cost:
+          l.fill_cost_cents != null
+            ? (l.fill_cost_cents / 100).toFixed(2).replace(".", ",")
+            : "",
+        expires: ing ? estimateForDate(ing, date) : "",
+        fromParse: true,
+        rawName: l.raw_name,
+        grade: l.confidence === "baixa" && l.match_grade === "verde" ? "ambar" : l.match_grade,
+        parseNote: noteParts.length > 0 ? noteParts.join(" · ") : null,
+      };
+    });
+    if (drafts.length === 0) {
+      toast.error("A fatura não trouxe linhas aproveitáveis — regista à mão.");
+      return;
+    }
+    if (result.supplier) setSupplier(result.supplier);
+    if (result.invoice_number) setInvoiceNo(result.invoice_number);
+    setInvoiceDate(date);
+    setParsedSupplierNorm(result.supplier_norm ?? null);
+    setLines(drafts);
+    const matched = drafts.filter((d) => d.ingredientId).length;
+    toast.success(
+      `Fatura lida: ${drafts.length} linha${drafts.length > 1 ? "s" : ""}, ${matched} com match. Revê e regista.`,
+    );
+  }
+
+  function estimateForDate(ing: Ingredient, date: string): string {
     const days = resolveShelfLifeDays(
       {
         category: (ing as { category?: string | null }).category ?? null,
@@ -72,7 +138,18 @@ export default function Entradas() {
       },
       shelfDefaultsQuery.data ?? [],
     );
-    return days != null ? estimateExpiryDate(invoiceDate, days) : "";
+    return days != null ? estimateExpiryDate(date, days) : "";
+  }
+
+  function onFiles(list: FileList | File[] | null) {
+    const files = Array.from(list ?? []);
+    if (files.length === 0) return;
+    parse.mutate(files, {
+      onSuccess: applyParseResult,
+      onError: (err) =>
+        toast.error(err instanceof Error ? err.message : "Não foi possível ler a fatura."),
+    });
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function onSubmit(e: React.FormEvent) {
@@ -107,8 +184,25 @@ export default function Entradas() {
       setFormError("A fatura precisa de pelo menos uma linha.");
       return;
     }
+    // Aprendizagem (0018): a escolha final do dono em linhas do parse vira
+    // alias do fornecedor — a próxima fatura igual casa a verde sozinha.
+    const aliasItems = lines
+      .filter((l) => l.fromParse && l.rawName && l.ingredientId)
+      .map((l) => ({ rawNameNorm: norm(l.rawName as string), ingredientId: l.ingredientId }))
+      .filter((a) => a.rawNameNorm.length > 0);
+    const aliasLearning =
+      parsedSupplierNorm && aliasItems.length > 0
+        ? { supplierNorm: parsedSupplierNorm, items: aliasItems }
+        : null;
+
     create.mutate(
-      { supplier: supplier.trim(), invoiceNo: invoiceNo.trim(), invoiceDate, lines: parsed },
+      {
+        supplier: supplier.trim(),
+        invoiceNo: invoiceNo.trim(),
+        invoiceDate,
+        lines: parsed,
+        aliasLearning,
+      },
       {
         onSuccess: (n) => {
           toast.success(`Entrada registada (${n} linha${n > 1 ? "s" : ""})`);
@@ -116,6 +210,7 @@ export default function Entradas() {
           setInvoiceNo("");
           setInvoiceDate(todayServiceDate());
           setLines([{ ...EMPTY_LINE }]);
+          setParsedSupplierNorm(null);
         },
         onError: (err) =>
           setFormError(err instanceof Error ? err.message : "Não foi possível registar."),
@@ -165,6 +260,59 @@ export default function Entradas() {
             </CardHeader>
             <CardContent>
               <form onSubmit={onSubmit} className="space-y-4" noValidate>
+                {/* Upload da fatura: pré-preenche o form (a revisão é aqui);
+                    no telemóvel o capture abre a câmara na recepção da
+                    mercadoria. Progressive enhancement — sem edge, o manual
+                    continua intacto. */}
+                <div
+                  className={
+                    "rounded-md border border-dashed p-4 text-center transition-colors " +
+                    (dragOver ? "border-primary bg-primary/5" : "border-input")
+                  }
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOver(true);
+                  }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOver(false);
+                    onFiles(e.dataTransfer.files);
+                  }}
+                >
+                  {parse.isPending ? (
+                    <div className="space-y-2 py-1">
+                      <p className="text-sm font-medium">A ler a fatura…</p>
+                      <Skeleton className="mx-auto h-4 w-2/3" />
+                      <Skeleton className="mx-auto h-4 w-1/2" />
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="application/pdf,image/*"
+                        capture="environment"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => onFiles(e.target.files)}
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Camera className="h-4 w-4" /> Carregar fatura (PDF ou foto)
+                      </Button>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        ou arrasta para aqui · a leitura pré-preenche o
+                        formulário; revês e registas
+                      </p>
+                    </>
+                  )}
+                </div>
+
                 <div className="grid gap-4 sm:grid-cols-3">
                   <Field id="e-supplier" label="Fornecedor" required>
                     {(p) => (
@@ -193,8 +341,31 @@ export default function Entradas() {
                   {lines.map((line, idx) => {
                     const ing = ingredientById.get(line.ingredientId);
                     const lastCost = ing ? lastCostsQuery.data?.get(ing.id) : undefined;
+                    // Âmbar: pede olhos do dono (confiança baixa, note, contenção,
+                    // sugestão do modelo, unidade divergente ou sem match).
+                    const amber =
+                      line.fromParse && (line.grade === "ambar" || !line.ingredientId || !!line.parseNote);
                     return (
-                      <div key={idx} className="rounded-md border border-input p-3">
+                      <div
+                        key={idx}
+                        className={
+                          "rounded-md border p-3 " +
+                          (amber
+                            ? "border-[hsl(var(--status-pending-fg))]/50 bg-[hsl(var(--status-pending-bg))]"
+                            : "border-input")
+                        }
+                      >
+                        {line.fromParse && line.rawName && (
+                          <p className="mb-1 text-xs text-muted-foreground">
+                            Na fatura: <span className="font-medium text-foreground">{line.rawName}</span>
+                            {line.grade === "verde" && !amber && (
+                              <span className="ml-2 text-[hsl(var(--status-seated-fg))]">match automático</span>
+                            )}
+                            {line.fromParse && !line.ingredientId && (
+                              <span className="ml-2">— escolhe o ingrediente</span>
+                            )}
+                          </p>
+                        )}
                         <div className="grid gap-2 sm:grid-cols-[1fr_110px_150px_36px]">
                           <Select
                             aria-label="Ingrediente"
@@ -239,6 +410,11 @@ export default function Entradas() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
+                        {line.fromParse && line.parseNote && (
+                          <p className="mt-1 text-xs font-medium text-[hsl(var(--status-pending-fg))]">
+                            {line.parseNote}
+                          </p>
+                        )}
                         {ing && (
                           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
                             <p className="text-xs text-muted-foreground">

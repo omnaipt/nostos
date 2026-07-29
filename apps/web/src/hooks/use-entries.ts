@@ -25,6 +25,14 @@ export interface PurchaseEntryInput {
   invoiceNo: string;
   invoiceDate: string; // YYYY-MM-DD
   lines: PurchaseEntryLine[];
+  // Aprendizagem de aliases (0018): para linhas vindas do PARSE em que o dono
+  // escolheu/confirmou o ingrediente, upsert silencioso fornecedor+raw_name →
+  // ingredient. Reescolher noutra fatura corrige (upsert substitui). A chave é
+  // a supplier_norm devolvida pela edge (estável entre faturas do fornecedor).
+  aliasLearning?: {
+    supplierNorm: string;
+    items: { rawNameNorm: string; ingredientId: string }[];
+  } | null;
 }
 
 export function useCreatePurchaseEntry(restaurantId: string | undefined) {
@@ -48,6 +56,25 @@ export function useCreatePurchaseEntry(restaurantId: string | undefined) {
       }));
       const { error } = await supabase.from("stock_movements").insert(rows);
       if (error) throw error;
+
+      // Aprendizagem best-effort: nunca falha a entrada por causa do alias.
+      const learning = input.aliasLearning;
+      if (learning && learning.supplierNorm && learning.items.length > 0) {
+        const { error: aliasError } = await supabase
+          .from("supplier_product_aliases")
+          .upsert(
+            learning.items.map((a) => ({
+              restaurant_id: restaurantId as string,
+              supplier_norm: learning.supplierNorm,
+              raw_name_norm: a.rawNameNorm,
+              ingredient_id: a.ingredientId,
+            })),
+            { onConflict: "restaurant_id,supplier_norm,raw_name_norm" },
+          );
+        if (aliasError) {
+          console.warn("[nostos] Alias não aprendido (ignorado):", aliasError.message);
+        }
+      }
       return rows.length;
     },
     onSuccess: () => {
