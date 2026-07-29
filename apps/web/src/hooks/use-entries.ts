@@ -15,6 +15,9 @@ export interface PurchaseEntryLine {
   unit: string;
   qty: number;
   costPerUnitCents: number | null; // custo unitário s/IVA; null = sem custo
+  // Validade ESTIMADA (0017): data da fatura + shelf life resolvido (override
+  // > categoria > fallback), editável no acto do registo. null = sem estimativa.
+  expiresAt: string | null;
 }
 
 export interface PurchaseEntryInput {
@@ -41,6 +44,7 @@ export function useCreatePurchaseEntry(restaurantId: string | undefined) {
         source_ref: input.invoiceNo || null,
         note,
         created_at: createdAt,
+        expires_at: l.expiresAt,
       }));
       const { error } = await supabase.from("stock_movements").insert(rows);
       if (error) throw error;

@@ -97,37 +97,46 @@ export type Database = {
       ingredients: {
         Row: {
           active: boolean
+          category: string | null
           cost_per_unit_cents: number | null
           created_at: string
           id: string
           low_stock_threshold: number | null
           name: string
           restaurant_id: string
+          shelf_life_override_days: number | null
           stock_qty: number
+          storage_mode: string
           unit: string
           updated_at: string
         }
         Insert: {
           active?: boolean
+          category?: string | null
           cost_per_unit_cents?: number | null
           created_at?: string
           id?: string
           low_stock_threshold?: number | null
           name: string
           restaurant_id: string
+          shelf_life_override_days?: number | null
           stock_qty?: number
+          storage_mode?: string
           unit?: string
           updated_at?: string
         }
         Update: {
           active?: boolean
+          category?: string | null
           cost_per_unit_cents?: number | null
           created_at?: string
           id?: string
           low_stock_threshold?: number | null
           name?: string
           restaurant_id?: string
+          shelf_life_override_days?: number | null
           stock_qty?: number
+          storage_mode?: string
           unit?: string
           updated_at?: string
         }
@@ -820,10 +829,38 @@ export type Database = {
           },
         ]
       }
+      shelf_life_defaults: {
+        Row: {
+          category: string
+          id: string
+          note: string | null
+          shelf_life_days: number
+          source: string
+          storage_mode: string
+        }
+        Insert: {
+          category: string
+          id?: string
+          note?: string | null
+          shelf_life_days: number
+          source: string
+          storage_mode: string
+        }
+        Update: {
+          category?: string
+          id?: string
+          note?: string | null
+          shelf_life_days?: number
+          source?: string
+          storage_mode?: string
+        }
+        Relationships: []
+      }
       stock_movements: {
         Row: {
           cost_per_unit_cents: number | null
           created_at: string
+          expires_at: string | null
           id: string
           ingredient_id: string
           kind: string
@@ -837,6 +874,7 @@ export type Database = {
         Insert: {
           cost_per_unit_cents?: number | null
           created_at?: string
+          expires_at?: string | null
           id?: string
           ingredient_id: string
           kind: string
@@ -850,6 +888,7 @@ export type Database = {
         Update: {
           cost_per_unit_cents?: number | null
           created_at?: string
+          expires_at?: string | null
           id?: string
           ingredient_id?: string
           kind?: string
@@ -1076,6 +1115,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_inventory_count: {
+        Args: { p_counts: Json; p_note: string; p_restaurant_id: string }
+        Returns: Json
+      }
+      ingredient_avg_cost: {
+        Args: { p_ingredient_id: string }
+        Returns: number
+      }
       is_restaurant_member: { Args: { target: string }; Returns: boolean }
       public_create_lead: {
         Args: {

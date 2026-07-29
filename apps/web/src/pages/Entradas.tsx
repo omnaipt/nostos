@@ -16,9 +16,11 @@ import {
   useRecentPurchaseEntries,
   type PurchaseEntryLine,
 } from "@/hooks/use-entries";
+import { useShelfLifeDefaults } from "@/hooks/use-inventory";
 import { formatCostCents } from "@/components/menu/PantryManager";
 import { todayServiceDate } from "@/lib/service-date";
-import { parsePriceToCents } from "@/lib/types";
+import { estimateExpiryDate, resolveShelfLifeDays } from "@/lib/expiry";
+import { parsePriceToCents, type Ingredient } from "@/lib/types";
 
 // Entradas de compra (Gap A): fornecedor + nº fatura + data + linhas
 // (ingrediente do catálogo, qtd, custo unitário s/IVA) → stock_movements
@@ -30,9 +32,10 @@ interface LineDraft {
   ingredientId: string;
   qty: string;
   cost: string; // €/unidade s/IVA, texto livre ("9,80")
+  expires: string; // validade estimada (YYYY-MM-DD), editável; "" = sem estimativa
 }
 
-const EMPTY_LINE: LineDraft = { ingredientId: "", qty: "", cost: "" };
+const EMPTY_LINE: LineDraft = { ingredientId: "", qty: "", cost: "", expires: "" };
 
 export default function Entradas() {
   const { data: restaurant, isLoading: loadingRest } = useActiveRestaurant();
@@ -40,6 +43,7 @@ export default function Entradas() {
   const ingredientsQuery = useIngredients(restaurantId);
   const lastCostsQuery = useLastPurchaseCosts(restaurantId);
   const entriesQuery = useRecentPurchaseEntries(restaurantId);
+  const shelfDefaultsQuery = useShelfLifeDefaults();
   const create = useCreatePurchaseEntry(restaurantId);
 
   const [supplier, setSupplier] = React.useState("");
@@ -53,6 +57,22 @@ export default function Entradas() {
 
   function setLine(idx: number, patch: Partial<LineDraft>) {
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
+  }
+
+  // Validade estimada (Gap G): data da fatura + shelf life resolvido (override
+  // do ingrediente > categoria > fallback do storage_mode). Campos category/
+  // storage_mode podem não existir em runtime antes da 0017 — defensivo.
+  function estimateFor(ing: Ingredient): string {
+    const days = resolveShelfLifeDays(
+      {
+        category: (ing as { category?: string | null }).category ?? null,
+        storage_mode: (ing as { storage_mode?: string }).storage_mode ?? "ambiente",
+        shelf_life_override_days:
+          (ing as { shelf_life_override_days?: number | null }).shelf_life_override_days ?? null,
+      },
+      shelfDefaultsQuery.data ?? [],
+    );
+    return days != null ? estimateExpiryDate(invoiceDate, days) : "";
   }
 
   function onSubmit(e: React.FormEvent) {
@@ -80,6 +100,7 @@ export default function Entradas() {
         unit: ing.unit,
         qty,
         costPerUnitCents: parsePriceToCents(l.cost),
+        expiresAt: l.expires.trim() || null,
       });
     }
     if (parsed.length === 0) {
@@ -178,7 +199,13 @@ export default function Entradas() {
                           <Select
                             aria-label="Ingrediente"
                             value={line.ingredientId}
-                            onChange={(e) => setLine(idx, { ingredientId: e.target.value })}
+                            onChange={(e) => {
+                              const next = ingredientById.get(e.target.value);
+                              setLine(idx, {
+                                ingredientId: e.target.value,
+                                expires: next ? estimateFor(next) : "",
+                              });
+                            }}
                           >
                             <option value="">Ingrediente...</option>
                             {ingredients.map((i) => (
@@ -213,11 +240,23 @@ export default function Entradas() {
                           </Button>
                         </div>
                         {ing && (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Custo médio actual: {formatCostCents(ing.cost_per_unit_cents)}/{ing.unit}
-                            {lastCost != null && <> · última compra: {formatCostCents(lastCost)}/{ing.unit}</>}
-                            {" "}· saldo: {ing.stock_qty} {ing.unit}
-                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <p className="text-xs text-muted-foreground">
+                              Custo médio actual: {formatCostCents(ing.cost_per_unit_cents)}/{ing.unit}
+                              {lastCost != null && <> · última compra: {formatCostCents(lastCost)}/{ing.unit}</>}
+                              {" "}· saldo: {ing.stock_qty} {ing.unit}
+                            </p>
+                            <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                              Validade estimada:
+                              <Input
+                                aria-label="Validade estimada"
+                                type="date"
+                                className="h-7 w-36 text-xs"
+                                value={line.expires}
+                                onChange={(e) => setLine(idx, { expires: e.target.value })}
+                              />
+                            </label>
+                          </div>
                         )}
                       </div>
                     );
@@ -246,6 +285,10 @@ export default function Entradas() {
                   {create.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                   {create.isPending ? "A registar..." : "Registar entrada"}
                 </Button>
+                <p className="text-xs text-muted-foreground">
+                  Validade estimada por categoria — o rótulo prevalece. Ajusta a
+                  data se o produto disser outra coisa.
+                </p>
               </form>
             </CardContent>
           </Card>
