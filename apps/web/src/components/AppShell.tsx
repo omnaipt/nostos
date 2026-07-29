@@ -21,7 +21,7 @@ const NAV: { to: string; label: string; end?: boolean }[] = [
 
 // Sprint de stock do Marco (rotas /entradas e /inventario, em curso em
 // paralelo): quando os PRs dele fundirem, basta virar esta flag.
-const SHOW_STOCK_ROUTES = false;
+const SHOW_STOCK_ROUTES = true;
 const STOCK_NAV: { to: string; label: string; end?: boolean }[] = [
   { to: "/entradas", label: "Entradas" },
   { to: "/inventario", label: "Inventário" },
