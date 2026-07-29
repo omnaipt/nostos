@@ -74,3 +74,68 @@ describe("computeMenuMargins", () => {
     expect(vazio.avgFoodCostPct).toBeNull();
   });
 });
+
+// Gap E: pratos `variants` (price_cents null) calculam pela variante principal
+// (is_default; fallback primeira com preço) e contam nos alertas e no
+// completeCount.
+describe("computeMenuMargins · pratos variants", () => {
+  const vItems = [
+    { id: "var-default", name: "Bacalhau à casa", price_cents: null, active: true },
+    { id: "var-sem-default", name: "Arroz de marisco", price_cents: null, active: true },
+    { id: "var-sem-preco", name: "Peixe do dia", price_cents: null, active: true },
+  ];
+  const vSheets = [
+    { id: "s-vd", menu_item_id: "var-default" },
+    { id: "s-vsd", menu_item_id: "var-sem-default" },
+    { id: "s-vsp", menu_item_id: "var-sem-preco" },
+  ];
+  const vLines = [
+    // 320g bacalhau = 400c em todas, para comparar só o PVP efectivo
+    { tech_sheet_id: "s-vd", qty: 320, unit: "g", ingredient_id: "bacalhau" },
+    { tech_sheet_id: "s-vsd", qty: 320, unit: "g", ingredient_id: "bacalhau" },
+    { tech_sheet_id: "s-vsp", qty: 320, unit: "g", ingredient_id: "bacalhau" },
+  ];
+  const variants = new Map([
+    // default (dose) 500c apesar de a ½ dose vir primeiro → margem 20%, alerta
+    ["var-default", [
+      { price_cents: 300, is_default: false },
+      { price_cents: 500, is_default: true },
+    ]],
+    // sem default marcada → primeira com preço (2000) → margem 80%
+    ["var-sem-default", [
+      { price_cents: null, is_default: false },
+      { price_cents: 2000, is_default: false },
+    ]],
+    // nenhuma variante com preço (preço do dia) → sem PVP, sem alerta
+    ["var-sem-preco", [{ price_cents: null, is_default: false }]],
+  ]);
+
+  const r = computeMenuMargins(vItems, vSheets, vLines, ings, 65, variants);
+
+  it("usa a variante default e marca viaVariant", () => {
+    const vd = r.rows.find((x) => x.itemId === "var-default");
+    expect(vd?.priceCents).toBe(500);
+    expect(vd?.viaVariant).toBe(true);
+    expect(vd?.marginPct).toBeCloseTo(20, 5);
+    expect(vd?.belowTarget).toBe(true);
+  });
+
+  it("sem default cai na primeira variante com preço", () => {
+    const vsd = r.rows.find((x) => x.itemId === "var-sem-default");
+    expect(vsd?.priceCents).toBe(2000);
+    expect(vsd?.marginPct).toBeCloseTo(80, 5);
+    expect(vsd?.belowTarget).toBe(false);
+  });
+
+  it("variantes todas sem preço (preço do dia): sem PVP, sem alerta", () => {
+    const vsp = r.rows.find((x) => x.itemId === "var-sem-preco");
+    expect(vsp?.priceCents).toBeNull();
+    expect(vsp?.marginPct).toBeNull();
+    expect(vsp?.belowTarget).toBe(false);
+  });
+
+  it("variants completos com PVP contam no completeCount e nos alertas", () => {
+    expect(r.completeCount).toBe(2); // var-default + var-sem-default
+    expect(r.belowTargetCount).toBe(1);
+  });
+});

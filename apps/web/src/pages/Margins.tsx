@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import { useIngredients } from "@/hooks/use-ingredients";
-import { useMenuItems } from "@/hooks/use-menu";
+import { useItemVariants, useMenuItems } from "@/hooks/use-menu";
 import { useTechSheetLines, useTechSheets } from "@/hooks/use-tech-sheets";
 import { formatCostCents } from "@/components/menu/PantryManager";
 import { computeMenuMargins, formatPriceCents, type DishMargin } from "@/lib/types";
@@ -19,6 +19,7 @@ export default function Margins() {
   const { data: restaurant, isLoading: loadingRest } = useActiveRestaurant();
   const restaurantId = restaurant?.id;
   const itemsQuery = useMenuItems(restaurantId);
+  const variantsQuery = useItemVariants(restaurantId);
   const sheetsQuery = useTechSheets(restaurantId);
   const linesQuery = useTechSheetLines(restaurantId);
   const ingredientsQuery = useIngredients(restaurantId);
@@ -36,6 +37,13 @@ export default function Margins() {
 
   const summary = React.useMemo(() => {
     if (!itemsQuery.data) return null;
+    // Gap E: pratos `variants` calculam margem pela variante principal.
+    const variantsByItem = new Map<string, { price_cents: number | null; is_default: boolean }[]>();
+    for (const v of variantsQuery.data ?? []) {
+      const arr = variantsByItem.get(v.item_id) ?? [];
+      arr.push({ price_cents: v.price_cents, is_default: v.is_default });
+      variantsByItem.set(v.item_id, arr);
+    }
     return computeMenuMargins(
       itemsQuery.data,
       sheetsQuery.data ?? [],
@@ -47,8 +55,9 @@ export default function Margins() {
         ]),
       ),
       targetPct,
+      variantsByItem,
     );
-  }, [itemsQuery.data, sheetsQuery.data, linesQuery.data, ingredientsQuery.data, targetPct]);
+  }, [itemsQuery.data, variantsQuery.data, sheetsQuery.data, linesQuery.data, ingredientsQuery.data, targetPct]);
 
   return (
     <div className="container max-w-3xl py-8">
@@ -157,7 +166,10 @@ function MarginRow({ row, targetPct }: { row: DishMargin; targetPct: number }) {
         </p>
       </div>
       <div className="shrink-0 text-right">
-        <p className="text-sm tabular-nums text-muted-foreground">{formatPriceCents(row.priceCents)}</p>
+        <p className="text-sm tabular-nums text-muted-foreground">
+          {formatPriceCents(row.priceCents)}
+          {row.viaVariant && <span className="ml-1 text-xs">· dose principal</span>}
+        </p>
         {row.hasSheet && row.marginPct != null && (
           <p
             className={

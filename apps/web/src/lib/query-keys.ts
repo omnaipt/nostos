@@ -44,6 +44,11 @@ export const queryKeys = {
     ["stock", restaurantId, "movements", ingredientId] as const,
   lastPurchases: (restaurantId: string | undefined) =>
     ["stock", restaurantId, "last-purchases"] as const,
+  // Entradas de compra (Gap A): lista agrupada por fatura + último custo p/ UI.
+  purchaseEntries: (restaurantId: string | undefined) =>
+    ["stock", restaurantId, "purchase-entries"] as const,
+  lastPurchaseCosts: (restaurantId: string | undefined) =>
+    ["stock", restaurantId, "last-purchase-costs"] as const,
   // Imports SAF-T (0012). saftRoot invalida lotes + linhas + último fecho.
   saftRoot: ["saft"] as const,
   saftImports: (restaurantId: string | undefined) => ["saft", restaurantId, "imports"] as const,

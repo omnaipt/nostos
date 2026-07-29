@@ -249,6 +249,24 @@ export interface DishMargin {
   complete: boolean; // todas as linhas da ficha têm custo
   hasSheet: boolean;
   belowTarget: boolean; // só true quando completa e com PVP
+  viaVariant: boolean; // PVP veio da variante principal (prato variants)
+}
+
+// PVP efectivo de um prato para cálculo de margem (Gap E): pratos `variants`
+// não têm price_cents próprio — usa-se a variante principal (is_default; a
+// unicidade parcial garante no máx. 1), senão a primeira com preço (a ordem
+// de entrada é sort_order). A ficha técnica descreve a dose principal, por
+// isso custo e PVP ficam na mesma base.
+export function effectiveItemPriceCents(
+  priceCents: number | null,
+  variants: { price_cents: number | null; is_default: boolean }[] | undefined,
+): { priceCents: number | null; viaVariant: boolean } {
+  if (priceCents != null) return { priceCents, viaVariant: false };
+  if (!variants || variants.length === 0) return { priceCents: null, viaVariant: false };
+  const chosen =
+    variants.find((v) => v.is_default && v.price_cents != null) ??
+    variants.find((v) => v.price_cents != null);
+  return chosen ? { priceCents: chosen.price_cents, viaVariant: true } : { priceCents: null, viaVariant: false };
 }
 
 export interface MenuMarginsSummary {
@@ -264,6 +282,7 @@ export function computeMenuMargins(
   lines: { tech_sheet_id: string; qty: number; unit: string; ingredient_id: string | null }[],
   ingredientsById: Map<string, { unit: string; cost_per_unit_cents: number | null }>,
   targetPct: number,
+  variantsByItem?: Map<string, { price_cents: number | null; is_default: boolean }[]>,
 ): MenuMarginsSummary {
   const linesBySheet = new Map<string, typeof lines>();
   for (const l of lines) {
@@ -276,33 +295,39 @@ export function computeMenuMargins(
   const rows: DishMargin[] = items
     .filter((i) => i.active)
     .map((item) => {
+      const { priceCents, viaVariant } = effectiveItemPriceCents(
+        item.price_cents,
+        variantsByItem?.get(item.id),
+      );
       const sheet = sheetByItem.get(item.id);
       if (!sheet) {
         return {
           itemId: item.id,
           name: item.name,
-          priceCents: item.price_cents,
+          priceCents,
           costCents: 0,
           marginPct: null,
           marginCents: null,
           complete: false,
           hasSheet: false,
           belowTarget: false,
+          viaVariant,
         };
       }
       const summary = computeFoodCost(linesBySheet.get(sheet.id) ?? [], ingredientsById);
       const complete = summary.total > 0 && summary.costed === summary.total;
-      const marginPct = computeMarginPct(item.price_cents, summary.costCents);
+      const marginPct = computeMarginPct(priceCents, summary.costCents);
       return {
         itemId: item.id,
         name: item.name,
-        priceCents: item.price_cents,
+        priceCents,
         costCents: summary.costCents,
         marginPct,
-        marginCents: item.price_cents != null ? item.price_cents - summary.costCents : null,
+        marginCents: priceCents != null ? priceCents - summary.costCents : null,
         complete,
         hasSheet: true,
         belowTarget: complete && marginPct != null && marginPct < targetPct,
+        viaVariant,
       };
     });
 

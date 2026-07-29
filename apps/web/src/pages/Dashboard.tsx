@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import { useOwnerSummary, type WeekSummary } from "@/hooks/use-owner-summary";
 import { useIngredients } from "@/hooks/use-ingredients";
-import { useMenuItems } from "@/hooks/use-menu";
+import { useItemVariants, useMenuItems } from "@/hooks/use-menu";
 import { useTechSheetLines, useTechSheets } from "@/hooks/use-tech-sheets";
 import { useLastAppliedImport } from "@/hooks/use-saft";
 import { computeMenuMargins } from "@/lib/types";
@@ -20,11 +20,20 @@ export default function Dashboard() {
 
   // Margens (S3): food cost médio + pratos abaixo do alvo, derivados das fichas.
   const itemsQuery = useMenuItems(restaurant?.id);
+  const variantsQuery = useItemVariants(restaurant?.id);
   const sheetsQuery = useTechSheets(restaurant?.id);
   const sheetLinesQuery = useTechSheetLines(restaurant?.id);
   const ingredientsQuery = useIngredients(restaurant?.id);
   const margins = React.useMemo(() => {
     if (!itemsQuery.data || !restaurant) return null;
+    // Gap E: pratos `variants` contam nos alertas e no "Fichas completas"
+    // pela variante principal.
+    const variantsByItem = new Map<string, { price_cents: number | null; is_default: boolean }[]>();
+    for (const v of variantsQuery.data ?? []) {
+      const arr = variantsByItem.get(v.item_id) ?? [];
+      arr.push({ price_cents: v.price_cents, is_default: v.is_default });
+      variantsByItem.set(v.item_id, arr);
+    }
     return computeMenuMargins(
       itemsQuery.data,
       sheetsQuery.data ?? [],
@@ -36,8 +45,9 @@ export default function Dashboard() {
         ]),
       ),
       restaurant.target_margin_pct ?? 65,
+      variantsByItem,
     );
-  }, [itemsQuery.data, sheetsQuery.data, sheetLinesQuery.data, ingredientsQuery.data, restaurant]);
+  }, [itemsQuery.data, variantsQuery.data, sheetsQuery.data, sheetLinesQuery.data, ingredientsQuery.data, restaurant]);
 
   // Despensa + fecho SAF-T (0011/0012): alerta de reposição e último fecho.
   const pantry = React.useMemo(
