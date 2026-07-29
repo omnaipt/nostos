@@ -14,7 +14,9 @@ import {
   usePublicRestaurant,
   usePublicTurns,
 } from "@/hooks/use-public-booking";
+import { usePublicMenu } from "@/hooks/use-public-menu";
 import { todayServiceDate } from "@/lib/service-date";
+import { formatPriceCents } from "@/lib/types";
 
 // C8 — página pública de reservas (/r/{slug}). O pedido entra PENDENTE e
 // POR ATRIBUIR; o staff confirma na vista de disponibilidade (só aí segue o
@@ -38,6 +40,14 @@ export default function PublicBooking() {
 
   const turnsQuery = usePublicTurns(slug, date);
   const create = useCreatePublicReservation();
+
+  // Pré-pedido de pratos por encomenda (0013): o pedido segue na p_notes da
+  // reserva, sem tocar em reservations. Selecção por id; nomes vão nas notas.
+  const menuQuery = usePublicMenu(slug);
+  const byOrderItems = (menuQuery.data ?? [])
+    .flatMap((c) => c.items)
+    .filter((i) => i.byOrder && i.available);
+  const [preOrder, setPreOrder] = React.useState<string[]>([]);
 
   const turns = turnsQuery.data ?? [];
 
@@ -66,8 +76,16 @@ export default function PublicBooking() {
       setFormError("Indica o número de pessoas.");
       return;
     }
+    const preOrderNames = byOrderItems
+      .filter((i) => preOrder.includes(i.id))
+      .map((i) => i.name);
+    const composedNotes =
+      preOrderNames.length > 0
+        ? `Pré-pedido (por encomenda): ${preOrderNames.join(", ")}` +
+          (notes.trim() ? `\n${notes}` : "")
+        : notes;
     create.mutate(
-      { slug, date, turnId, name, phone, email, partySize, notes },
+      { slug, date, turnId, name, phone, email, partySize, notes: composedNotes },
       {
         onSuccess: () => setDone(true),
         onError: (err) => setFormError(publicBookingErrorMessage(err)),
@@ -120,7 +138,7 @@ export default function PublicBooking() {
               {email.trim() ? " para o teu email" : ""}.
               {restaurant.phone ? ` Para alterações: ${restaurant.phone}.` : ""}
             </p>
-            <Button variant="outline" size="sm" onClick={() => { setDone(false); setNotes(""); }}>
+            <Button variant="outline" size="sm" onClick={() => { setDone(false); setNotes(""); setPreOrder([]); }}>
               Fazer outro pedido
             </Button>
           </CardContent>
@@ -188,6 +206,43 @@ export default function PublicBooking() {
             <Field id="p-email" label="Email (opcional)" hint="Para receberes a confirmação.">
               {(p) => <Input {...p} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />}
             </Field>
+
+            {byOrderItems.length > 0 && (
+              <fieldset className="space-y-2 rounded-md border border-border p-3">
+                <legend className="px-1 text-sm font-medium">
+                  Pratos por encomenda
+                </legend>
+                <p className="text-xs text-muted-foreground">
+                  Confeção demorada: encomenda já e o restaurante confirma
+                  contigo na reserva.
+                </p>
+                {byOrderItems.map((item) => (
+                  <label
+                    key={item.id}
+                    className="flex cursor-pointer items-baseline gap-2 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      className="translate-y-0.5 accent-primary"
+                      checked={preOrder.includes(item.id)}
+                      onChange={(e) =>
+                        setPreOrder((prev) =>
+                          e.target.checked
+                            ? [...prev, item.id]
+                            : prev.filter((id) => id !== item.id),
+                        )
+                      }
+                    />
+                    <span className="flex-1">{item.name}</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {item.priceType === "market"
+                        ? "preço do dia"
+                        : formatPriceCents(item.priceCents)}
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+            )}
 
             <Field id="p-notes" label="Notas (opcional)" hint="Alergias, ocasião, cadeira de bebé...">
               {(p) => <Textarea {...p} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} />}

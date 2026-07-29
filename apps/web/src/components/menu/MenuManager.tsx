@@ -233,6 +233,22 @@ function ItemRow({
           />
           Disponível
         </label>
+        <label
+          className="flex items-center gap-1 text-xs text-muted-foreground"
+          title="Prato por encomenda: sinalizado no menu e pré-pedido na página de reserva"
+        >
+          <input
+            type="checkbox"
+            checked={item.by_order}
+            onChange={(e) =>
+              update.mutate(
+                { id: item.id, patch: { by_order: e.target.checked } },
+                { onError: (err) => toast.error(errMsg(err)) },
+              )
+            }
+          />
+          Encomenda
+        </label>
         <Button
           size="icon"
           variant="ghost"

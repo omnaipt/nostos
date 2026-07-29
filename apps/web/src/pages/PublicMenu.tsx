@@ -140,12 +140,23 @@ export default function PublicMenu() {
                           Esgotado
                         </span>
                       )}
+                      {item.byOrder && item.available && (
+                        <span className="ml-2 rounded border border-primary/30 bg-primary/5 px-1.5 py-0.5 text-xs font-normal text-primary">
+                          Por encomenda
+                        </span>
+                      )}
                     </span>
                     <ItemPrice item={item} />
                   </div>
                   {item.description && (
                     <p className="mt-0.5 text-sm text-muted-foreground">
                       {item.description}
+                    </p>
+                  )}
+                  {item.byOrder && item.available && (
+                    <p className="mt-0.5 text-xs italic text-muted-foreground">
+                      Confeção demorada — encomende ao reservar e confirmamos
+                      consigo.
                     </p>
                   )}
                   {item.allergens.length > 0 && (
