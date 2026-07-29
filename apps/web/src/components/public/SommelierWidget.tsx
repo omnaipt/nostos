@@ -1,9 +1,8 @@
 import * as React from "react";
-import { Wine } from "lucide-react";
+import { Wine, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPriceCents } from "@/lib/types";
 import {
@@ -13,20 +12,36 @@ import {
   type SommelierSuggestion,
 } from "@/lib/sommelier";
 
-// Sommelier Virtual no menu público (/m/{slug}). Specs David 07-Jul: o
-// cliente responde a DUAS perguntas antes das sugestões — range de preço e
-// região/casta/dica de gosto — com prato opcional. As sugestões vêm SEMPRE
-// da carta da casa (whitelist na edge function).
+// Sommelier Virtual no menu público (/m/{slug}).
+// UX v2 (specs David 29-Jul): o caminho principal é clicar no PRATO ("vou
+// comer isto") — o widget abre já com o prato escolhido, sem select comprido.
+// O gosto pede-se por TIPO em botões (tinto/branco/rosé/espumante/doce), com
+// texto livre opcional para região/casta. As sugestões vêm SEMPRE da carta
+// da casa (whitelist na edge; nenhuma mudança na edge nesta versão).
+
+const WINE_TYPES: { code: string; label: string; query: string }[] = [
+  { code: "indiferente", label: "Tanto faz", query: "" },
+  { code: "tinto", label: "Tinto", query: "vinho tinto" },
+  { code: "branco", label: "Branco", query: "vinho branco" },
+  { code: "rose", label: "Rosé", query: "vinho rosé" },
+  { code: "espumante", label: "Espumante", query: "espumante" },
+  { code: "doce", label: "Doce / Porto", query: "vinho doce ou fortificado" },
+];
 
 export function SommelierWidget({
   slug,
-  dishNames,
+  dish,
+  onDishChange,
+  open,
+  onOpenChange,
 }: {
   slug: string;
-  dishNames: string[];
+  dish: string | null;
+  onDishChange: (d: string | null) => void;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
 }) {
-  const [open, setOpen] = React.useState(false);
-  const [dish, setDish] = React.useState("");
+  const [wineType, setWineType] = React.useState("indiferente");
   const [priceRange, setPriceRange] = React.useState<PriceRange>("indiferente");
   const [preference, setPreference] = React.useState("");
   const [loading, setLoading] = React.useState(false);
@@ -40,16 +55,23 @@ export function SommelierWidget({
     setError(null);
   }
 
+  // Abrir para um prato novo limpa a resposta anterior.
+  React.useEffect(() => {
+    if (open) reset();
+  }, [open, dish]);
+
   async function ask() {
     setLoading(true);
     setError(null);
+    const typeQuery = WINE_TYPES.find((t) => t.code === wineType)?.query ?? "";
+    const pref = [typeQuery, preference.trim()].filter(Boolean).join(" · ");
     try {
       const { data, error: fnError } = await supabase.functions.invoke("sommelier-pairing", {
         body: {
           slug,
           dishName: dish || null,
           priceRange,
-          preference: preference.trim() || null,
+          preference: pref || null,
         },
       });
       if (fnError) throw fnError;
@@ -78,8 +100,8 @@ export function SommelierWidget({
           size="lg"
           className="rounded-full shadow-lg"
           onClick={() => {
-            reset();
-            setOpen(true);
+            onDishChange(null);
+            onOpenChange(true);
           }}
         >
           <Wine className="h-5 w-5" aria-hidden /> Pedir sugestão ao sommelier
@@ -88,10 +110,29 @@ export function SommelierWidget({
 
       <Dialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={onOpenChange}
         title="O sommelier da casa"
-        description="Duas perguntas rápidas e sugerimos vinhos da nossa carta."
+        description={
+          dish ? "Vais comer isto; nós tratamos do vinho." : "Sugestões da nossa carta, à tua medida."
+        }
       >
+        {dish && (
+          <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-muted px-3 py-2">
+            <p className="text-sm">
+              <span className="text-muted-foreground">Para acompanhar: </span>
+              <span className="font-medium">{dish}</span>
+            </p>
+            <button
+              type="button"
+              aria-label="Remover prato; sugerir para a refeição em geral"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => onDishChange(null)}
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
+        )}
+
         {suggestions ? (
           <div className="space-y-4">
             <ul className="space-y-3">
@@ -112,7 +153,7 @@ export function SommelierWidget({
               <Button size="sm" variant="outline" onClick={reset}>
                 Perguntar outra vez
               </Button>
-              <Button size="sm" onClick={() => setOpen(false)}>
+              <Button size="sm" onClick={() => onOpenChange(false)}>
                 Fechar
               </Button>
             </div>
@@ -120,23 +161,32 @@ export function SommelierWidget({
         ) : (
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <p className="text-sm font-medium">Para que prato? (opcional)</p>
-              <Select
-                aria-label="Prato"
-                value={dish}
-                onChange={(e) => setDish(e.target.value)}
-              >
-                <option value="">Para a refeição em geral</option>
-                {dishNames.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </Select>
+              <p className="text-sm font-medium">1. Que tipo de vinho?</p>
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Tipo de vinho">
+                {WINE_TYPES.map((t) => {
+                  const on = wineType === t.code;
+                  return (
+                    <button
+                      key={t.code}
+                      type="button"
+                      onClick={() => setWineType(t.code)}
+                      aria-pressed={on}
+                      className={
+                        "rounded-full border px-3 py-1.5 text-sm transition-colors " +
+                        (on
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-input text-muted-foreground hover:bg-muted")
+                      }
+                    >
+                      {t.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="space-y-1.5">
-              <p className="text-sm font-medium">1. Quanto queres gastar na garrafa?</p>
+              <p className="text-sm font-medium">2. Quanto queres gastar na garrafa?</p>
               <div className="flex flex-wrap gap-1.5" role="group" aria-label="Range de preço">
                 {PRICE_RANGES.map((r) => {
                   const on = priceRange === r.code;
@@ -161,11 +211,13 @@ export function SommelierWidget({
             </div>
 
             <div className="space-y-1.5">
-              <p className="text-sm font-medium">2. Região, casta ou o teu gosto?</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Região ou casta? (opcional)
+              </p>
               <Input
-                aria-label="Região, casta ou gosto pessoal"
+                aria-label="Região ou casta (opcional)"
                 maxLength={200}
-                placeholder="Ex.: Douro · Alvarinho · gosto de tintos encorpados"
+                placeholder="Ex.: Douro · Alvarinho"
                 value={preference}
                 onChange={(e) => setPreference(e.target.value)}
                 onKeyDown={(e) => {

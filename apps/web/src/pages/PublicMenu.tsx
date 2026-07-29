@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
-import { CalendarCheck, UtensilsCrossed } from "lucide-react";
+import { CalendarCheck, UtensilsCrossed, Wine } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,6 +17,9 @@ export default function PublicMenu() {
   const { slug } = useParams<{ slug: string }>();
   const restaurantQuery = usePublicRestaurant(slug);
   const menuQuery = usePublicMenu(slug);
+  // Sommelier v2: abre a partir do prato ("vou comer isto") ou do botão geral.
+  const [sommelierOpen, setSommelierOpen] = useState(false);
+  const [sommelierDish, setSommelierDish] = useState<string | null>(null);
 
   // ERRO / NÃO ENCONTRADO
   if (
@@ -59,10 +62,6 @@ export default function PublicMenu() {
   const hasWines = categories.some(
     (c) => isWineCategory(c.label) && c.items.some((i) => i.available),
   );
-  const dishNames = categories
-    .filter((c) => !isWineCategory(c.label))
-    .flatMap((c) => c.items.filter((i) => i.available).map((i) => i.name));
-
   return (
     <MenuShell>
       <div className="w-full max-w-lg space-y-6">
@@ -133,13 +132,35 @@ export default function PublicMenu() {
                         .join(", ")}
                     </p>
                   )}
+                  {hasWines && item.available && !isWineCategory(cat.label) && (
+                    <button
+                      type="button"
+                      className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-input px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      aria-label={`Que vinho combina com ${item.name}?`}
+                      onClick={() => {
+                        setSommelierDish(item.name);
+                        setSommelierOpen(true);
+                      }}
+                    >
+                      <Wine className="h-3.5 w-3.5" aria-hidden />
+                      Que vinho combina?
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
           </section>
         ))}
 
-        {slug && hasWines && <SommelierWidget slug={slug} dishNames={dishNames} />}
+        {slug && hasWines && (
+          <SommelierWidget
+            slug={slug}
+            dish={sommelierDish}
+            onDishChange={setSommelierDish}
+            open={sommelierOpen}
+            onOpenChange={setSommelierOpen}
+          />
+        )}
       </div>
     </MenuShell>
   );
