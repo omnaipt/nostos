@@ -1,15 +1,20 @@
+import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { RoleGate } from "@/components/RoleGate";
 import { AppShell } from "@/components/AppShell";
+import { RoleProvider, useRole } from "@/contexts/RoleContext";
+import { homeForRole } from "@/lib/roles";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Landing from "@/pages/Landing";
 import { useAuth } from "@/contexts/AuthContext";
 import Onboarding from "@/pages/Onboarding";
 import Availability from "@/pages/Availability";
+import Balcao from "@/pages/Balcao";
 import Settings from "@/pages/Settings";
 import Customers from "@/pages/Customers";
 import Margins from "@/pages/Margins";
@@ -28,27 +33,45 @@ import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Raiz condicionada pela sessão: anónimo vê a landing comercial; membro vê o
-// Dashboard. Sem redirect para não partir bookmarks nem piscar o ecrã.
+// Raiz condicionada pela sessão: anónimo vê a landing; membro vê o Início do
+// seu perfil. owner/gestor → Dashboard; balcão → /balcao; cozinha → /ementa
+// (spec Roles 29-07). Sem redirect para owner/gestor (não parte bookmarks).
 function HomeGate() {
   const { user, loading } = useAuth();
   if (loading) return null;
-  return user ? (
-    <AppShell>
-      <Dashboard />
-    </AppShell>
-  ) : (
-    <Landing />
+  if (!user) return <Landing />;
+  return (
+    <RoleProvider>
+      <AppShell>
+        <RoleHome />
+      </AppShell>
+    </RoleProvider>
   );
 }
 
-// Página autenticada do backoffice com a navegação global (auditoria 29-07).
-// A ficha de cozinha (/fichas/:id/imprimir) fica de fora: é uma folha de
-// impressão, o chrome de navegação só sujava o papel.
+function RoleHome() {
+  const { role, isLoading } = useRole();
+  const navigate = useNavigate();
+  const home = isLoading ? "/" : homeForRole(role);
+  useEffect(() => {
+    if (!isLoading && home !== "/") navigate(home, { replace: true });
+  }, [isLoading, home, navigate]);
+  if (isLoading || home !== "/") return null;
+  return <Dashboard />;
+}
+
+// Página autenticada do backoffice com a navegação global (auditoria 29-07) e
+// o gating por perfil (spec Roles 29-07). A ficha de cozinha
+// (/fichas/:id/imprimir) fica de fora: é folha de impressão, o chrome só sujava
+// o papel.
 function Backoffice({ children }: { children: React.ReactNode }) {
   return (
     <ProtectedRoute>
-      <AppShell>{children}</AppShell>
+      <RoleProvider>
+        <AppShell>
+          <RoleGate>{children}</RoleGate>
+        </AppShell>
+      </RoleProvider>
     </ProtectedRoute>
   );
 }
@@ -68,6 +91,7 @@ export default function App() {
             {/* Raiz: landing pública para anónimos, Dashboard para membros (S4). */}
             <Route path="/" element={<HomeGate />} />
             <Route path="/disponibilidade" element={<Backoffice><Availability /></Backoffice>} />
+            <Route path="/balcao" element={<Backoffice><Balcao /></Backoffice>} />
             <Route path="/clientes" element={<Backoffice><Customers /></Backoffice>} />
             <Route path="/ementa" element={<Backoffice><MenuPage /></Backoffice>} />
             <Route path="/ementa/rever/:importId" element={<Backoffice><MenuImportReview /></Backoffice>} />
