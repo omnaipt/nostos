@@ -7,8 +7,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TableManager, type TableRow } from "@/components/tables/TableManager";
 import { TurnManager, type TurnRow } from "@/components/turns/TurnManager";
 import { PantryManager } from "@/components/menu/PantryManager";
+import { CasaLogo } from "@/components/CasaLogo";
 import { useActiveRestaurant, useUpdateRestaurant } from "@/hooks/use-active-restaurant";
+import { supabase } from "@/integrations/supabase/client";
+import { isThemeSlug, THEME_SLUGS, THEMES } from "@/lib/themes";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import type { Restaurant } from "@/lib/types";
 import { useCreateTable, useDeleteTable, useTables, useUpdateTable } from "@/hooks/use-tables";
 import { useCreateTurn, useDeleteTurn, useTurns, useUpdateTurn } from "@/hooks/use-turns";
 import type { IsoWeekday } from "@/lib/types";
@@ -219,15 +224,19 @@ export default function Settings() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Tom da casa</CardTitle>
+              <CardTitle>Identidade da casa</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               {restaurant && (
-                <ToneField
-                  key={restaurant.id}
-                  current={restaurant.tone === "formal" ? "formal" : "proximo"}
-                  restaurantId={restaurant.id}
-                />
+                <>
+                  <LogoField key={`logo-${restaurant.id}`} restaurant={restaurant} />
+                  <ToneField
+                    key={`tone-${restaurant.id}`}
+                    current={restaurant.tone === "formal" ? "formal" : "proximo"}
+                    restaurantId={restaurant.id}
+                  />
+                  <ThemeField key={`theme-${restaurant.id}`} restaurant={restaurant} />
+                </>
               )}
             </CardContent>
           </Card>
@@ -302,6 +311,196 @@ const TONE_OPTIONS: { value: "proximo" | "formal"; label: string; example: strin
     example: "“A sua reserva está confirmada. Com os melhores cumprimentos.”",
   },
 ];
+
+// Logo da casa (0019): bucket restaurant-logos, path {restaurant_id}/logo.ext,
+// leitura pública + escrita por membros (policies na migração). Sem logo, o
+// CasaLogo cai no monograma — nada fica vazio.
+function LogoField({ restaurant }: { restaurant: Restaurant }) {
+  const update = useUpdateRestaurant();
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = React.useState(false);
+
+  async function onFile(file: File | undefined) {
+    if (!file) return;
+    const kinds: Record<string, string> = {
+      "image/png": "png",
+      "image/svg+xml": "svg",
+      "image/jpeg": "jpg",
+    };
+    const ext = kinds[file.type];
+    if (!ext) {
+      toast.error("Usa PNG, SVG ou JPG.");
+      return;
+    }
+    if (file.size > 1024 * 1024) {
+      toast.error("O logo tem de ter no máximo 1 MB.");
+      return;
+    }
+    if (file.type !== "image/svg+xml") {
+      const bigEnough = await new Promise<boolean>((resolve) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          resolve(img.width >= 128 && img.height >= 128);
+        };
+        img.onerror = () => resolve(false);
+        img.src = url;
+      });
+      if (!bigEnough) {
+        toast.error("Imagem demasiado pequena — mínimo 128px de lado.");
+        return;
+      }
+    }
+    setBusy(true);
+    const path = `${restaurant.id}/logo.${ext}`;
+    const { error } = await supabase.storage
+      .from("restaurant-logos")
+      .upload(path, file, { upsert: true, contentType: file.type, cacheControl: "3600" });
+    if (error) {
+      toast.error(error.message || "Não foi possível carregar o logo.");
+      setBusy(false);
+      return;
+    }
+    const { data } = supabase.storage.from("restaurant-logos").getPublicUrl(path);
+    // cache-bust: substituir o ficheiro mantém o URL; o ?v= força refrescar.
+    const url = `${data.publicUrl}?v=${Date.now()}`;
+    update.mutate(
+      { id: restaurant.id, patch: { logo_url: url } },
+      {
+        onSuccess: () => toast.success("Logo da casa guardado"),
+        onError: (e) => toast.error(errMsg(e)),
+        onSettled: () => setBusy(false),
+      },
+    );
+  }
+
+  function removeLogo() {
+    update.mutate(
+      { id: restaurant.id, patch: { logo_url: null } },
+      {
+        onSuccess: () => toast.success("Logo removido — fica o monograma"),
+        onError: (e) => toast.error(errMsg(e)),
+      },
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">Logo</p>
+      <div className="flex flex-wrap items-center gap-4">
+        <CasaLogo name={restaurant.name} logoUrl={restaurant.logo_url} size={56} />
+        <div className="space-y-1.5">
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => inputRef.current?.click()}>
+              {busy ? "A carregar…" : restaurant.logo_url ? "Substituir logo" : "Carregar logo"}
+            </Button>
+            {restaurant.logo_url && (
+              <Button size="sm" variant="ghost" disabled={busy || update.isPending} onClick={removeLogo}>
+                Remover
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            PNG, SVG ou JPG até 1 MB, mínimo 128px. Aparece no menu, nas
+            reservas, nas fichas e aqui no backoffice.
+          </p>
+        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/png,image/svg+xml,image/jpeg"
+          className="hidden"
+          onChange={(e) => {
+            onFile(e.target.files?.[0]);
+            e.target.value = "";
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Tema das superfícies públicas (0019): 6 conjuntos curados (lib/themes.ts).
+// O backoffice não muda com o tema — é identidade nostos.
+function ThemeField({ restaurant }: { restaurant: Restaurant }) {
+  const update = useUpdateRestaurant();
+  const current = isThemeSlug(restaurant.theme) ? restaurant.theme : "costeiro";
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-sm font-medium">Tema do menu e das reservas</p>
+        {restaurant.slug && (
+          <a
+            href={`/m/${restaurant.slug}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-muted-foreground underline"
+          >
+            ver o meu menu
+          </a>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Muda só o que o cliente vê (menu, reserva e email). Contraste verificado
+        em todos.
+      </p>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {THEME_SLUGS.map((slug) => {
+          const t = THEMES[slug];
+          const active = current === slug;
+          return (
+            <button
+              key={slug}
+              type="button"
+              disabled={update.isPending}
+              aria-pressed={active}
+              onClick={() => {
+                if (slug === current) return;
+                update.mutate(
+                  { id: restaurant.id, patch: { theme: slug } },
+                  {
+                    onSuccess: () => toast.success(`Tema guardado: ${t.label}`),
+                    onError: (e) => toast.error(errMsg(e)),
+                  },
+                );
+              }}
+              className={
+                "overflow-hidden rounded-md border text-left transition-shadow " +
+                (active
+                  ? "border-primary ring-2 ring-primary/40"
+                  : "border-input hover:shadow-warm")
+              }
+            >
+              {/* Miniatura: hero + linha de item + preço, nas cores reais. */}
+              <span className="block" style={{ background: t.preview.bg }}>
+                <span
+                  className="block px-2 py-1.5 text-[10px] font-semibold"
+                  style={{ background: t.preview.hero, color: t.preview.bg }}
+                >
+                  {restaurant.name.split(" ")[0]}
+                </span>
+                <span className="flex items-center justify-between px-2 py-2">
+                  <span className="text-[10px]" style={{ color: t.preview.ink }}>
+                    Prato do dia
+                  </span>
+                  <span className="text-[10px] font-semibold" style={{ color: t.preview.accent }}>
+                    12,50 €
+                  </span>
+                </span>
+              </span>
+              <span className="block border-t border-input bg-card px-2 py-1.5">
+                <span className="block text-xs font-medium">{t.label}</span>
+                <span className="block truncate text-[10px] text-muted-foreground">{t.hint}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function ToneField({
   current,

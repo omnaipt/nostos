@@ -659,11 +659,13 @@ export type Database = {
           default_duration_min: number
           email: string | null
           id: string
+          logo_url: string | null
           name: string
           owner_id: string
           phone: string | null
           slug: string
           target_margin_pct: number
+          theme: string
           timezone: string
           tone: string
           vertical: string
@@ -674,11 +676,13 @@ export type Database = {
           default_duration_min?: number
           email?: string | null
           id?: string
+          logo_url?: string | null
           name: string
           owner_id: string
           phone?: string | null
           slug?: string
           target_margin_pct?: number
+          theme?: string
           timezone?: string
           tone?: string
           vertical?: string
@@ -689,11 +693,13 @@ export type Database = {
           default_duration_min?: number
           email?: string | null
           id?: string
+          logo_url?: string | null
           name?: string
           owner_id?: string
           phone?: string | null
           slug?: string
           target_margin_pct?: number
+          theme?: string
           timezone?: string
           tone?: string
           vertical?: string
@@ -1215,9 +1221,11 @@ export type Database = {
       public_restaurant_by_slug: {
         Args: { p_slug: string }
         Returns: {
+          logo_url: string
           name: string
           phone: string
           slug: string
+          theme: string
         }[]
       }
       public_turns_for_date: {

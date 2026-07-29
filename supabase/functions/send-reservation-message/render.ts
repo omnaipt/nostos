@@ -29,7 +29,22 @@ export interface MessageInput {
   hooks: Hook[];
   /** Há reply-to da casa configurado (frase "responda..." só nesse caso). */
   hasReply: boolean;
+  /** Identidade da casa (0019): logo no topo do email; ausente = sem imagem. */
+  logoUrl?: string | null;
+  /** Cor de acento do tema do restaurante (hex); default terracota nostos. */
+  accentHex?: string;
 }
+
+// Acento por tema (0019) — espelho mínimo de lib/themes.ts (a edge não
+// importa código da app); tema desconhecido cai no costeiro.
+export const THEME_ACCENT: Record<string, string> = {
+  costeiro: "#B4502A",
+  ardosia: "#C89B3C",
+  trattoria: "#B33A2B",
+  horta: "#2F5233",
+  carvao: "#C4572E",
+  editorial: "#2E5E73",
+};
 
 // Dois registos chegam no v1; uma escala de 5 seria falsa precisão (§6b).
 const COPY: Record<Tone, {
@@ -136,10 +151,16 @@ export function renderEmailHtml(input: MessageInput): string {
         `<li><strong>${escapeHtml(h.name)}</strong> <span style="color:#6b6b6b;">· ${escapeHtml(c.hookTag[h.kind])}</span></li>`,
     )
     .join("\n        ");
+  const accent = input.accentHex ?? THEME_ACCENT.costeiro;
   return `
     <div style="font-family: system-ui, sans-serif; color: #1a1a1a; line-height: 1.5;">
+      ${
+    input.logoUrl
+      ? `<img src="${escapeHtml(input.logoUrl)}" alt="${escapeHtml(input.restaurantName)}" style="max-height:120px;max-width:200px;margin-bottom:12px;" />`
+      : ""
+  }
       <p>${escapeHtml(c.greeting(input.customerName))}</p>
-      <p>${escapeHtml(c.thanks(input.restaurantName))}</p>
+      <p style="color:${escapeHtml(accent)};font-weight:600;">${escapeHtml(c.thanks(input.restaurantName))}</p>
       <ul>
         <li><strong>Data:</strong> ${escapeHtml(when)}</li>
         <li><strong>Pessoas:</strong> ${input.partySize}</li>

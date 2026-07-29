@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,8 @@ import {
   usePublicTurns,
 } from "@/hooks/use-public-booking";
 import { usePublicMenu, type PublicMenuItem } from "@/hooks/use-public-menu";
+import { CasaLogo } from "@/components/CasaLogo";
+import { themeStyle } from "@/lib/themes";
 import { todayServiceDate } from "@/lib/service-date";
 import { formatPriceCents } from "@/lib/types";
 
@@ -49,7 +51,10 @@ function formatDatePt(iso: string): string {
 
 export default function PublicBooking() {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
   const restaurantQuery = usePublicRestaurant(slug);
+  // Tema do restaurante (0019); `?tema=` sobrepõe para pré-visualização.
+  const style = themeStyle(searchParams.get("tema") ?? restaurantQuery.data?.theme);
 
   const [date, setDate] = React.useState(todayServiceDate());
   const [turnId, setTurnId] = React.useState("");
@@ -127,7 +132,7 @@ export default function PublicBooking() {
   // ERRO / NÃO ENCONTRADO
   if (restaurantQuery.isError || (restaurantQuery.isSuccess && !restaurantQuery.data)) {
     return (
-      <PublicShell>
+      <PublicShell style={style}>
         <Card className="w-full max-w-md">
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
             {restaurantQuery.isError
@@ -142,7 +147,7 @@ export default function PublicBooking() {
   // LOADING
   if (restaurantQuery.isLoading) {
     return (
-      <PublicShell>
+      <PublicShell style={style}>
         <Card className="w-full max-w-md">
           <CardContent className="space-y-3 py-8">
             <Skeleton className="h-8 w-2/3" />
@@ -160,7 +165,7 @@ export default function PublicBooking() {
   if (done) {
     const turn = turns.find((t) => t.id === turnId);
     return (
-      <PublicShell>
+      <PublicShell style={style}>
         <Card className="w-full max-w-md">
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
             <CheckCircle2 className="h-10 w-10 text-[hsl(var(--status-seated-fg))]" aria-hidden="true" />
@@ -201,10 +206,16 @@ export default function PublicBooking() {
 
   // A CONVERSA
   return (
-    <PublicShell>
+    <PublicShell style={style}>
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle>{restaurant.name}</CardTitle>
+        <CardHeader className="space-y-2">
+          <div className="flex items-center gap-2.5">
+            <CasaLogo name={restaurant.name} logoUrl={restaurant.logo_url} size={38} />
+            {/* Cor via var: nos temas escuros o atlântico do backoffice não serve. */}
+            <CardTitle className="text-[hsl(var(--card-foreground))]">
+              {restaurant.name}
+            </CardTitle>
+          </div>
           <p className="text-sm text-muted-foreground">
             Diga-nos quando vem e quantos são, que a mesa fica guardada.
           </p>
@@ -345,9 +356,18 @@ export default function PublicBooking() {
   );
 }
 
-function PublicShell({ children }: { children: React.ReactNode }) {
+function PublicShell({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+}) {
   return (
-    <div className="grid min-h-screen place-items-center bg-muted/30 p-4">
+    <div
+      style={style}
+      className="grid min-h-screen place-items-center bg-background p-4 text-foreground"
+    >
       <div className="flex w-full flex-col items-center gap-4">
         {children}
         <p className="text-xs text-muted-foreground">

@@ -1,21 +1,28 @@
-import { useState, type ReactNode } from "react";
-import { Link, useParams } from "react-router-dom";
-import { CalendarCheck, UtensilsCrossed, Wine } from "lucide-react";
+import { useState, type CSSProperties, type ReactNode } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import { CalendarCheck, Wine } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePublicRestaurant } from "@/hooks/use-public-booking";
 import { usePublicMenu, type PublicMenuItem } from "@/hooks/use-public-menu";
 import { SommelierWidget } from "@/components/public/SommelierWidget";
+import { CasaLogo } from "@/components/CasaLogo";
 import { isWineCategory } from "@/lib/sommelier";
+import { themeStyle } from "@/lib/themes";
 import { ALLERGEN_LABEL, formatPriceCents } from "@/lib/types";
 
 // Menu público (/m/{slug}). Só leitura, anónimo, via RPC. Sem preços em falta
 // a partir de "—". Itens esgotados aparecem esbatidos com selo "Esgotado".
+// Tema por restaurante (0019): as CSS vars do tema aplicam-se no root; a
+// estrutura não muda. `?tema=<slug>` sobrepõe para pré-visualizar (usado pelo
+// "ver o meu menu" das Definições).
 
 export default function PublicMenu() {
   const { slug } = useParams<{ slug: string }>();
+  const [params] = useSearchParams();
   const restaurantQuery = usePublicRestaurant(slug);
   const menuQuery = usePublicMenu(slug);
+  const style = themeStyle(params.get("tema") ?? restaurantQuery.data?.theme);
   // Sommelier v2: abre a partir do prato ("vou comer isto") ou do botão geral.
   const [sommelierOpen, setSommelierOpen] = useState(false);
   const [sommelierDish, setSommelierDish] = useState<string | null>(null);
@@ -26,7 +33,7 @@ export default function PublicMenu() {
     (restaurantQuery.isSuccess && !restaurantQuery.data)
   ) {
     return (
-      <MenuShell>
+      <MenuShell style={style}>
         <Card className="w-full max-w-lg">
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
             {restaurantQuery.isError
@@ -41,7 +48,7 @@ export default function PublicMenu() {
   // LOADING
   if (restaurantQuery.isLoading || menuQuery.isLoading) {
     return (
-      <MenuShell>
+      <MenuShell style={style}>
         <Card className="w-full max-w-lg">
           <CardContent className="space-y-3 py-8">
             <Skeleton className="h-8 w-1/2" />
@@ -74,12 +81,21 @@ export default function PublicMenu() {
     ),
   ).slice(0, 8);
   return (
-    <MenuShell>
+    <MenuShell
+      style={style}
+      hero={
+        <div className="bg-[hsl(var(--hero-bg))] text-[hsl(var(--hero-fg))]">
+          <div className="mx-auto flex w-full max-w-lg items-center gap-3.5 px-4 pb-7 pt-8">
+            <CasaLogo name={restaurant.name} logoUrl={restaurant.logo_url} size={48} />
+            <div className="min-w-0">
+              <h1 className="truncate font-display text-2xl font-semibold">{restaurant.name}</h1>
+              <p className="text-xs uppercase tracking-[0.18em] opacity-75">Menu</p>
+            </div>
+          </div>
+        </div>
+      }
+    >
       <div className="w-full max-w-lg space-y-6">
-        <header className="flex items-center gap-2 px-1">
-          <UtensilsCrossed className="h-6 w-6 text-primary" aria-hidden="true" />
-          <h1 className="text-2xl font-semibold">{restaurant.name}</h1>
-        </header>
 
         {/* Navegação horizontal por categoria (pedido David 29-07): sticky no
             topo, salta por âncora para cada secção do menu. */}
@@ -160,7 +176,7 @@ export default function PublicMenu() {
                     </p>
                   )}
                   {item.allergens.length > 0 && (
-                    <p className="mt-1 text-xs font-medium text-amber-700">
+                    <p className="mt-1 text-xs font-medium text-[hsl(var(--warn-fg))]">
                       Alergénios:{" "}
                       {item.allergens
                         .map((a) => ALLERGEN_LABEL[a] ?? a)
@@ -258,14 +274,25 @@ function ItemPrice({ item }: { item: PublicMenuItem }) {
   );
 }
 
-function MenuShell({ children }: { children: ReactNode }) {
+function MenuShell({
+  children,
+  style,
+  hero,
+}: {
+  children: ReactNode;
+  style?: CSSProperties;
+  hero?: ReactNode;
+}) {
   return (
-    <div className="min-h-screen bg-muted/30 p-4">
-      <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-6 py-6">
-        {children}
-        <p className="text-xs text-muted-foreground">
-          Menu por <span className="font-semibold">nostos</span>
-        </p>
+    <div style={style} className="min-h-screen bg-background text-foreground">
+      {hero}
+      <div className="p-4">
+        <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-6 py-6">
+          {children}
+          <p className="text-xs text-muted-foreground">
+            reservas e menu por <span className="font-semibold">nostos</span>
+          </p>
+        </div>
       </div>
     </div>
   );
