@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AppShell } from "@/components/AppShell";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Landing from "@/pages/Landing";
@@ -12,6 +13,7 @@ import Availability from "@/pages/Availability";
 import Settings from "@/pages/Settings";
 import Customers from "@/pages/Customers";
 import Margins from "@/pages/Margins";
+import MenuPage from "@/pages/MenuPage";
 import Pantry from "@/pages/Pantry";
 import SaftClose from "@/pages/SaftClose";
 import KitchenSheet from "@/pages/KitchenSheet";
@@ -28,7 +30,24 @@ const queryClient = new QueryClient();
 function HomeGate() {
   const { user, loading } = useAuth();
   if (loading) return null;
-  return user ? <Dashboard /> : <Landing />;
+  return user ? (
+    <AppShell>
+      <Dashboard />
+    </AppShell>
+  ) : (
+    <Landing />
+  );
+}
+
+// Página autenticada do backoffice com a navegação global (auditoria 29-07).
+// A ficha de cozinha (/fichas/:id/imprimir) fica de fora: é uma folha de
+// impressão, o chrome de navegação só sujava o papel.
+function Backoffice({ children }: { children: React.ReactNode }) {
+  return (
+    <ProtectedRoute>
+      <AppShell>{children}</AppShell>
+    </ProtectedRoute>
+  );
 }
 
 export default function App() {
@@ -45,54 +64,13 @@ export default function App() {
             <Route path="/repor-password" element={<ResetPassword />} />
             {/* Raiz: landing pública para anónimos, Dashboard para membros (S4). */}
             <Route path="/" element={<HomeGate />} />
-            <Route
-              path="/disponibilidade"
-              element={
-                <ProtectedRoute>
-                  <Availability />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/clientes"
-              element={
-                <ProtectedRoute>
-                  <Customers />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/definicoes"
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/margens"
-              element={
-                <ProtectedRoute>
-                  <Margins />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/despensa"
-              element={
-                <ProtectedRoute>
-                  <Pantry />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/fecho-dia"
-              element={
-                <ProtectedRoute>
-                  <SaftClose />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/disponibilidade" element={<Backoffice><Availability /></Backoffice>} />
+            <Route path="/clientes" element={<Backoffice><Customers /></Backoffice>} />
+            <Route path="/ementa" element={<Backoffice><MenuPage /></Backoffice>} />
+            <Route path="/definicoes" element={<Backoffice><Settings /></Backoffice>} />
+            <Route path="/margens" element={<Backoffice><Margins /></Backoffice>} />
+            <Route path="/despensa" element={<Backoffice><Pantry /></Backoffice>} />
+            <Route path="/fecho-dia" element={<Backoffice><SaftClose /></Backoffice>} />
             <Route
               path="/fichas/:menuItemId/imprimir"
               element={
