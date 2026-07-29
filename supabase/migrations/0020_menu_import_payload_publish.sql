@@ -1,4 +1,5 @@
--- 0019 — Parse do menu (onboarding): payload do draft + publicação transaccional.
+-- 0020 — Parse do menu (onboarding): payload do draft + publicação transaccional.
+-- (Renumerada de 0019 → 0020: a 0019_identidade_casa entrou primeiro via #58.)
 --
 -- SINALIZADO (prompt parse-menu §7 previa "sem migração nova"): menu_imports
 -- (0010) NÃO tinha coluna para guardar o rascunho — o desenho do staging

@@ -4,7 +4,7 @@
 // partilhado (./draft.ts).
 //
 // PRINCÍPIO: o parse NUNCA publica sozinho. O draft validado fica em STAGING
-// (menu_imports, status 'review', payload jsonb da 0019); publicar é acção do
+// (menu_imports, status 'review', payload jsonb da 0020); publicar é acção do
 // dono no ecrã de revisão do Zé, via publish_menu_import (transaccional).
 // menu_categories/menu_items NUNCA são tocados por esta edge.
 //

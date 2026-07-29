@@ -1,10 +1,10 @@
--- STOA/Nostos — Testes da publicação do import de menu (migration 0019).
+-- STOA/Nostos — Testes da publicação do import de menu (migration 0020).
 -- Valida: publicação transaccional (categorias novas + reutilizadas, itens,
 -- variants com default na 1ª, alergénios sugeridos filtrados e por confirmar),
 -- rollback total quando uma linha é inválida (aceitação 5), estado do import,
 -- e isolamento multi-tenant.
 --
--- Correr com: supabase test db (pgTAP). Requer 0001 + 0005 + 0010 + 0019.
+-- Correr com: supabase test db (pgTAP). Requer 0001 + 0005 + 0010 + 0020.
 
 begin;
 
