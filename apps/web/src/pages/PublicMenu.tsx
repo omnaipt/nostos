@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { useParams } from "react-router-dom";
-import { UtensilsCrossed } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { CalendarCheck, UtensilsCrossed } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePublicRestaurant } from "@/hooks/use-public-booking";
@@ -65,9 +66,20 @@ export default function PublicMenu() {
   return (
     <MenuShell>
       <div className="w-full max-w-lg space-y-6">
-        <header className="flex items-center gap-2 px-1">
-          <UtensilsCrossed className="h-6 w-6 text-primary" aria-hidden="true" />
-          <h1 className="text-2xl font-semibold">{restaurant.name}</h1>
+        <header className="flex items-center justify-between gap-2 px-1">
+          <div className="flex items-center gap-2">
+            <UtensilsCrossed className="h-6 w-6 text-primary" aria-hidden="true" />
+            <h1 className="text-2xl font-semibold">{restaurant.name}</h1>
+          </div>
+          {/* Do menu à mesa num toque: a reserva pública já existia em /r/{slug},
+              só não estava ligada daqui (runbook da demo, 29-07). */}
+          <Link
+            to={`/r/${slug}`}
+            className={buttonVariants({ variant: "outline", size: "sm", className: "shrink-0" })}
+          >
+            <CalendarCheck className="mr-1.5 h-4 w-4" aria-hidden="true" />
+            Reservar mesa
+          </Link>
         </header>
 
         {menuQuery.isError && (
