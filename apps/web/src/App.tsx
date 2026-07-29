@@ -15,6 +15,7 @@ import Customers from "@/pages/Customers";
 import Margins from "@/pages/Margins";
 import MenuPage from "@/pages/MenuPage";
 import Pantry from "@/pages/Pantry";
+import Entradas from "@/pages/Entradas";
 import SaftClose from "@/pages/SaftClose";
 import KitchenSheet from "@/pages/KitchenSheet";
 import PublicBooking from "@/pages/PublicBooking";
@@ -70,6 +71,7 @@ export default function App() {
             <Route path="/definicoes" element={<Backoffice><Settings /></Backoffice>} />
             <Route path="/margens" element={<Backoffice><Margins /></Backoffice>} />
             <Route path="/despensa" element={<Backoffice><Pantry /></Backoffice>} />
+            <Route path="/entradas" element={<Backoffice><Entradas /></Backoffice>} />
             <Route path="/fecho-dia" element={<Backoffice><SaftClose /></Backoffice>} />
             <Route
               path="/fichas/:menuItemId/imprimir"
