@@ -24,6 +24,7 @@ import {
   renderSms,
   renderSubject,
   selectHooks,
+  THEME_ACCENT,
   type Tone,
 } from "./render.ts";
 
@@ -100,6 +101,32 @@ async function fetchHooks(slug: string, serviceDate: string, tz: string): Promis
   } catch (e) {
     console.warn("[send-reservation-message] falha a compor ganchos (ignorada):", e);
     return [];
+  }
+}
+
+// Identidade da casa (0019): logo + tema via a RPC pública do restaurante.
+// Best-effort: falha => sem logo, acento costeiro.
+async function fetchIdentity(
+  slug: string,
+): Promise<{ logoUrl: string | null; theme: string | null }> {
+  try {
+    const url = Deno.env.get("SUPABASE_URL");
+    const anon = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!url || !anon) return { logoUrl: null, theme: null };
+    const res = await fetch(`${url}/rest/v1/rpc/public_restaurant_by_slug`, {
+      method: "POST",
+      headers: {
+        apikey: anon,
+        Authorization: `Bearer ${anon}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ p_slug: slug }),
+    });
+    if (!res.ok) return { logoUrl: null, theme: null };
+    const rows = (await res.json()) as { logo_url?: string | null; theme?: string | null }[];
+    return { logoUrl: rows[0]?.logo_url ?? null, theme: rows[0]?.theme ?? null };
+  } catch {
+    return { logoUrl: null, theme: null };
   }
 }
 
@@ -220,6 +247,7 @@ Deno.serve(async (req: Request) => {
   const tz = payload.timezone || "Europe/Lisbon";
   const tone: Tone = payload.tone === "formal" ? "formal" : "proximo";
   const hooks = await fetchHooks(payload.restaurantSlug, payload.serviceDate, tz);
+  const identity = await fetchIdentity(payload.restaurantSlug);
 
   const serviceDateObj = new Date(`${payload.serviceDate}T12:00:00Z`);
   const dateLong = new Intl.DateTimeFormat("pt-PT", {
@@ -256,6 +284,8 @@ Deno.serve(async (req: Request) => {
     notes: payload.notes?.trim() ? payload.notes.trim() : null,
     hooks,
     hasReply: !!payload.replyTo,
+    logoUrl: identity.logoUrl,
+    accentHex: THEME_ACCENT[identity.theme ?? "costeiro"] ?? THEME_ACCENT.costeiro,
   };
 
   // Ordem §6c: WhatsApp quando existir → SMS → email como recibo.

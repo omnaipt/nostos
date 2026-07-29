@@ -9,6 +9,10 @@ export interface PublicRestaurant {
   name: string;
   phone: string | null;
   slug: string;
+  // 0019 (identidade da casa): opcionais enquanto a migração não estiver
+  // aplicada em todos os ambientes — sem eles cai no monograma + costeiro.
+  logo_url?: string | null;
+  theme?: string | null;
 }
 
 export interface PublicTurn {

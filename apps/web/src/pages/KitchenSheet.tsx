@@ -6,6 +6,7 @@ import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import { useIngredients } from "@/hooks/use-ingredients";
 import { useMenuItems } from "@/hooks/use-menu";
 import { useTechSheetLines, useTechSheets } from "@/hooks/use-tech-sheets";
+import { CasaLogo } from "@/components/CasaLogo";
 import { ALLERGEN_LABEL } from "@/lib/types";
 
 // Ficha de cozinha imprimível (S3): a ficha técnica num layout limpo para a
@@ -65,15 +66,23 @@ export default function KitchenSheet() {
       </div>
 
       <article className="rounded-lg border border-input bg-card p-6 print:border-0 print:p-0">
-        <header className="mb-4 border-b border-border pb-3">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">
-            Ficha técnica de cozinha · {restaurant?.name}
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold">{item.name}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {sheet.servings} dose{sheet.servings > 1 ? "s" : ""}
-            {sheet.status === "validada" ? " · validada pelo chef" : " · RASCUNHO (não validada)"}
-          </p>
+        <header className="mb-4 flex items-start gap-3 border-b border-border pb-3">
+          {/* Logo da casa também no papel (decisão David 29-07); em P&B imprime bem. */}
+          {restaurant && (
+            <CasaLogo name={restaurant.name} logoUrl={restaurant.logo_url} size={44} />
+          )}
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              {restaurant?.name} · Ficha técnica de cozinha
+            </p>
+            <h1 className="mt-1 font-display text-2xl font-semibold text-atlantico-900 print:text-black">
+              {item.name}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {sheet.servings} dose{sheet.servings > 1 ? "s" : ""}
+              {sheet.status === "validada" ? " · validada pelo chef" : " · RASCUNHO (não validada)"}
+            </p>
+          </div>
         </header>
 
         <section className="mb-4">
@@ -125,7 +134,7 @@ export default function KitchenSheet() {
         )}
 
         <footer className="mt-6 border-t border-border pt-2 text-xs text-muted-foreground print:mt-8">
-          nostos · actualizada a {new Date(sheet.updated_at).toLocaleDateString("pt-PT")}
+          ficha por nostos · actualizada a {new Date(sheet.updated_at).toLocaleDateString("pt-PT")}
         </footer>
       </article>
     </div>
