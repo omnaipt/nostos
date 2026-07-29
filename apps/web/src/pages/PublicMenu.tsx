@@ -125,7 +125,7 @@ export default function PublicMenu() {
                     </p>
                   )}
                   {item.allergens.length > 0 && (
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1 text-xs font-medium text-amber-700">
                       Alergénios:{" "}
                       {item.allergens
                         .map((a) => ALLERGEN_LABEL[a] ?? a)
