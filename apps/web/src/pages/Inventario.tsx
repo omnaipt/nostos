@@ -76,7 +76,7 @@ export default function Inventario() {
     return (
       <div className="container max-w-3xl py-8">
         <header className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Inventário aplicado</h1>
+          <h1 className="font-display text-2xl font-semibold text-atlantico-900">Inventário aplicado</h1>
           <Link to="/" className={buttonVariants({ variant: "outline", size: "sm" })}>
             Voltar
           </Link>
@@ -130,7 +130,7 @@ export default function Inventario() {
     <div className="container max-w-3xl py-8">
       <header className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Inventário</h1>
+          <h1 className="font-display text-2xl font-semibold text-atlantico-900">Inventário</h1>
           <p className="text-sm text-muted-foreground">
             Conta o que está fisicamente em casa; só as linhas preenchidas geram acerto.
           </p>

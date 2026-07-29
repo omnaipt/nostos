@@ -36,7 +36,7 @@ export default function Customers() {
   return (
     <div className="container max-w-2xl py-8">
       <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Clientes</h1>
+        <h1 className="font-display text-2xl font-semibold text-atlantico-900">Clientes</h1>
         <Link to="/disponibilidade" className={buttonVariants({ variant: "outline", size: "sm" })}>
           Voltar
         </Link>

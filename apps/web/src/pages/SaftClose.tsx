@@ -106,7 +106,7 @@ export default function SaftClose() {
     <div className="container max-w-5xl py-8">
       <header className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Fecho do dia (SAF-T)</h1>
+          <h1 className="font-display text-2xl font-semibold text-atlantico-900">Fecho do dia (SAF-T)</h1>
           <p className="text-sm text-muted-foreground">
             Importa o ficheiro do software de facturação; as vendas abatem a despensa pelas fichas
             técnicas
@@ -293,7 +293,7 @@ function MiniStat({ label, value, bad }: { label: string; value: string; bad?: b
       }
     >
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-xl font-semibold tabular-nums">{value}</p>
+      <p className="mt-1 font-display text-xl font-semibold tabular-nums text-atlantico-900">{value}</p>
     </div>
   );
 }

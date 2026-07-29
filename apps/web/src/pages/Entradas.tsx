@@ -224,7 +224,7 @@ export default function Entradas() {
     <div className="container max-w-3xl py-8">
       <header className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Entradas de compra</h1>
+          <h1 className="font-display text-2xl font-semibold text-atlantico-900">Entradas de compra</h1>
           <p className="text-sm text-muted-foreground">
             Regista as faturas de fornecedor; o saldo e o custo médio da despensa
             actualizam-se sozinhos.

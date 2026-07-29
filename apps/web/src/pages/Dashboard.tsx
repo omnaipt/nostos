@@ -11,6 +11,15 @@ import { computePantrySummary } from "@/lib/stock";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MareDivider } from "@/components/MareDivider";
+
+// Saudação na voz da casa, por hora do dia (direcção Costeiro 29-07).
+function saudacao(): string {
+  const h = new Date().getHours();
+  if (h >= 6 && h < 13) return "Bom dia. A casa está pronta.";
+  if (h >= 13 && h < 20) return "Boa tarde. A casa está pronta.";
+  return "Boa noite. A casa está pronta.";
+}
 
 export default function Dashboard() {
   const { data: restaurant } = useActiveRestaurant();
@@ -57,6 +66,10 @@ export default function Dashboard() {
   const lastAppliedQuery = useLastAppliedImport(restaurant?.id);
   return (
     <div className="container py-8">
+      <header className="mb-6">
+        <h1 className="font-display text-3xl text-atlantico-900">{saudacao()}</h1>
+        <MareDivider className="mt-3" />
+      </header>
       {(publicUrl || menuUrl) && (
         <div className="mb-6 space-y-1 rounded-md border border-input bg-card p-3 text-sm">
           {publicUrl && (
@@ -288,7 +301,7 @@ function Stat({
       }
     >
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-semibold">{value}</p>
+      <p className="mt-1 font-display text-2xl font-semibold text-atlantico-900">{value}</p>
       {delta !== undefined && (
         <p
           className={

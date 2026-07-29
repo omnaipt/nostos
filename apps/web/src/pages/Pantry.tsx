@@ -77,7 +77,7 @@ export default function Pantry() {
     <div className="container max-w-5xl py-8">
       <header className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Despensa</h1>
+          <h1 className="font-display text-2xl font-semibold text-atlantico-900">Despensa</h1>
           <p className="text-sm text-muted-foreground">
             Saldos, alertas de reposição e rasto de movimentos por ingrediente
           </p>
@@ -118,7 +118,7 @@ export default function Pantry() {
               <p className="text-xs text-muted-foreground">Último fecho aplicado</p>
               {lastAppliedQuery.data ? (
                 <>
-                  <p className="mt-1 text-2xl font-semibold">
+                  <p className="mt-1 font-display text-2xl font-semibold text-atlantico-900">
                     {formatDate(lastAppliedQuery.data.applied_at ?? lastAppliedQuery.data.created_at)}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
@@ -211,7 +211,7 @@ function StatBox({ label, value, bad }: { label: string; value: string; bad?: bo
       }
     >
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={"mt-1 text-2xl font-semibold " + (bad ? "text-destructive" : "")}>{value}</p>
+      <p className={"mt-1 font-display text-2xl font-semibold " + (bad ? "text-destructive" : "text-atlantico-900")}>{value}</p>
     </div>
   );
 }
