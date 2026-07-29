@@ -1,14 +1,16 @@
 import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ImportMenuCard } from "@/components/menu/ImportMenuCard";
 import { MenuManager } from "@/components/menu/MenuManager";
 import { MenuQR } from "@/components/menu/MenuQR";
 import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 
 // /ementa — a ementa como página própria (auditoria 29-07: o editor vivia
-// enterrado em /definicoes). Editor completo (pratos de hoje, doses, toggles,
-// vinhos) + QR do menu para imprimir. Aceita ?ficha=<itemId> para abrir a
-// ficha técnica de um prato directamente (link vindo de /margens).
+// enterrado em /definicoes). Importar por foto/PDF (onboarding) + editor
+// completo (pratos de hoje, doses, toggles, vinhos) + QR do menu para
+// imprimir. Aceita ?ficha=<itemId> para abrir a ficha técnica de um prato
+// directamente (link vindo de /margens).
 
 export default function MenuPage() {
   const { data: restaurant, isLoading, isError } = useActiveRestaurant();
@@ -41,6 +43,10 @@ export default function MenuPage() {
 
       {!isError && !isLoading && restaurant && (
         <div className="space-y-6">
+          {/* Onboarding demonstrável: Definições (logo+tema+tom) → Importar →
+              rever → publicar → QR na mesa. */}
+          <ImportMenuCard restaurantId={restaurant.id} />
+
           <MenuManager restaurantId={restaurant.id} initialSheetItemId={fichaItemId} />
 
           {restaurant.slug && (

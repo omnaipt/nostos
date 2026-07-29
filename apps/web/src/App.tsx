@@ -14,6 +14,7 @@ import Settings from "@/pages/Settings";
 import Customers from "@/pages/Customers";
 import Margins from "@/pages/Margins";
 import MenuPage from "@/pages/MenuPage";
+import MenuImportReview from "@/pages/MenuImportReview";
 import Pantry from "@/pages/Pantry";
 import Entradas from "@/pages/Entradas";
 import Inventario from "@/pages/Inventario";
@@ -69,6 +70,7 @@ export default function App() {
             <Route path="/disponibilidade" element={<Backoffice><Availability /></Backoffice>} />
             <Route path="/clientes" element={<Backoffice><Customers /></Backoffice>} />
             <Route path="/ementa" element={<Backoffice><MenuPage /></Backoffice>} />
+            <Route path="/ementa/rever/:importId" element={<Backoffice><MenuImportReview /></Backoffice>} />
             <Route path="/definicoes" element={<Backoffice><Settings /></Backoffice>} />
             <Route path="/margens" element={<Backoffice><Margins /></Backoffice>} />
             <Route path="/despensa" element={<Backoffice><Pantry /></Backoffice>} />
