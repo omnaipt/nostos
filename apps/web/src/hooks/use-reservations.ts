@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { computeReservedAt, computeServiceDate } from "@/lib/service-date";
 import { queryKeys } from "@/lib/query-keys";
-import { sendReservationEmail } from "@/lib/email";
+import { sendReservationMessage } from "@/lib/reservation-message";
 import type { Restaurant, Turn } from "@/lib/types";
 import type { ReservationValues } from "@/lib/schemas";
 
@@ -139,15 +139,20 @@ export function useSaveReservation(ctx: SaveContext | undefined) {
       return { reservation: data, email, restaurant, isNew: true };
     },
     onSuccess: async (result) => {
-      // C7 — email best-effort. NUNCA bloqueia nem falha a criação da reserva.
-      if (result.isNew && result.email) {
-        void sendReservationEmail({
+      // C7 — confirmação multi-canal best-effort. NUNCA bloqueia a criação.
+      // O telefone é obrigatório na reserva; o email é opcional — a edge
+      // decide os canais com o que houver.
+      if (result.isNew && (result.email || result.reservation.customer_phone)) {
+        void sendReservationMessage({
           reservationId: result.reservation.id,
           restaurant: result.restaurant,
           toEmail: result.email,
+          toPhone: result.reservation.customer_phone,
           customerName: result.reservation.customer_name,
           partySize: result.reservation.party_size,
           serviceDate: result.reservation.service_date,
+          reservedAt: result.reservation.reserved_at,
+          notes: result.reservation.notes,
         });
       }
       await qc.invalidateQueries({ queryKey: queryKeys.availabilityRoot });
@@ -173,7 +178,8 @@ export function useAssignTable() {
 }
 
 // C8 — confirmar reserva pendente (vinda do canal público). Só na confirmação
-// segue o email C7 (best-effort): o email do cliente vive em customers.
+// segue a mensagem C7 (best-effort): o email do cliente vive em customers, o
+// telefone na própria reserva.
 export function useConfirmReservation(restaurant: Restaurant | undefined) {
   const qc = useQueryClient();
   return useMutation({
@@ -189,14 +195,18 @@ export function useConfirmReservation(restaurant: Restaurant | undefined) {
     },
     onSuccess: (row) => {
       const email = row.customers?.email ?? null;
-      if (restaurant && email) {
-        void sendReservationEmail({
+      const phone = (row.customer_phone as string | null) ?? null;
+      if (restaurant && (email || phone)) {
+        void sendReservationMessage({
           reservationId: row.id as string,
           restaurant,
           toEmail: email,
+          toPhone: phone,
           customerName: row.customer_name as string,
           partySize: row.party_size as number,
           serviceDate: row.service_date as string,
+          reservedAt: (row.reserved_at as string | null) ?? null,
+          notes: (row.notes as string | null) ?? null,
         });
       }
       void qc.invalidateQueries({ queryKey: queryKeys.availabilityRoot });

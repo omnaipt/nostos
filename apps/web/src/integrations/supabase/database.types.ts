@@ -656,6 +656,7 @@ export type Database = {
           slug: string
           target_margin_pct: number
           timezone: string
+          tone: string
           vertical: string
         }
         Insert: {
@@ -670,6 +671,7 @@ export type Database = {
           slug?: string
           target_margin_pct?: number
           timezone?: string
+          tone?: string
           vertical?: string
         }
         Update: {
@@ -684,6 +686,7 @@ export type Database = {
           slug?: string
           target_margin_pct?: number
           timezone?: string
+          tone?: string
           vertical?: string
         }
         Relationships: []
