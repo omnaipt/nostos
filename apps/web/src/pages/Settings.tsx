@@ -6,8 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableManager, type TableRow } from "@/components/tables/TableManager";
 import { TurnManager, type TurnRow } from "@/components/turns/TurnManager";
-import { MenuManager } from "@/components/menu/MenuManager";
-import { MenuQR } from "@/components/menu/MenuQR";
 import { PantryManager } from "@/components/menu/PantryManager";
 import { useActiveRestaurant, useUpdateRestaurant } from "@/hooks/use-active-restaurant";
 import { Input } from "@/components/ui/input";
@@ -135,11 +133,16 @@ export default function Settings() {
 
   return (
     <div className="container max-w-2xl py-8">
-      <header className="mb-6 flex items-center justify-between">
+      <header className="mb-6">
         <h1 className="text-2xl font-semibold">Definições</h1>
-        <Link to="/disponibilidade" className={buttonVariants({ variant: "outline", size: "sm" })}>
-          Voltar
-        </Link>
+        <p className="text-sm text-muted-foreground">
+          Mesas, turnos, catálogo da despensa, margem alvo e tom da casa. A ementa
+          e o QR do menu vivem na página{" "}
+          <Link to="/ementa" className="underline">
+            Ementa
+          </Link>
+          .
+        </p>
       </header>
 
       {error && (
@@ -216,23 +219,18 @@ export default function Settings() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Menu digital</CardTitle>
+              <CardTitle>Tom da casa</CardTitle>
             </CardHeader>
             <CardContent>
-              {restaurantId && <MenuManager restaurantId={restaurantId} />}
+              {restaurant && (
+                <ToneField
+                  key={restaurant.id}
+                  current={restaurant.tone === "formal" ? "formal" : "proximo"}
+                  restaurantId={restaurant.id}
+                />
+              )}
             </CardContent>
           </Card>
-
-          {restaurant?.slug && (
-            <Card>
-              <CardHeader>
-                <CardTitle>QR do menu</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <MenuQR slug={restaurant.slug} />
-              </CardContent>
-            </Card>
-          )}
         </div>
       )}
     </div>
@@ -285,6 +283,78 @@ function TargetMarginField({ current, restaurantId }: { current: number; restaur
       <p className="text-sm text-muted-foreground">
         Pratos com margem abaixo deste valor aparecem como alerta em Margens.
       </p>
+    </div>
+  );
+}
+
+// Tom da casa (0015): decide a voz das mensagens ao cliente (confirmação de
+// reserva, e o que vier). As frases de exemplo são as reais da edge
+// send-reservation-message, para o dono ouvir exactamente o que vai sair.
+const TONE_OPTIONS: { value: "proximo" | "formal"; label: string; example: string }[] = [
+  {
+    value: "proximo",
+    label: "Próximo",
+    example: "“A casa agradece — a sua mesa está guardada. Até já!”",
+  },
+  {
+    value: "formal",
+    label: "Formal",
+    example: "“A sua reserva está confirmada. Com os melhores cumprimentos.”",
+  },
+];
+
+function ToneField({
+  current,
+  restaurantId,
+}: {
+  current: "proximo" | "formal";
+  restaurantId: string;
+}) {
+  const update = useUpdateRestaurant();
+
+  function choose(tone: "proximo" | "formal") {
+    if (tone === current) return;
+    update.mutate(
+      { id: restaurantId, patch: { tone } },
+      {
+        onSuccess: () =>
+          toast.success(`Tom guardado: ${tone === "proximo" ? "próximo" : "formal"}`),
+        onError: (e) => toast.error(errMsg(e)),
+      },
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm text-muted-foreground">
+        Como a casa fala com os clientes nas mensagens (confirmações de reserva).
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {TONE_OPTIONS.map((opt) => {
+          const active = current === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              disabled={update.isPending}
+              onClick={() => choose(opt.value)}
+              aria-pressed={active}
+              className={
+                "rounded-md border p-3 text-left transition-colors " +
+                (active
+                  ? "border-primary bg-primary/5"
+                  : "border-input hover:bg-muted/50")
+              }
+            >
+              <p className="text-sm font-medium">
+                {opt.label}
+                {active && <span className="ml-2 text-xs font-normal text-primary">em uso</span>}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{opt.example}</p>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

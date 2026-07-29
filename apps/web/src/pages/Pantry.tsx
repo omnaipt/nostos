@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { buttonVariants, Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
-import { useIngredients } from "@/hooks/use-ingredients";
+import { useIngredients, useUpdateIngredient } from "@/hooks/use-ingredients";
 import {
   useCreateManualMovement,
   useLastPurchases,
@@ -82,9 +82,6 @@ export default function Pantry() {
             Saldos, alertas de reposição e rasto de movimentos por ingrediente
           </p>
         </div>
-        <Link to="/" className={buttonVariants({ variant: "outline", size: "sm" })}>
-          Voltar
-        </Link>
       </header>
 
       {ingredientsQuery.isError && (
@@ -175,6 +172,7 @@ export default function Pantry() {
                 {rows.map((i) => (
                   <PantryRow
                     key={i.id}
+                    restaurantId={restaurantId as string}
                     ingredient={i}
                     lastPurchase={lastPurchasesQuery.data?.get(i.id) ?? null}
                     onOpen={() => setSelected(i)}
@@ -187,6 +185,8 @@ export default function Pantry() {
           <p className="mt-6 text-xs text-muted-foreground">
             O saldo é aplicado pelos movimentos (entradas, abates do fecho SAF-T, quebras e
             ajustes). Para corrigir um saldo, regista um ajuste — os movimentos não se editam.
+            O mínimo define quando o ingrediente pede &quot;repor&quot;; deixa vazio se não
+            quiseres alerta.
           </p>
         </>
       )}
@@ -217,54 +217,123 @@ function StatBox({ label, value, bad }: { label: string; value: string; bad?: bo
 }
 
 function PantryRow({
+  restaurantId,
   ingredient,
   lastPurchase,
   onOpen,
 }: {
+  restaurantId: string;
   ingredient: Ingredient;
   lastPurchase: string | null;
   onOpen: () => void;
 }) {
   const below = isBelowMin(ingredient);
+  // A linha inteira continua clicável (abre os movimentos); o botão no nome dá
+  // o acesso por teclado, e o campo do mínimo trava a propagação do clique.
   return (
-    <li className="border-b border-input last:border-b-0">
+    <li
+      onClick={onOpen}
+      className={
+        "grid cursor-pointer grid-cols-2 items-center gap-2 border-b border-input px-3 py-2 text-sm last:border-b-0 hover:bg-muted/50 sm:grid-cols-[1fr_110px_110px_110px_110px_90px] " +
+        (below ? "bg-destructive/5" : "")
+      }
+    >
       <button
         type="button"
-        onClick={onOpen}
-        className={
-          "grid w-full grid-cols-2 items-center gap-2 px-3 py-2.5 text-left text-sm hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:grid-cols-[1fr_110px_110px_110px_110px_90px] " +
-          (below ? "bg-destructive/5" : "")
-        }
+        onClick={(e) => {
+          e.stopPropagation();
+          onOpen();
+        }}
+        className="min-w-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label={`Ver movimentos de ${ingredient.name}`}
       >
-        <span className="truncate font-medium">{ingredient.name}</span>
-        <span className={"text-right tabular-nums " + (below ? "font-semibold text-destructive" : "")}>
-          {formatQty(ingredient.stock_qty)} {ingredient.unit}
-        </span>
-        <span className="hidden text-right tabular-nums text-muted-foreground sm:block">
-          {ingredient.low_stock_threshold != null
-            ? `${formatQty(ingredient.low_stock_threshold)} ${ingredient.unit}`
-            : "—"}
-        </span>
-        <span className="hidden text-right tabular-nums text-muted-foreground sm:block">
-          {formatCostCents(ingredient.cost_per_unit_cents)}
-        </span>
-        <span className="hidden text-right text-xs text-muted-foreground sm:block">
-          {lastPurchase ? formatDate(lastPurchase) : "—"}
-        </span>
-        <span className="text-right">
-          {below ? (
-            <span className="inline-flex rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive">
-              repor
-            </span>
-          ) : (
-            <span className="inline-flex rounded-full bg-[hsl(var(--status-seated-bg))] px-2 py-0.5 text-xs font-medium text-[hsl(var(--status-seated-fg))]">
-              ok
-            </span>
-          )}
-        </span>
+        <span className="block truncate font-medium">{ingredient.name}</span>
       </button>
+      <span className={"text-right tabular-nums " + (below ? "font-semibold text-destructive" : "")}>
+        {formatQty(ingredient.stock_qty)} {ingredient.unit}
+      </span>
+      <span className="hidden justify-end sm:flex">
+        <MinThresholdField restaurantId={restaurantId} ingredient={ingredient} />
+      </span>
+      <span className="hidden text-right tabular-nums text-muted-foreground sm:block">
+        {formatCostCents(ingredient.cost_per_unit_cents)}
+      </span>
+      <span className="hidden text-right text-xs text-muted-foreground sm:block">
+        {lastPurchase ? formatDate(lastPurchase) : "—"}
+      </span>
+      <span className="text-right">
+        {below ? (
+          <span className="inline-flex rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive">
+            repor
+          </span>
+        ) : (
+          <span className="inline-flex rounded-full bg-[hsl(var(--status-seated-bg))] px-2 py-0.5 text-xs font-medium text-[hsl(var(--status-seated-fg))]">
+            ok
+          </span>
+        )}
+      </span>
     </li>
+  );
+}
+
+// Gap B (auditoria 29-07): o mínimo existia na BD e mostrava-se, mas não havia
+// onde o definir. Edição inline, blur grava via RLS (padrão das doses do
+// editor v2). Vazio = sem alerta (estado de incentivo, não de erro).
+function MinThresholdField({
+  restaurantId,
+  ingredient,
+}: {
+  restaurantId: string;
+  ingredient: Ingredient;
+}) {
+  const update = useUpdateIngredient(restaurantId);
+  const served =
+    ingredient.low_stock_threshold != null
+      ? String(ingredient.low_stock_threshold).replace(".", ",")
+      : "";
+  const [value, setValue] = React.useState(served);
+  React.useEffect(() => setValue(served), [served]);
+
+  function save() {
+    const trimmed = value.trim();
+    const next = trimmed === "" ? null : Number(trimmed.replace(",", "."));
+    if (next !== null && (!Number.isFinite(next) || next < 0)) {
+      toast.error("Mínimo inválido.");
+      setValue(served);
+      return;
+    }
+    if (next === ingredient.low_stock_threshold) return;
+    update.mutate(
+      { id: ingredient.id, patch: { low_stock_threshold: next } },
+      {
+        onSuccess: () =>
+          toast.success(
+            next === null
+              ? `Mínimo de ${ingredient.name} removido`
+              : `Mínimo de ${ingredient.name}: ${formatQty(next)} ${ingredient.unit}`,
+          ),
+        onError: (e) =>
+          toast.error(e instanceof Error ? e.message : "Não foi possível guardar o mínimo."),
+      },
+    );
+  }
+
+  return (
+    <span className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+      <Input
+        aria-label={`Mínimo de ${ingredient.name} (${ingredient.unit})`}
+        inputMode="decimal"
+        placeholder="—"
+        className="h-7 w-20 text-right text-xs tabular-nums"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+      />
+      <span className="text-xs text-muted-foreground">{ingredient.unit}</span>
+    </span>
   );
 }
 
@@ -294,7 +363,7 @@ function MovementsDialog({
       }`}
       className="sm:max-w-xl"
     >
-      <div className="mb-4">
+      <div className="mb-4 space-y-3">
         {showForm ? (
           <ManualMovementForm
             restaurantId={restaurantId}
@@ -306,6 +375,11 @@ function MovementsDialog({
             Registar quebra/ajuste
           </Button>
         )}
+        {/* Mínimo também aqui: em mobile a coluna da lista está escondida. */}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          Mínimo de reposição
+          <MinThresholdField restaurantId={restaurantId} ingredient={ingredient} />
+        </div>
       </div>
 
       {movementsQuery.isLoading && (

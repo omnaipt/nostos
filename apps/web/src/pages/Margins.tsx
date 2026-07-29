@@ -59,9 +59,6 @@ export default function Margins() {
             Margem alvo: {targetPct}% (muda nas Definições)
           </p>
         </div>
-        <Link to="/" className={buttonVariants({ variant: "outline", size: "sm" })}>
-          Voltar
-        </Link>
       </header>
 
       {error && (
@@ -145,11 +142,18 @@ function MarginRow({ row, targetPct }: { row: DishMargin; targetPct: number }) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{row.name}</p>
         <p className="text-xs text-muted-foreground">
-          {!row.hasSheet
-            ? "Sem ficha técnica — cria uma nas Definições para veres a margem"
-            : row.complete
-              ? `Food cost ${formatCostCents(row.costCents)}`
-              : `Food cost ${formatCostCents(row.costCents)} (parcial)`}
+          {!row.hasSheet ? (
+            <>
+              Sem ficha técnica —{" "}
+              <Link to={`/ementa?ficha=${row.itemId}`} className="underline">
+                criar ficha (a IA escreve o rascunho)
+              </Link>
+            </>
+          ) : row.complete ? (
+            `Food cost ${formatCostCents(row.costCents)}`
+          ) : (
+            `Food cost ${formatCostCents(row.costCents)} (parcial)`
+          )}
         </p>
       </div>
       <div className="shrink-0 text-right">

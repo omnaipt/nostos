@@ -112,6 +112,23 @@ export function useSaveTechSheet(restaurantId: string | undefined) {
   });
 }
 
+// Validação rápida a partir da fila "por validar" (sem abrir a ficha inteira).
+export function useValidateTechSheet(restaurantId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (sheetId: string) => {
+      const { error } = await supabase
+        .from("tech_sheets")
+        .update({ status: "validada" })
+        .eq("id", sheetId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.techSheets(restaurantId) });
+    },
+  });
+}
+
 export function useDeleteTechSheet(restaurantId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({

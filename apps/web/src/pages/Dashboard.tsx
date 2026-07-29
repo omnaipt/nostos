@@ -1,6 +1,5 @@
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import { useOwnerSummary, type WeekSummary } from "@/hooks/use-owner-summary";
 import { useIngredients } from "@/hooks/use-ingredients";
@@ -10,13 +9,13 @@ import { useLastAppliedImport } from "@/hooks/use-saft";
 import { computeMenuMargins } from "@/lib/types";
 import { computePantrySummary } from "@/lib/stock";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Dashboard() {
-  const { user, signOut } = useAuth();
   const { data: restaurant } = useActiveRestaurant();
   const publicUrl = restaurant?.slug ? `${window.location.origin}/r/${restaurant.slug}` : null;
+  const menuUrl = restaurant?.slug ? `${window.location.origin}/m/${restaurant.slug}` : null;
   const summaryQuery = useOwnerSummary(restaurant?.id);
 
   // Margens (S3): food cost médio + pratos abaixo do alvo, derivados das fichas.
@@ -48,20 +47,28 @@ export default function Dashboard() {
   const lastAppliedQuery = useLastAppliedImport(restaurant?.id);
   return (
     <div className="container py-8">
-      <header className="mb-8 flex items-center justify-between">
-        <img src="/brand/nostos-restaurantes.svg" alt="nostos restaurantes" className="h-12 -ml-2" />
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <span>{user?.email}</span>
-          <Button variant="outline" size="sm" onClick={signOut}>Sair</Button>
+      {(publicUrl || menuUrl) && (
+        <div className="mb-6 space-y-1 rounded-md border border-input bg-card p-3 text-sm">
+          {publicUrl && (
+            <p>
+              <span className="text-muted-foreground">Reservas (link público): </span>
+              <a href={publicUrl} target="_blank" rel="noreferrer" className="font-medium underline">
+                {publicUrl}
+              </a>
+            </p>
+          )}
+          {menuUrl && (
+            <p>
+              <span className="text-muted-foreground">Menu (link público): </span>
+              <a href={menuUrl} target="_blank" rel="noreferrer" className="font-medium underline">
+                {menuUrl}
+              </a>
+              <Link to="/ementa" className="ml-2 text-muted-foreground underline">
+                QR para imprimir
+              </Link>
+            </p>
+          )}
         </div>
-      </header>
-      {publicUrl && (
-        <p className="mb-6 rounded-md border border-input bg-card p-3 text-sm">
-          <span className="text-muted-foreground">Link público de reservas: </span>
-          <a href={publicUrl} target="_blank" rel="noreferrer" className="font-medium underline">
-            {publicUrl}
-          </a>
-        </p>
       )}
       {/* Resumo semanal do dono (v0 do relatório da S2) */}
       <section aria-label="Resumo da semana" className="mb-8">
@@ -129,6 +136,15 @@ export default function Dashboard() {
           </CardContent>
         </Card>
         <Card>
+          <CardHeader><CardTitle>Ementa</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Pratos, pratos do dia, doses, fichas técnicas e o QR do menu.
+            </p>
+            <Link to="/ementa" className={buttonVariants({ variant: "outline" })}>Abrir ementa</Link>
+          </CardContent>
+        </Card>
+        <Card>
           <CardHeader><CardTitle>Clientes</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">Consultar fichas de cliente, notas e histórico de reservas.</p>
@@ -136,9 +152,11 @@ export default function Dashboard() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Mesas e turnos</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Definições</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">Configurar o esquema de mesas e os turnos.</p>
+            <p className="text-sm text-muted-foreground">
+              Mesas, turnos, margem alvo, catálogo da despensa e tom da casa.
+            </p>
             <Link to="/definicoes" className={buttonVariants({ variant: "outline" })}>Abrir definições</Link>
           </CardContent>
         </Card>

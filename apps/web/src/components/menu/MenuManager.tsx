@@ -1,6 +1,6 @@
 import * as React from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, NotebookPen, CopyPlus } from "lucide-react";
+import { Plus, Trash2, Pencil, NotebookPen, CopyPlus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -21,7 +21,7 @@ import {
 import { dailyDuplicates, isDailyOf } from "@/lib/menu-daily";
 import { todayServiceDate } from "@/lib/service-date";
 import { useIngredients } from "@/hooks/use-ingredients";
-import { useTechSheetLines, useTechSheets } from "@/hooks/use-tech-sheets";
+import { useTechSheetLines, useTechSheets, useValidateTechSheet } from "@/hooks/use-tech-sheets";
 import { TechSheetDialog } from "@/components/menu/TechSheetDialog";
 import { formatCostCents } from "@/components/menu/PantryManager";
 import {
@@ -40,6 +40,9 @@ export interface SheetSummary {
   costCents: number;
   marginPct: number | null;
   complete: boolean;
+  // Gap D (auditoria 29-07): rascunhos IA precisam de fila de validação.
+  status: "rascunho" | "validada";
+  sheetId: string;
 }
 
 // Gestão de menu (self-contained): categorias e pratos, tenant-scoped via RLS.
@@ -293,6 +296,11 @@ function ItemRow({
           {!item.available && (
             <span className="ml-2 text-xs font-normal text-muted-foreground">(esgotado)</span>
           )}
+          {sheetSummary?.status === "rascunho" && (
+            <span className="ml-2 rounded-full border border-[hsl(var(--status-pending-fg))]/40 bg-[hsl(var(--status-pending-bg))] px-2 py-0.5 text-[11px] font-normal text-muted-foreground">
+              ficha por validar
+            </span>
+          )}
         </p>
         {item.description && (
           <p className="text-xs text-muted-foreground">{item.description}</p>
@@ -352,15 +360,28 @@ function ItemRow({
           />
           Encomenda
         </label>
-        <Button
-          size="icon"
-          variant="ghost"
-          aria-label="Ficha técnica"
-          title={sheetSummary ? "Ficha técnica (existe)" : "Criar ficha técnica"}
-          onClick={onOpenSheet}
-        >
-          <NotebookPen className={sheetSummary ? "h-4 w-4 text-primary" : "h-4 w-4"} />
-        </Button>
+        {sheetSummary ? (
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="Ficha técnica"
+            title="Abrir ficha técnica"
+            onClick={onOpenSheet}
+          >
+            <NotebookPen className="h-4 w-4 text-primary" />
+          </Button>
+        ) : (
+          // Gap D: sem ficha, o caminho para a IA fica visível na linha.
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 px-2 text-xs"
+            title="Criar ficha técnica — a IA escreve o rascunho"
+            onClick={onOpenSheet}
+          >
+            <Sparkles className="h-3.5 w-3.5" /> Ficha IA
+          </Button>
+        )}
         <Button size="icon" variant="ghost" aria-label="Editar prato" onClick={() => setEditing(true)}>
           <Pencil className="h-4 w-4" />
         </Button>
@@ -696,12 +717,31 @@ function DailyPanel({
   );
 }
 
-export function MenuManager({ restaurantId }: { restaurantId: string }) {
+export function MenuManager({
+  restaurantId,
+  initialSheetItemId,
+}: {
+  restaurantId: string;
+  // Deep link ?ficha=<itemId> (vindo de /margens): abre a ficha do prato mal
+  // os itens cheguem. Consumido uma única vez.
+  initialSheetItemId?: string | null;
+}) {
   const categoriesQuery = useMenuCategories(restaurantId);
   const itemsQuery = useMenuItems(restaurantId);
   const createCategory = useCreateCategory(restaurantId);
+  const validateSheet = useValidateTechSheet(restaurantId);
   const [newCat, setNewCat] = React.useState("");
   const [sheetItem, setSheetItem] = React.useState<MenuItem | null>(null);
+  const consumedDeepLink = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!initialSheetItemId || consumedDeepLink.current || !itemsQuery.data) return;
+    const target = itemsQuery.data.find((i) => i.id === initialSheetItemId);
+    if (target) {
+      consumedDeepLink.current = true;
+      setSheetItem(target);
+    }
+  }, [initialSheetItemId, itemsQuery.data]);
 
   // Fichas técnicas: custo/margem por prato para a lista (0006).
   const sheetsQuery = useTechSheets(restaurantId);
@@ -747,6 +787,8 @@ export function MenuManager({ restaurantId }: { restaurantId: string }) {
         costCents: summary.costCents,
         marginPct: computeMarginPct(item?.price_cents ?? null, summary.costCents),
         complete: summary.total > 0 && summary.costed === summary.total,
+        status: s.status === "validada" ? "validada" : "rascunho",
+        sheetId: s.id,
       });
     }
     return map;
@@ -764,6 +806,16 @@ export function MenuManager({ restaurantId }: { restaurantId: string }) {
     }
     return m;
   }, [items]);
+
+  // Gap D: fila de fichas em rascunho (IA gerou, chef ainda não validou).
+  const pendingSheets = React.useMemo(() => {
+    const list: { item: MenuItem; sheetId: string }[] = [];
+    for (const it of items) {
+      const info = sheetInfoByItem.get(it.id);
+      if (it.active && info?.status === "rascunho") list.push({ item: it, sheetId: info.sheetId });
+    }
+    return list;
+  }, [items, sheetInfoByItem]);
 
   function addCategory() {
     const label = newCat.trim();
@@ -804,6 +856,44 @@ export function MenuManager({ restaurantId }: { restaurantId: string }) {
         <p className="rounded-md border border-dashed border-input p-4 text-sm text-muted-foreground">
           Ainda não tens menu. Cria a primeira categoria (ex.: Entradas, Pratos, Sobremesas).
         </p>
+      )}
+
+      {pendingSheets.length > 0 && (
+        <div className="space-y-2 rounded-md border border-[hsl(var(--status-pending-fg))]/40 bg-[hsl(var(--status-pending-bg))] p-3">
+          <p className="text-sm font-semibold">
+            Fichas por validar ({pendingSheets.length})
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Rascunhos escritos pela IA à espera do olho do chef. Valida depois de
+            confirmares quantidades e custos.
+          </p>
+          <ul className="divide-y divide-border/60">
+            {pendingSheets.map(({ item, sheetId }) => (
+              <li key={sheetId} className="flex items-center justify-between gap-2 py-1.5">
+                <span className="truncate text-sm font-medium">{item.name}</span>
+                <span className="flex shrink-0 gap-1.5">
+                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setSheetItem(item)}>
+                    Abrir
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs"
+                    disabled={validateSheet.isPending}
+                    onClick={() =>
+                      validateSheet.mutate(sheetId, {
+                        onSuccess: () => toast.success(`Ficha de "${item.name}" validada`),
+                        onError: (e) => toast.error(errMsg(e)),
+                      })
+                    }
+                  >
+                    Validar
+                  </Button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {categories.length > 0 && (
