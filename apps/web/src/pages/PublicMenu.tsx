@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { CalendarCheck, UtensilsCrossed, Wine } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePublicRestaurant } from "@/hooks/use-public-booking";
@@ -77,20 +76,9 @@ export default function PublicMenu() {
   return (
     <MenuShell>
       <div className="w-full max-w-lg space-y-6">
-        <header className="flex items-center justify-between gap-2 px-1">
-          <div className="flex items-center gap-2">
-            <UtensilsCrossed className="h-6 w-6 text-primary" aria-hidden="true" />
-            <h1 className="text-2xl font-semibold">{restaurant.name}</h1>
-          </div>
-          {/* Do menu à mesa num toque: a reserva pública já existia em /r/{slug},
-              só não estava ligada daqui (runbook da demo, 29-07). */}
-          <Link
-            to={`/r/${slug}`}
-            className={buttonVariants({ variant: "outline", size: "sm", className: "shrink-0" })}
-          >
-            <CalendarCheck className="mr-1.5 h-4 w-4" aria-hidden="true" />
-            Reservar mesa
-          </Link>
+        <header className="flex items-center gap-2 px-1">
+          <UtensilsCrossed className="h-6 w-6 text-primary" aria-hidden="true" />
+          <h1 className="text-2xl font-semibold">{restaurant.name}</h1>
         </header>
 
         {/* Navegação horizontal por categoria (pedido David 29-07): sticky no
@@ -187,6 +175,19 @@ export default function PublicMenu() {
             </ul>
           </section>
         ))}
+
+        {/* Reserva despromovida no menu (David 29-07): quem lê o menu por QR
+            já está sentado; a porta de entrada da reserva é /r/{slug}. Fica
+            só um caminho discreto para quem chega ao menu fora da mesa. */}
+        <p className="pt-2 text-center">
+          <Link
+            to={`/r/${slug}`}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            <CalendarCheck className="h-4 w-4" aria-hidden="true" />
+            Reservar mesa para outro dia
+          </Link>
+        </p>
 
         {slug && hasWines && (
           <SommelierWidget
