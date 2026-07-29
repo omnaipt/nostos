@@ -62,6 +62,18 @@ export default function PublicMenu() {
   const hasWines = categories.some(
     (c) => isWineCategory(c.label) && c.items.some((i) => i.available),
   );
+  // Regiões da carta (convenção "Região · castas · perfil" na descrição dos
+  // vinhos) para os chips do sommelier: extraídas do próprio menu, sem schema.
+  const wineRegions = Array.from(
+    new Set(
+      categories
+        .filter((c) => isWineCategory(c.label))
+        .flatMap((c) => c.items)
+        .filter((i) => i.available && i.description)
+        .map((i) => (i.description ?? "").split("·")[0].trim())
+        .filter((r) => r.length > 1 && r.length <= 30),
+    ),
+  ).slice(0, 8);
   return (
     <MenuShell>
       <div className="w-full max-w-lg space-y-6">
@@ -81,6 +93,30 @@ export default function PublicMenu() {
           </Link>
         </header>
 
+        {/* Navegação horizontal por categoria (pedido David 29-07): sticky no
+            topo, salta por âncora para cada secção do menu. */}
+        {categories.length > 1 && (
+          <nav
+            aria-label="Categorias do menu"
+            className="sticky top-0 z-20 -my-2 flex gap-1.5 overflow-x-auto border-b border-border/60 bg-background/90 px-1 py-2 backdrop-blur [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {categories.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className="shrink-0 rounded-full border border-input bg-background px-3 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                onClick={() =>
+                  document
+                    .getElementById(`cat-${c.id}`)
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+              >
+                {c.label}
+              </button>
+            ))}
+          </nav>
+        )}
+
         {menuQuery.isError && (
           <Card>
             <CardContent className="py-10 text-center text-sm text-muted-foreground">
@@ -98,7 +134,7 @@ export default function PublicMenu() {
         )}
 
         {categories.map((cat) => (
-          <section key={cat.id} className="space-y-3">
+          <section key={cat.id} id={`cat-${cat.id}`} className="scroll-mt-14 space-y-3">
             <h2 className="border-b border-border pb-1 text-lg font-semibold text-primary">
               {cat.label}
             </h2>
@@ -159,6 +195,7 @@ export default function PublicMenu() {
             onDishChange={setSommelierDish}
             open={sommelierOpen}
             onOpenChange={setSommelierOpen}
+            regions={wineRegions}
           />
         )}
       </div>

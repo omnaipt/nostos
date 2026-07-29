@@ -28,20 +28,35 @@ const WINE_TYPES: { code: string; label: string; query: string }[] = [
   { code: "doce", label: "Doce / Porto", query: "vinho doce ou fortificado" },
 ];
 
+// O toque do empregado de mesa (David 29-07): "gostas mais robusto, encorpado,
+// com acidez?" — perfil em escolha múltipla, nas palavras da mesa.
+const WINE_PROFILES: { code: string; label: string }[] = [
+  { code: "leve e fresco", label: "Leve e fresco" },
+  { code: "encorpado e robusto", label: "Encorpado" },
+  { code: "com acidez viva", label: "Acidez viva" },
+  { code: "macio e frutado", label: "Macio e frutado" },
+  { code: "seco", label: "Seco" },
+  { code: "mineral", label: "Mineral" },
+];
+
 export function SommelierWidget({
   slug,
   dish,
   onDishChange,
   open,
   onOpenChange,
+  regions = [],
 }: {
   slug: string;
   dish: string | null;
   onDishChange: (d: string | null) => void;
   open: boolean;
   onOpenChange: (o: boolean) => void;
+  regions?: string[];
 }) {
   const [wineType, setWineType] = React.useState("indiferente");
+  const [profiles, setProfiles] = React.useState<string[]>([]);
+  const [region, setRegion] = React.useState("indiferente");
   const [priceRange, setPriceRange] = React.useState<PriceRange>("indiferente");
   const [preference, setPreference] = React.useState("");
   const [loading, setLoading] = React.useState(false);
@@ -64,7 +79,14 @@ export function SommelierWidget({
     setLoading(true);
     setError(null);
     const typeQuery = WINE_TYPES.find((t) => t.code === wineType)?.query ?? "";
-    const pref = [typeQuery, preference.trim()].filter(Boolean).join(" · ");
+    const pref = [
+      typeQuery,
+      profiles.join(", "),
+      region !== "indiferente" ? `da região ${region}` : "",
+      preference.trim(),
+    ]
+      .filter(Boolean)
+      .join(" · ");
     try {
       const { data, error: fnError } = await supabase.functions.invoke("sommelier-pairing", {
         body: {
@@ -186,7 +208,67 @@ export function SommelierWidget({
             </div>
 
             <div className="space-y-1.5">
-              <p className="text-sm font-medium">2. Quanto queres gastar na garrafa?</p>
+              <p className="text-sm font-medium">2. Como gostas? (escolhe os que quiseres)</p>
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Perfil de gosto">
+                {WINE_PROFILES.map((p) => {
+                  const on = profiles.includes(p.code);
+                  return (
+                    <button
+                      key={p.code}
+                      type="button"
+                      onClick={() =>
+                        setProfiles((prev) =>
+                          prev.includes(p.code)
+                            ? prev.filter((x) => x !== p.code)
+                            : [...prev, p.code],
+                        )
+                      }
+                      aria-pressed={on}
+                      className={
+                        "rounded-full border px-3 py-1.5 text-sm transition-colors " +
+                        (on
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-input text-muted-foreground hover:bg-muted")
+                      }
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {regions.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-sm font-medium">3. Alguma região preferida?</p>
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Região">
+                  {["indiferente", ...regions].map((r) => {
+                    const on = region === r;
+                    return (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setRegion(r)}
+                        aria-pressed={on}
+                        className={
+                          "rounded-full border px-3 py-1.5 text-sm transition-colors " +
+                          (on
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-input text-muted-foreground hover:bg-muted")
+                        }
+                      >
+                        {r === "indiferente" ? "Tanto faz" : r}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium">
+                {regions.length > 0 ? "4." : "3."} Quanto queres gastar na garrafa?
+              </p>
               <div className="flex flex-wrap gap-1.5" role="group" aria-label="Range de preço">
                 {PRICE_RANGES.map((r) => {
                   const on = priceRange === r.code;
@@ -212,12 +294,12 @@ export function SommelierWidget({
 
             <div className="space-y-1.5">
               <p className="text-sm font-medium text-muted-foreground">
-                Região ou casta? (opcional)
+                Alguma casta ou outro detalhe? (opcional)
               </p>
               <Input
-                aria-label="Região ou casta (opcional)"
+                aria-label="Casta ou outro detalhe (opcional)"
                 maxLength={200}
-                placeholder="Ex.: Douro · Alvarinho"
+                placeholder="Ex.: Alvarinho · sem madeira"
                 value={preference}
                 onChange={(e) => setPreference(e.target.value)}
                 onKeyDown={(e) => {
