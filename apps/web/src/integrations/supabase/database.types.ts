@@ -325,6 +325,7 @@ export type Database = {
           allergens: string[]
           allergens_confirmed: boolean
           available: boolean
+          by_order: boolean
           category_id: string
           created_at: string
           description: string | null
@@ -349,6 +350,7 @@ export type Database = {
           allergens?: string[]
           allergens_confirmed?: boolean
           available?: boolean
+          by_order?: boolean
           category_id: string
           created_at?: string
           description?: string | null
@@ -373,6 +375,7 @@ export type Database = {
           allergens?: string[]
           allergens_confirmed?: boolean
           available?: boolean
+          by_order?: boolean
           category_id?: string
           created_at?: string
           description?: string | null
@@ -1099,6 +1102,7 @@ export type Database = {
         Returns: {
           allergens: string[]
           available: boolean
+          by_order: boolean
           category_id: string
           category_label: string
           category_sort: number

@@ -24,6 +24,8 @@ export interface PublicMenuItem {
   variants: PublicMenuVariant[];
   allergens: string[];
   available: boolean;
+  // Prato por encomenda (0013): confeção lenta, pré-pedido na reserva.
+  byOrder: boolean;
 }
 
 export interface PublicMenuCategory {
@@ -49,6 +51,8 @@ interface MenuRow {
   variants: unknown;
   item_sort: number | null;
   available: boolean | null;
+  // Opcional enquanto a 0013 não estiver aplicada em todos os ambientes.
+  by_order?: boolean | null;
 }
 
 const PRICE_TYPES: readonly PublicPriceType[] = [
@@ -105,6 +109,7 @@ export function usePublicMenu(slug: string | undefined) {
             variants: parseVariants(r.variants),
             allergens: r.allergens ?? [],
             available: r.available ?? true,
+            byOrder: r.by_order ?? false,
           });
         }
       }

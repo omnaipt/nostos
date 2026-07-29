@@ -3,11 +3,11 @@
 -- trigger que impede variante com item de outro restaurante, a coerência
 -- price_type x price_cents, e que public_menu_by_slug devolve as variantes.
 --
--- Correr com: supabase test db (pgTAP). Requer 0001_init + 0005_menu_digital + 0010.
+-- Correr com: supabase test db (pgTAP). Requer 0001_init + 0005_menu_digital + 0010 + 0013.
 
 begin;
 
-select plan(17);
+select plan(19);
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('11111111-1111-1111-1111-111111111111', 'ownerA@stoa.test', '{"full_name":"Owner A"}'),
@@ -144,6 +144,18 @@ select is(
 select is(
   (select count(*)::int from public.public_menu_by_slug('tasca-a') where item_name = 'Prato do dia ONTEM'),
   0, 'Prato do dia de ontem escondeu-se sozinho');
+
+-- ── Cenário 5: by_order (0013) exposto pela RPC pública ─────────────────────
+insert into public.menu_items (restaurant_id, category_id, name, price_type, price_cents, by_order, active) values
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111111', 'Cataplana por encomenda', 'fixed', 4500, true, true);
+
+select is(
+  (select by_order from public.public_menu_by_slug('tasca-a') where item_name = 'Cataplana por encomenda'),
+  true, 'Item por encomenda sai com by_order=true na RPC pública');
+
+select is(
+  (select by_order from public.public_menu_by_slug('tasca-a') where item_name = 'Bacalhau à casa'),
+  false, 'Item normal sai com by_order=false por omissão');
 
 select * from finish();
 rollback;
