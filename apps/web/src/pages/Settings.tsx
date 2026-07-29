@@ -176,6 +176,28 @@ export default function Settings() {
 
       {!error && !loading && (
         <div className="space-y-6">
+          {/* Identidade primeiro: é o que o dono procura mais vezes (logo, tom,
+              tema) e estava enterrada debaixo do catálogo da despensa — David
+              não a encontrou no tour de 29-07. */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Identidade da casa</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {restaurant && (
+                <>
+                  <LogoField key={`logo-${restaurant.id}`} restaurant={restaurant} />
+                  <ToneField
+                    key={`tone-${restaurant.id}`}
+                    current={restaurant.tone === "formal" ? "formal" : "proximo"}
+                    restaurantId={restaurant.id}
+                  />
+                  <ThemeField key={`theme-${restaurant.id}`} restaurant={restaurant} />
+                </>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Esquema de mesas</CardTitle>
@@ -222,24 +244,6 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Identidade da casa</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {restaurant && (
-                <>
-                  <LogoField key={`logo-${restaurant.id}`} restaurant={restaurant} />
-                  <ToneField
-                    key={`tone-${restaurant.id}`}
-                    current={restaurant.tone === "formal" ? "formal" : "proximo"}
-                    restaurantId={restaurant.id}
-                  />
-                  <ThemeField key={`theme-${restaurant.id}`} restaurant={restaurant} />
-                </>
-              )}
-            </CardContent>
-          </Card>
         </div>
       )}
     </div>
