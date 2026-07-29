@@ -60,15 +60,17 @@ export interface PublicReservationInput {
   notes: string;
 }
 
+// Voz da casa (Reserva com Proximidade v1): tratamos o cliente por "si",
+// como ao telefone. Mensagens curtas, sem tom de formulário.
 const ERROR_PT: Record<string, string> = {
   restaurante_invalido: "Restaurante não encontrado.",
-  turno_invalido: "O turno escolhido já não está disponível.",
-  turno_nao_aplicavel: "Esse turno não se aplica ao dia escolhido.",
-  data_passada: "Não é possível reservar para uma data passada.",
+  turno_invalido: "Esse horário já não está disponível.",
+  turno_nao_aplicavel: "Esse horário não se aplica ao dia escolhido.",
+  data_passada: "Essa data já passou.",
   data_demasiado_distante: "Só aceitamos reservas até 6 meses.",
-  pax_invalido: "Indica um número de pessoas entre 1 e 50.",
-  dados_invalidos: "Verifica o nome e o telefone (mín. 9 dígitos).",
-  limite_atingido: "Já tens pedidos pendentes para esse dia. O restaurante vai contactar-te.",
+  pax_invalido: "Indique um número de pessoas entre 1 e 50.",
+  dados_invalidos: "Confirme o nome e o telefone (mín. 9 dígitos).",
+  limite_atingido: "Já tem pedidos pendentes para esse dia. O restaurante vai falar consigo.",
 };
 
 export function publicBookingErrorMessage(err: unknown): string {
@@ -76,7 +78,7 @@ export function publicBookingErrorMessage(err: unknown): string {
   for (const [key, pt] of Object.entries(ERROR_PT)) {
     if (msg.includes(key)) return pt;
   }
-  return "Não foi possível enviar o pedido. Tenta novamente.";
+  return "Não conseguimos enviar o pedido. Tente novamente.";
 }
 
 export function useCreatePublicReservation() {

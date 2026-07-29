@@ -26,6 +26,9 @@ export interface PublicMenuItem {
   available: boolean;
   // Prato por encomenda (0013): confeção lenta, pré-pedido na reserva.
   byOrder: boolean;
+  // Prato do dia (0014): a RPC só devolve daily do próprio dia; o cliente usa
+  // o kind para o destacar (ex.: "hoje temos" na reserva).
+  kind: "standard" | "daily";
 }
 
 export interface PublicMenuCategory {
@@ -53,6 +56,8 @@ interface MenuRow {
   available: boolean | null;
   // Opcional enquanto a 0013 não estiver aplicada em todos os ambientes.
   by_order?: boolean | null;
+  // Opcional enquanto a 0014 não estiver aplicada em todos os ambientes.
+  kind?: string | null;
 }
 
 const PRICE_TYPES: readonly PublicPriceType[] = [
@@ -110,6 +115,7 @@ export function usePublicMenu(slug: string | undefined) {
             allergens: r.allergens ?? [],
             available: r.available ?? true,
             byOrder: r.by_order ?? false,
+            kind: r.kind === "daily" ? "daily" : "standard",
           });
         }
       }

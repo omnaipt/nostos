@@ -1110,6 +1110,7 @@ export type Database = {
           item_id: string
           item_name: string
           item_sort: number
+          kind: string
           price_cents: number
           price_type: string
           serves: number
