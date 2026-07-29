@@ -1,0 +1,95 @@
+import { describe, expect, it } from "vitest";
+import type { PublicMenuItem } from "@/hooks/use-public-menu";
+import {
+  cartCount,
+  cartTotalCents,
+  isOrderable,
+  optionsForItem,
+  pickupSlots,
+  toSubmitItems,
+  type CartLine,
+} from "./takeaway";
+
+function item(p: Partial<PublicMenuItem>): PublicMenuItem {
+  return {
+    id: "i",
+    name: "Prato",
+    description: null,
+    priceCents: 1200,
+    priceType: "fixed",
+    serves: null,
+    variants: [],
+    allergens: [],
+    available: true,
+    byOrder: false,
+    kind: "standard",
+    ...p,
+  } as PublicMenuItem;
+}
+
+describe("isOrderable", () => {
+  it("fixed com preço entra; market/by_order/esgotado ficam fora", () => {
+    expect(isOrderable(item({}))).toBe(true);
+    expect(isOrderable(item({ priceType: "market", priceCents: null }))).toBe(false);
+    expect(isOrderable(item({ byOrder: true }))).toBe(false);
+    expect(isOrderable(item({ available: false }))).toBe(false);
+    expect(isOrderable(item({ priceType: "per_kg" }))).toBe(false);
+  });
+  it("variants entra se pelo menos uma dose tem preço", () => {
+    expect(
+      isOrderable(item({ priceType: "variants", priceCents: null, variants: [{ label: "2 pax", priceCents: 3200, unit: "dose", serves: 2 }] })),
+    ).toBe(true);
+    expect(
+      isOrderable(item({ priceType: "variants", priceCents: null, variants: [{ label: "?", priceCents: null, unit: "dose", serves: null }] })),
+    ).toBe(false);
+  });
+});
+
+describe("optionsForItem", () => {
+  it("fixed dá 1 opção; variants dá uma por dose com preço", () => {
+    expect(optionsForItem(item({}))).toHaveLength(1);
+    const opts = optionsForItem(
+      item({
+        priceType: "variants",
+        priceCents: null,
+        variants: [
+          { label: "2 pax", priceCents: 3200, unit: "dose", serves: 2 },
+          { label: "1 pax", priceCents: 1800, unit: "dose", serves: 1 },
+        ],
+      }),
+    );
+    expect(opts.map((o) => o.label)).toEqual(["Prato · 2 pax", "Prato · 1 pax"]);
+    expect(opts[0].priceCents).toBe(3200);
+  });
+});
+
+describe("cart math", () => {
+  const lines: CartLine[] = [
+    { key: "a", menuItemId: "a", variantId: null, name: "A", unitPriceCents: 1200, qty: 2 },
+    { key: "b", menuItemId: "b", variantId: null, name: "B", unitPriceCents: 500, qty: 1 },
+  ];
+  it("total e contagem", () => {
+    expect(cartTotalCents(lines)).toBe(2900);
+    expect(cartCount(lines)).toBe(3);
+  });
+  it("toSubmitItems só leva ids + qty (preço é do servidor)", () => {
+    expect(toSubmitItems(lines)).toEqual([
+      { menu_item_id: "a", variant_id: null, qty: 2 },
+      { menu_item_id: "b", variant_id: null, qty: 1 },
+    ]);
+  });
+});
+
+describe("pickupSlots", () => {
+  it("gera slots de 15min por 2h30 desde cada turno, ordenados e sem duplicados", () => {
+    const slots = pickupSlots(["12:30", "19:30"]);
+    expect(slots[0]).toBe("12:30");
+    expect(slots).toContain("13:00");
+    expect(slots).toContain("15:00"); // 12:30 + 2h30
+    expect(slots).toContain("19:30");
+    // ordenado
+    expect([...slots]).toEqual([...slots].sort());
+    // sem duplicados
+    expect(new Set(slots).size).toBe(slots.length);
+  });
+});

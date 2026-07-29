@@ -27,6 +27,7 @@ import SaftClose from "@/pages/SaftClose";
 import KitchenSheet from "@/pages/KitchenSheet";
 import PublicBooking from "@/pages/PublicBooking";
 import PublicMenu from "@/pages/PublicMenu";
+import PublicTakeaway from "@/pages/PublicTakeaway";
 import RecoverPassword from "@/pages/RecoverPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
@@ -86,6 +87,7 @@ export default function App() {
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/r/:slug" element={<PublicBooking />} />
             <Route path="/m/:slug" element={<PublicMenu />} />
+            <Route path="/m/:slug/levar" element={<PublicTakeaway />} />
             <Route path="/recuperar-password" element={<RecoverPassword />} />
             <Route path="/repor-password" element={<ResetPassword />} />
             {/* Raiz: landing pública para anónimos, Dashboard para membros (S4). */}

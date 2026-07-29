@@ -1,6 +1,6 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { CalendarCheck, Wine } from "lucide-react";
+import { CalendarCheck, ShoppingBag, Wine } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePublicRestaurant } from "@/hooks/use-public-booking";
@@ -202,6 +202,19 @@ export default function PublicMenu() {
             </ul>
           </section>
         ))}
+
+        {/* Take-away (fase D): só quando o restaurante o activa (defensivo se a
+            coluna ainda não existir). Botão de acção, ao contrário da reserva
+            que é discreta — encomendar é a chamada à acção da vitrine. */}
+        {restaurant.takeaway_enabled === true && (
+          <Link
+            to={`/m/${slug}/levar`}
+            className="flex items-center justify-center gap-2 rounded-[9px] bg-primary px-4 py-3 text-sm font-medium text-primary-foreground"
+          >
+            <ShoppingBag className="h-4 w-4" aria-hidden="true" />
+            Encomendar para levar
+          </Link>
+        )}
 
         {/* Reserva despromovida no menu (David 29-07): quem lê o menu por QR
             já está sentado; a porta de entrada da reserva é /r/{slug}. Fica

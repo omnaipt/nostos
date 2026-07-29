@@ -9,6 +9,7 @@ import { TurnManager, type TurnRow } from "@/components/turns/TurnManager";
 import { PantryManager } from "@/components/menu/PantryManager";
 import { CasaLogo } from "@/components/CasaLogo";
 import { EquipaCard } from "@/components/settings/EquipaCard";
+import { TakeawayCard } from "@/components/settings/TakeawayCard";
 import { useRole } from "@/contexts/RoleContext";
 import { useActiveRestaurant, useUpdateRestaurant } from "@/hooks/use-active-restaurant";
 import { supabase } from "@/integrations/supabase/client";
@@ -250,6 +251,8 @@ export default function Settings() {
             </CardContent>
           </Card>
 
+          {/* Take-away: owner/gestor (não gated a owner) — módulo operacional. */}
+          {restaurant && <TakeawayCard key={`ta-${restaurant.id}`} restaurant={restaurant} />}
         </div>
       )}
     </div>

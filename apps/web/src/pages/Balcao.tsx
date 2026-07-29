@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ReservationFormDialog } from "@/components/reservations/ReservationFormDialog";
+import { OrderQueue, useReceivedCount } from "@/components/balcao/OrderQueue";
 import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import { useTables } from "@/hooks/use-tables";
 import { useTurns } from "@/hooks/use-turns";
@@ -43,6 +44,17 @@ export default function Balcao() {
   const turnsQuery = useTurns(restaurantId);
   const [turnId, setTurnId] = React.useState("");
   const [formOpen, setFormOpen] = React.useState(false);
+  const [tab, setTab] = React.useState<"reservas" | "takeaway">("reservas");
+
+  // Encomendas por atender: badge na tab + título da página (o tablet pode
+  // estar noutra tab). A fila degrada a [] se o take-away ainda não existir.
+  const receivedCount = useReceivedCount(restaurantId);
+  React.useEffect(() => {
+    document.title = receivedCount > 0 ? `(${receivedCount}) Balcão · nostos` : "Balcão · nostos";
+    return () => {
+      document.title = "nostos";
+    };
+  }, [receivedCount]);
 
   const confirmReservation = useConfirmReservation(restaurant ?? undefined);
   const updateStatus = useUpdateReservationStatus();
@@ -87,17 +99,53 @@ export default function Balcao() {
             )}
           </p>
         </div>
-        <Button
-          size="lg"
-          className="h-12 px-5 text-base"
-          disabled={todaysTurns.length === 0}
-          onClick={() => setFormOpen(true)}
-        >
-          <Plus className="h-5 w-5" /> Nova reserva
-        </Button>
+        {tab === "reservas" && (
+          <Button
+            size="lg"
+            className="h-12 px-5 text-base"
+            disabled={todaysTurns.length === 0}
+            onClick={() => setFormOpen(true)}
+          >
+            <Plus className="h-5 w-5" /> Nova reserva
+          </Button>
+        )}
       </header>
 
-      {loading && (
+      {/* Tabs: reservas | take-away (com badge de encomendas por atender). */}
+      <div className="mb-4 flex gap-2">
+        {(["reservas", "takeaway"] as const).map((t) => {
+          const active = tab === t;
+          return (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              className={
+                "flex min-h-11 items-center gap-2 rounded-full border px-4 text-base transition-colors " +
+                (active
+                  ? "border-terracota-600 bg-terracota-600 font-medium text-areia-50"
+                  : "border-input bg-card text-foreground hover:bg-muted")
+              }
+            >
+              {t === "reservas" ? "Reservas" : "Take-away"}
+              {t === "takeaway" && receivedCount > 0 && (
+                <span
+                  className={
+                    "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-semibold " +
+                    (active ? "bg-areia-50 text-terracota-600" : "bg-terracota-600 text-areia-50")
+                  }
+                >
+                  {receivedCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === "takeaway" && restaurant && <OrderQueue restaurant={restaurant} />}
+
+      {tab === "reservas" && loading && (
         <div className="space-y-3">
           <Skeleton className="h-11 w-full" />
           <Skeleton className="h-24 w-full" />
@@ -105,7 +153,7 @@ export default function Balcao() {
         </div>
       )}
 
-      {!loading && todaysTurns.length === 0 && (
+      {tab === "reservas" && !loading && todaysTurns.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
             Hoje não há turnos com serviço. Podes na mesma receber quem chegar
@@ -114,7 +162,7 @@ export default function Balcao() {
         </Card>
       )}
 
-      {!loading && todaysTurns.length > 0 && (
+      {tab === "reservas" && !loading && todaysTurns.length > 0 && (
         <>
           {/* Turnos como pills grandes (targets ≥44px). */}
           <div className="mb-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
