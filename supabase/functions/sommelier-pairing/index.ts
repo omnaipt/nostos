@@ -186,13 +186,30 @@ Regras:
     }
 
     // WHITELIST: só passam sugestões cujo vinho existe mesmo na carta.
+    // Robustez (29-07): cartas com prefixo de tipo no nome ("Branco · X")
+    // faziam o modelo responder só "X" e a whitelist deitava tudo fora
+    // (sem_correspondencia na Lota do Cais). Depois do match exacto,
+    // aceita-se correspondência por contenção QUANDO É ÚNICA — o princípio
+    // de nunca inventar mantém-se (ambíguo = descartado).
     const byNorm = new Map(wines.map((w) => [norm(w.name), w]));
+    const findWine = (raw: string) => {
+      const n = norm(raw);
+      if (!n) return null;
+      const exact = byNorm.get(n);
+      if (exact) return exact;
+      const contained = wines.filter((w) => {
+        const wn = norm(w.name);
+        return wn.includes(n) || n.includes(wn);
+      });
+      return contained.length === 1 ? contained[0] : null;
+    };
+    const seen = new Set<string>();
     const valid = parsed.suggestions
       .map((s) => {
-        const match = byNorm.get(norm(s.wine));
-        return match
-          ? { wine: match.name, priceCents: match.price_cents, reason: s.reason }
-          : null;
+        const match = findWine(s.wine);
+        if (!match || seen.has(match.name)) return null;
+        seen.add(match.name);
+        return { wine: match.name, priceCents: match.price_cents, reason: s.reason };
       })
       .filter((x): x is { wine: string; priceCents: number | null; reason: string } => x !== null)
       .slice(0, 3);
