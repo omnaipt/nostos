@@ -27,10 +27,14 @@ export function useAvailability(
   restaurantId: string | undefined,
   serviceDate: string,
   turnId: string,
+  // Modo balcão: auto-refresh (o empregado não faz F5). Aditivo — os outros
+  // callers não passam nada e mantêm o comportamento de sempre.
+  opts?: { refetchInterval?: number },
 ) {
   return useQuery({
     queryKey: queryKeys.availability(restaurantId, serviceDate, turnId),
     queryFn: () => fetchSlotReservations(serviceDate, turnId),
     enabled: !!restaurantId && !!turnId && !!serviceDate,
+    refetchInterval: opts?.refetchInterval,
   });
 }

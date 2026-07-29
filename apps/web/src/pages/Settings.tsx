@@ -8,6 +8,9 @@ import { TableManager, type TableRow } from "@/components/tables/TableManager";
 import { TurnManager, type TurnRow } from "@/components/turns/TurnManager";
 import { PantryManager } from "@/components/menu/PantryManager";
 import { CasaLogo } from "@/components/CasaLogo";
+import { EquipaCard } from "@/components/settings/EquipaCard";
+import { TakeawayCard } from "@/components/settings/TakeawayCard";
+import { useRole } from "@/contexts/RoleContext";
 import { useActiveRestaurant, useUpdateRestaurant } from "@/hooks/use-active-restaurant";
 import { supabase } from "@/integrations/supabase/client";
 import { isThemeSlug, THEME_SLUGS, THEMES } from "@/lib/themes";
@@ -32,6 +35,10 @@ function tablesToRows(
 export default function Settings() {
   const { data: restaurant, isLoading: loadingRest, isError: restError } = useActiveRestaurant();
   const restaurantId = restaurant?.id;
+  // Identidade e Equipa são owner-only (spec §1): o gestor gere a operação mas
+  // não a identidade da casa nem a equipa.
+  const { role } = useRole();
+  const isOwner = role === "owner";
 
   const tablesQuery = useTables(restaurantId);
   const turnsQuery = useTurns(restaurantId);
@@ -178,25 +185,25 @@ export default function Settings() {
         <div className="space-y-6">
           {/* Identidade primeiro: é o que o dono procura mais vezes (logo, tom,
               tema) e estava enterrada debaixo do catálogo da despensa — David
-              não a encontrou no tour de 29-07. */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Identidade da casa</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {restaurant && (
-                <>
-                  <LogoField key={`logo-${restaurant.id}`} restaurant={restaurant} />
-                  <ToneField
-                    key={`tone-${restaurant.id}`}
-                    current={restaurant.tone === "formal" ? "formal" : "proximo"}
-                    restaurantId={restaurant.id}
-                  />
-                  <ThemeField key={`theme-${restaurant.id}`} restaurant={restaurant} />
-                </>
-              )}
-            </CardContent>
-          </Card>
+              não a encontrou no tour de 29-07. owner-only (spec Roles §1). */}
+          {isOwner && restaurant && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Identidade da casa</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <LogoField key={`logo-${restaurant.id}`} restaurant={restaurant} />
+                <ToneField
+                  key={`tone-${restaurant.id}`}
+                  current={restaurant.tone === "formal" ? "formal" : "proximo"}
+                  restaurantId={restaurant.id}
+                />
+                <ThemeField key={`theme-${restaurant.id}`} restaurant={restaurant} />
+              </CardContent>
+            </Card>
+          )}
+
+          {isOwner && restaurantId && <EquipaCard restaurantId={restaurantId} />}
 
           <Card>
             <CardHeader>
@@ -244,6 +251,8 @@ export default function Settings() {
             </CardContent>
           </Card>
 
+          {/* Take-away: owner/gestor (não gated a owner) — módulo operacional. */}
+          {restaurant && <TakeawayCard key={`ta-${restaurant.id}`} restaurant={restaurant} />}
         </div>
       )}
     </div>

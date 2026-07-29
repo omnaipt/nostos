@@ -13,6 +13,9 @@ export interface PublicRestaurant {
   // aplicada em todos os ambientes — sem eles cai no monograma + costeiro.
   logo_url?: string | null;
   theme?: string | null;
+  // Take-away (fase C do Marco): opt-in por restaurante. Defensivo — ausente
+  // ou false ⇒ o módulo de encomendas nem aparece.
+  takeaway_enabled?: boolean | null;
 }
 
 export interface PublicTurn {

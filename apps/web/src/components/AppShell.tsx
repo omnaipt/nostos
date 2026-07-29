@@ -1,44 +1,30 @@
 import { Link, NavLink } from "react-router-dom";
 import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/contexts/RoleContext";
 import { CasaLogo } from "@/components/CasaLogo";
+import { navForRole } from "@/lib/roles";
 
 // Navegação global do backoffice (auditoria 29-07: o produto estava enterrado
 // em /definicoes atrás de um cartão "Mesas e turnos"; se o dono não encontra,
 // o cliente também não). Desktop e mobile usam a mesma barra no topo, com
-// scroll horizontal em ecrãs estreitos — 8 entradas não cabem num bottom tab
-// bar honesto e o scroll de chips já é o padrão do menu público.
+// scroll horizontal em ecrãs estreitos.
 //
 // Pele "Costeiro quente" (29-07): a barra é atlantico-900 (estrutura), o
 // activo é a ÚNICA pill terracota, e à esquerda vive o bloco da casa
 // (logo/monograma + nome) com o nostos a assinar discreto — o produto é do
 // restaurante.
-
-const NAV: { to: string; label: string; end?: boolean }[] = [
-  { to: "/", label: "Início", end: true },
-  { to: "/disponibilidade", label: "Reservas" },
-  { to: "/ementa", label: "Ementa" },
-  { to: "/margens", label: "Margens" },
-  { to: "/despensa", label: "Despensa" },
-  { to: "/fecho-dia", label: "Fecho do dia" },
-  { to: "/clientes", label: "Clientes" },
-  { to: "/definicoes", label: "Definições" },
-];
-
-// Sprint de stock do Marco (rotas /entradas e /inventario, em curso em
-// paralelo): quando os PRs dele fundirem, basta virar esta flag.
-const SHOW_STOCK_ROUTES = true;
-const STOCK_NAV: { to: string; label: string; end?: boolean }[] = [
-  { to: "/entradas", label: "Entradas" },
-  { to: "/inventario", label: "Inventário" },
-];
+//
+// Nav filtrada por perfil (spec Roles 29-07): o balcão vê Balcão+Clientes, a
+// cozinha vê Ementa+Despensa+Entradas+Inventário, owner/gestor veem tudo.
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
   const { data: restaurant } = useActiveRestaurant();
-  const items = SHOW_STOCK_ROUTES
-    ? [...NAV.slice(0, 6), ...STOCK_NAV, ...NAV.slice(6)]
-    : NAV;
+  const { role, isLoading: roleLoading } = useRole();
+  // Enquanto o role não é conhecido, nav vazia (evita mostrar itens que o role
+  // não pode e depois os retirar).
+  const items = roleLoading ? [] : navForRole(role);
 
   return (
     <div className="min-h-screen">
