@@ -71,11 +71,16 @@ select is(
     where restaurant_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
   0, 'Owner B não vê aliases do tenant A');
 
+-- NOTA (verificado contra prod 29-07): o trigger de guarda corre ANTES da
+-- with-check da policy e sob o INVOKER — owner B não vê os ingredientes do
+-- tenant A por RLS, o EXISTS falha, e o P0001 dispara primeiro que o 42501.
+-- A escrita é rejeitada na mesma (defesa em profundidade); o código de erro
+-- é o da guarda, não o da policy.
 select throws_ok($$
   insert into public.supplier_product_aliases (restaurant_id, supplier_norm, raw_name_norm, ingredient_id)
   values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'intruso', 'x', '11110001-0000-0000-0000-000000000001')
-$$, '42501', null,
-   'Owner B não escreve alias no tenant A (with check)');
+$$, 'P0001', 'ingrediente_de_outro_restaurante',
+   'Owner B não escreve alias no tenant A (guarda sob RLS rejeita primeiro)');
 
 select * from finish();
 rollback;
