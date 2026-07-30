@@ -3,8 +3,10 @@ import type { PublicMenuItem } from "@/hooks/use-public-menu";
 import {
   cartCount,
   cartTotalCents,
+  earliestPickupToday,
   isOrderable,
   optionsForItem,
+  pickupDays,
   pickupSlots,
   toSubmitItems,
   type CartLine,
@@ -97,5 +99,45 @@ describe("pickupSlots", () => {
     expect([...slots]).toEqual([...slots].sort());
     // sem duplicados
     expect(new Set(slots).size).toBe(slots.length);
+  });
+
+  it("filtra as horas já passadas quando é para hoje", () => {
+    const todas = pickupSlots(["12:30", "19:30"]);
+    const so_tarde = pickupSlots(["12:30", "19:30"], "19:00");
+    expect(todas).toContain("13:00");
+    expect(so_tarde).not.toContain("13:00");
+    expect(so_tarde[0]).toBe("19:30");
+  });
+});
+
+describe("earliestPickupToday", () => {
+  it("soma a folga de preparação e arredonda para cima aos 15 min", () => {
+    // 17:21 + 30 = 17:51 -> 18:00
+    expect(earliestPickupToday(new Date(2026, 6, 30, 17, 21))).toBe("18:00");
+    // 12:00 + 30 = 12:30, já múltiplo de 15
+    expect(earliestPickupToday(new Date(2026, 6, 30, 12, 0))).toBe("12:30");
+  });
+
+  it("devolve 24:00 quando a folga transborda para o dia seguinte", () => {
+    // 23:50 + 30 passa da meia-noite: não há mais levantamentos hoje.
+    expect(earliestPickupToday(new Date(2026, 6, 30, 23, 50))).toBe("24:00");
+  });
+
+  it("aceita folga configurável", () => {
+    expect(earliestPickupToday(new Date(2026, 6, 30, 10, 0), 0)).toBe("10:00");
+  });
+});
+
+describe("pickupDays", () => {
+  it("dá hoje, amanhã e o dia seguinte pelo nome", () => {
+    // 30-07-2026 é uma quinta-feira; o terceiro dia é sábado.
+    const dias = pickupDays(new Date(2026, 6, 30, 9, 0));
+    expect(dias.map((d) => d.label)).toEqual(["Hoje", "Amanhã", "Sábado"]);
+    expect(dias.map((d) => d.date)).toEqual(["2026-07-30", "2026-07-31", "2026-08-01"]);
+  });
+
+  it("atravessa a fronteira do mês sem partir", () => {
+    const dias = pickupDays(new Date(2026, 6, 31, 9, 0));
+    expect(dias.map((d) => d.date)).toEqual(["2026-07-31", "2026-08-01", "2026-08-02"]);
   });
 });

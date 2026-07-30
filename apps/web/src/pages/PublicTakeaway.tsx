@@ -13,12 +13,13 @@ import { usePublicMenu } from "@/hooks/use-public-menu";
 import { useSubmitTakeawayOrder, sendTakeawayMessage } from "@/hooks/use-takeaway";
 import { CasaLogo } from "@/components/CasaLogo";
 import { themeStyle } from "@/lib/themes";
-import { todayServiceDate } from "@/lib/service-date";
 import { formatPriceCents } from "@/lib/types";
 import {
   cartCount,
   cartTotalCents,
+  earliestPickupToday,
   optionsForItem,
+  pickupDays,
   pickupSlots,
   toSubmitItems,
   type CartLine,
@@ -35,7 +36,10 @@ export default function PublicTakeaway() {
   const [params] = useSearchParams();
   const restaurantQuery = usePublicRestaurant(slug);
   const menuQuery = usePublicMenu(slug);
-  const date = todayServiceDate();
+  // Três dias sem calendário (David, 30-07): hoje, amanhã e o dia seguinte pelo
+  // nome. Chega para a encomenda de fim-de-semana e evita abrir um date picker.
+  const days = React.useMemo(() => pickupDays(new Date()), []);
+  const [date, setDate] = React.useState(days[0].date);
   const turnsQuery = usePublicTurns(slug, date);
   const submit = useSubmitTakeawayOrder();
   const style = themeStyle(params.get("tema") ?? restaurantQuery.data?.theme);
@@ -48,7 +52,9 @@ export default function PublicTakeaway() {
   const [note, setNote] = React.useState("");
   const [website, setWebsite] = React.useState(""); // honeypot
   const [formError, setFormError] = React.useState<string>();
-  const [doneOrder, setDoneOrder] = React.useState<{ pickup: string } | null>(null);
+  const [doneOrder, setDoneOrder] = React.useState<{ pickup: string; dayLabel: string } | null>(
+    null,
+  );
 
   const restaurant = restaurantQuery.data;
   const enabled = restaurant?.takeaway_enabled === true;
@@ -59,12 +65,19 @@ export default function PublicTakeaway() {
   })).filter((c) => c.options.length > 0);
 
   const slots = React.useMemo(
-    () => pickupSlots((turnsQuery.data ?? []).map((t) => t.start_time)),
-    [turnsQuery.data],
+    () =>
+      pickupSlots(
+        (turnsQuery.data ?? []).map((t) => t.start_time),
+        // A folga de preparação só se aplica a hoje; para os outros dias a
+        // cozinha tem a manhã toda.
+        date === days[0].date ? earliestPickupToday(new Date()) : undefined,
+      ),
+    [turnsQuery.data, date, days],
   );
 
   React.useEffect(() => {
     if (slots.length > 0 && !slots.includes(pickup)) setPickup(slots[0]);
+    if (slots.length === 0 && pickup) setPickup("");
   }, [slots, pickup]);
 
   function addOne(opt: OrderOption) {
@@ -122,7 +135,10 @@ export default function PublicTakeaway() {
       },
       {
         onSuccess: (res) => {
-          setDoneOrder({ pickup });
+          setDoneOrder({
+            pickup,
+            dayLabel: days.find((d) => d.date === date)?.label ?? "hoje",
+          });
           if (res.orderId && restaurant) {
             void sendTakeawayMessage({
               orderId: res.orderId,
@@ -193,8 +209,8 @@ export default function PublicTakeaway() {
             <CheckCircle2 className="h-10 w-10 text-[hsl(var(--status-seated-fg))]" aria-hidden="true" />
             <h2 className="text-lg font-semibold">Encomenda recebida</h2>
             <p className="text-sm text-muted-foreground">
-              Para levantar às {doneOrder.pickup}, em nome de {name.trim()}. Paga-se ao
-              levantar. {restaurant!.name} confirma consigo por mensagem.
+              Para levantar {doneOrder.dayLabel.toLowerCase()} às {doneOrder.pickup}, em nome de{" "}
+              {name.trim()}. Paga-se ao levantar. {restaurant!.name} confirma consigo por mensagem.
             </p>
             <Link to={`/m/${slug}`} className="text-sm text-primary underline">
               Voltar ao menu
@@ -282,11 +298,32 @@ export default function PublicTakeaway() {
                 {(p) => <Input {...p} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />}
               </Field>
             </div>
+            <div className="space-y-2">
+              <span className="text-sm font-medium">Quando levanta?</span>
+              <div className="flex flex-wrap gap-2">
+                {days.map((d) => (
+                  <button
+                    key={d.date}
+                    type="button"
+                    aria-pressed={d.date === date}
+                    onClick={() => setDate(d.date)}
+                    className={
+                      "rounded-md border px-3 py-1.5 text-sm transition-colors " +
+                      (d.date === date
+                        ? "border-transparent bg-[hsl(var(--primary))] font-medium text-[hsl(var(--primary-foreground))]"
+                        : "border-input hover:bg-[hsl(var(--muted))]")
+                    }
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <Field id="t-pickup" label="A que horas levanta?" required>
               {(p) => (
                 <Select {...p} value={pickup} onChange={(e) => setPickup(e.target.value)} disabled={slots.length === 0}>
                   {slots.length === 0 ? (
-                    <option value="">Hoje não há serviço para levantamento</option>
+                    <option value="">Sem horas disponíveis neste dia</option>
                   ) : (
                     slots.map((s) => (
                       <option key={s} value={s}>

@@ -32,6 +32,10 @@ export interface Order {
   id: string;
   customer_name: string;
   phone: string;
+  // Obrigatório desde a 0022 (email é o canal garantido). Estava a faltar aqui,
+  // e por isso o balcão mandava toEmail:null no aviso de "pronta" e o cliente
+  // nunca recebia nada (David, 30-07).
+  email: string;
   pickup_at: string | null;
   status: OrderStatus;
   note: string | null;
@@ -165,9 +169,11 @@ export async function sendTakeawayMessage(input: {
   customerName: string;
   kind: "takeaway_received" | "takeaway_ready";
   pickupAt: string | null;
-}): Promise<void> {
+  /** Fuso da casa: a edge precisa dele para ler o pickup_at (UTC) do balcão. */
+  timezone?: string | null;
+}): Promise<boolean> {
   try {
-    await supabase.functions.invoke("send-reservation-message", {
+    const { data } = await supabase.functions.invoke("send-reservation-message", {
       body: {
         kind: input.kind,
         orderId: input.orderId,
@@ -178,9 +184,17 @@ export async function sendTakeawayMessage(input: {
         toEmail: input.toEmail ?? undefined,
         customerName: input.customerName,
         pickupAt: input.pickupAt ?? undefined,
+        timezone: input.timezone ?? undefined,
       },
     });
+    // A edge é best-effort e devolve 200 mesmo quando salta o canal (foi assim
+    // que o aviso de "pronta" passou meses a não sair sem ninguém dar por
+    // isso). Devolvemos o resultado para quem chama poder avisar o balcão.
+    const enviado = (data as { sent?: boolean } | null)?.sent === true;
+    if (!enviado) console.warn("[nostos] mensagem de take-away não saiu:", data);
+    return enviado;
   } catch (e) {
     console.warn("[nostos] mensagem de take-away ignorada:", e);
+    return false;
   }
 }

@@ -38,20 +38,29 @@ export function OrderQueue({ restaurant }: { restaurant: Restaurant }) {
     advance.mutate(
       { orderId: order.id, status },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
           toast.success(`Encomenda ${ORDER_STATUS_LABEL[status].toLowerCase()}`);
           if (status === "pronta") {
-            void sendTakeawayMessage({
+            const enviado = await sendTakeawayMessage({
               orderId: order.id,
               slug: restaurant.slug,
               restaurantName: restaurant.name,
               tone: (restaurant as { tone?: string }).tone ?? "proximo",
               toPhone: order.phone,
-              toEmail: null,
+              // Sem isto a edge não tinha destino e saltava o email em silêncio.
+              // Quando o WhatsApp entrar, este aviso é o candidato natural: é
+              // o momento em que o cliente quer ser tocado no telemóvel.
+              toEmail: order.email,
               customerName: order.customer_name,
               kind: "takeaway_ready",
               pickupAt: order.pickup_at,
+              timezone: (restaurant as { timezone?: string | null }).timezone ?? null,
             });
+            // O balcão tem de saber se o cliente foi mesmo avisado: senão fica
+            // à espera de alguém que não sabe que a encomenda está pronta.
+            if (!enviado) {
+              toast.warning("A encomenda ficou pronta, mas o aviso ao cliente não saiu. Ligue-lhe.");
+            }
           }
         },
         onError: (e) => toast.error(e instanceof Error ? e.message : "Não foi possível actualizar."),

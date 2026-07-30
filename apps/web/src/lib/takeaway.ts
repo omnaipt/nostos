@@ -72,7 +72,7 @@ export function toSubmitItems(lines: CartLine[]): SubmitTakeawayItem[] {
 // Slots de levantamento a partir das horas dos turnos activos do dia, em passos
 // de 15 min a partir do início de cada turno (janela simples v1: início +
 // 2h30). Devolve "HH:MM".
-export function pickupSlots(turnStartTimes: string[]): string[] {
+export function pickupSlots(turnStartTimes: string[], minHHMM?: string): string[] {
   const slots = new Set<string>();
   for (const start of turnStartTimes) {
     const [h, m] = start.slice(0, 5).split(":").map(Number);
@@ -85,5 +85,51 @@ export function pickupSlots(turnStartTimes: string[]): string[] {
       slots.add(`${hh}:${mm}`);
     }
   }
-  return [...slots].sort();
+  const all = [...slots].sort();
+  // Só para HOJE: nada antes de agora + folga de preparação. Sem isto era
+  // possível encomendar para uma hora já passada (aconteceu em 30-07: pedido
+  // feito às 17:21 com levantamento marcado para as 14:00).
+  return minHHMM ? all.filter((s) => s >= minHHMM) : all;
+}
+
+/** Folga mínima de preparação da cozinha, em minutos (decisão David, 30-07). */
+export const PREP_BUFFER_MIN = 30;
+
+/** "HH:MM" da hora mais cedo aceitável hoje: agora + folga, arredondado a 15m. */
+export function earliestPickupToday(now: Date, bufferMin = PREP_BUFFER_MIN): string {
+  const total = now.getHours() * 60 + now.getMinutes() + bufferMin;
+  const rounded = Math.ceil(total / 15) * 15;
+  const hh = String(Math.floor(rounded / 60) % 24).padStart(2, "0");
+  const mm = String(rounded % 60).padStart(2, "0");
+  // Se transbordar para o dia seguinte, não há mais slots hoje: devolver 24:00
+  // faz o filtro esvaziar a lista, que é o comportamento correcto.
+  return rounded >= 24 * 60 ? "24:00" : `${hh}:${mm}`;
+}
+
+const DIAS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+
+export interface PickupDay {
+  /** ISO "YYYY-MM-DD" */
+  date: string;
+  /** "Hoje", "Amanhã", "Sexta" */
+  label: string;
+}
+
+/**
+ * Três dias sem calendário: hoje, amanhã e o dia seguinte pelo nome. Cobre a
+ * encomenda de fim-de-semana sem obrigar a abrir um date picker no telemóvel
+ * (decisão David, 30-07).
+ */
+export function pickupDays(now: Date, count = 3): PickupDay[] {
+  const out: PickupDay[] = [];
+  for (let i = 0; i < count; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const nome = DIAS[d.getDay()];
+    out.push({
+      date: iso,
+      label: i === 0 ? "Hoje" : i === 1 ? "Amanhã" : nome.charAt(0).toUpperCase() + nome.slice(1),
+    });
+  }
+  return out;
 }

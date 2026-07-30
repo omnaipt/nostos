@@ -212,10 +212,11 @@ const TAKEAWAY_COPY: Record<Tone, {
     receivedSubject: (rest) => `Recebemos a sua encomenda · ${rest}`,
     readySubject: (rest) => `A sua encomenda está pronta · ${rest}`,
     greeting: (name) => `Olá ${name},`,
+    // O pickup já vem com preposição e, se não for hoje, com o dia por extenso.
     received: (_rest, pickup) =>
-      `Recebemos a sua encomenda${pickup ? ` para levantar às ${pickup}` : ""}. Paga no levantamento.`,
+      `Recebemos a sua encomenda${pickup ? ` para levantar ${pickup}` : ""}. Paga no levantamento.`,
     ready: (_rest, pickup) =>
-      `A sua encomenda está pronta${pickup ? ` para levantar às ${pickup}` : " para levantar"}. Ficamos à sua espera.`,
+      `A sua encomenda está pronta${pickup ? ` para levantar ${pickup}` : " para levantar"}. Ficamos à sua espera.`,
     signoff: (rest) => `Até já,\n${rest}`,
   },
   formal: {
@@ -223,9 +224,9 @@ const TAKEAWAY_COPY: Record<Tone, {
     readySubject: (rest) => `Encomenda pronta · ${rest}`,
     greeting: (name) => `Caro(a) ${name},`,
     received: (_rest, pickup) =>
-      `Confirmamos a recepção da sua encomenda${pickup ? ` para levantamento às ${pickup}` : ""}. O pagamento é efectuado no levantamento.`,
+      `Confirmamos a recepção da sua encomenda${pickup ? ` para levantamento ${pickup}` : ""}. O pagamento é efectuado no levantamento.`,
     ready: (_rest, pickup) =>
-      `A sua encomenda encontra-se pronta${pickup ? ` para levantamento às ${pickup}` : " para levantamento"}.`,
+      `A sua encomenda encontra-se pronta${pickup ? ` para levantamento ${pickup}` : " para levantamento"}.`,
     signoff: (rest) => `Com os melhores cumprimentos,\n${rest}`,
   },
 };

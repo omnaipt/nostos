@@ -206,10 +206,63 @@ Deno.serve(async (req: Request) => {
 
   // ── Take-away ───────────────────────────────────────────────────────────────
   if (TAKEAWAY_KINDS.has(kind)) {
+    // Com encomendas para hoje, amanhã ou o dia seguinte (David, 30-07), a hora
+    // sozinha era ambígua: "para levantar às 19:30" não diz em que dia. Se o
+    // levantamento não for hoje, o dia entra na frase.
     let pickupLabel: string | null = null;
     if (payload.pickupAt) {
-      const m = payload.pickupAt.match(/T(\d{2}:\d{2})/);
-      pickupLabel = m ? m[1] : null;
+      const tzPickup = payload.timezone || "Europe/Lisbon";
+      // Dois formatos chegam aqui: o formulário público manda naive local
+      // ("2026-07-31T19:30:00") e o balcão manda o timestamptz da BD, em UTC
+      // ("2026-07-30T13:00:00+00:00"). Sem distinguir, o aviso de "pronta"
+      // anunciava a hora UTC (13:00 em vez de 14:00).
+      const temFuso = /(?:Z|[+-]\d{2}:?\d{2})$/.test(payload.pickupAt);
+      let dia = "";
+      let hora = "";
+      if (temFuso) {
+        const d = new Date(payload.pickupAt);
+        if (!Number.isNaN(d.getTime())) {
+          dia = new Intl.DateTimeFormat("en-CA", {
+            timeZone: tzPickup,
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          }).format(d);
+          hora = new Intl.DateTimeFormat("pt-PT", {
+            timeZone: tzPickup,
+            hour: "2-digit",
+            minute: "2-digit",
+          }).format(d);
+        }
+      } else {
+        const m = payload.pickupAt.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+        if (m) {
+          dia = m[1];
+          hora = m[2];
+        }
+      }
+      if (dia && hora) {
+        const hojeTz = new Intl.DateTimeFormat("en-CA", {
+          timeZone: tzPickup,
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }).format(new Date());
+        // O rótulo já traz a preposição, para o render não ter de adivinhar se
+        // é "às 19:30" ou "sexta-feira, 31 de julho, às 19:30".
+        if (dia === hojeTz) {
+          pickupLabel = `às ${hora}`;
+        } else {
+          const d = new Date(`${dia}T12:00:00Z`);
+          const legivel = new Intl.DateTimeFormat("pt-PT", {
+            timeZone: "UTC",
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+          }).format(d);
+          pickupLabel = `${legivel}, às ${hora}`;
+        }
+      }
     }
     const t: TakeawayInput = {
       restaurantName: payload.restaurantName || "nostos",
