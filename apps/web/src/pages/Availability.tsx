@@ -184,7 +184,13 @@ export default function Availability() {
           <Link to="/clientes" className={buttonVariants({ variant: "outline", size: "sm" })}>
             Clientes
           </Link>
-          <Link to="/definicoes" className={buttonVariants({ variant: "outline", size: "sm" })}>
+          {/* ?sec=servico: desde a sub-navegação das Definições (30-07) a página
+              abre em "A casa"; sem isto o atalho deixava o utilizador a
+              procurar as mesas noutra secção. */}
+          <Link
+            to="/definicoes?sec=servico"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
             Mesas e turnos
           </Link>
           <Button size="sm" onClick={openCreate} disabled={!turnId}>
@@ -259,7 +265,7 @@ export default function Availability() {
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             Não há turnos configurados para este dia. Define turnos em{" "}
-            <Link to="/definicoes" className="underline">
+            <Link to="/definicoes?sec=servico" className="underline">
               Mesas e turnos
             </Link>
             .
