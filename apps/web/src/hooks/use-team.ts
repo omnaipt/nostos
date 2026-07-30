@@ -39,6 +39,25 @@ export function useTeam(restaurantId: string | undefined) {
   return useQuery({
     queryKey: TEAM_KEY(restaurantId),
     queryFn: async (): Promise<TeamMember[]> => {
+      // Preferir a RPC list_team_members (Marco, 0021): dá nome+email de TODA a
+      // equipa (profiles é self-only, auth.users não é legível do cliente).
+      const rpc = await looseRpc<
+        { user_id: string; email: string | null; full_name: string | null; role: string }[]
+      >("list_team_members", { p_restaurant_id: restaurantId });
+      if (!rpc.error && rpc.data) {
+        return rpc.data.map((m) => ({
+          userId: m.user_id,
+          role: asRole(m.role),
+          isSelf: m.user_id === user?.id,
+          name: m.full_name,
+          email: m.email,
+          pending: false,
+        }));
+      }
+      if (rpc.error && !isMissingContract(rpc.error)) throw new Error(rpc.error.message);
+
+      // Fallback pré-0021 (RPC ainda não em prod): lê a tabela; só o próprio
+      // tem nome/email. Removível quando a 0021 estiver aplicada em todo o lado.
       const { data: members, error } = await supabase
         .from("restaurant_members")
         .select("user_id, role, created_at")
