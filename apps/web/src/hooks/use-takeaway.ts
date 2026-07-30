@@ -113,18 +113,21 @@ export function useOrders(restaurantId: string | undefined, opts?: { refetchInte
   });
 }
 
-// Toggle do módulo (owner/gestor). `takeaway_enabled` é da fase C do Marco;
-// via looseFrom porque ainda não está nos tipos. Erro claro se a coluna faltar.
+// Toggle do módulo (owner/gestor). Com a 0022 aplicada e os tipos regenerados,
+// `takeaway_enabled` já existe no schema tipado, por isso esta chamada deixou de
+// precisar do escape contract-ahead (era por aí que vinha o erro do `this`).
 export function useToggleTakeaway() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { restaurantId: string; enabled: boolean }) => {
-      const res = await looseFrom("restaurants")
+      const { error } = await supabase
+        .from("restaurants")
         .update({ takeaway_enabled: input.enabled })
         .eq("id", input.restaurantId);
-      const error = (res as { error: { message: string; code?: string } | null }).error;
       if (error) {
-        if (isMissingContract(error)) throw new Error("O take-away ainda não está activo neste ambiente.");
+        if (isMissingContract(error)) {
+          throw new Error("O take-away ainda não está activo neste ambiente.");
+        }
         throw new Error(error.message);
       }
     },

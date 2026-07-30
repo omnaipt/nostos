@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +32,64 @@ function tablesToRows(
   return rows.map((m) => ({ id: m.id, label: m.label, seats: m.seats, sortOrder: m.sort_order, active: m.active }));
 }
 
+// Sub-navegação das Definições (David, 30-07): tudo numa página só ficava
+// impraticável, porque o catálogo da despensa tem dezenas de linhas e empurrava
+// a margem alvo e o take-away para fora do ecrã. A secção activa vai no URL
+// (?sec=) para poder ser partilhada e sobreviver ao refresh.
+type SectionId = "casa" | "servico" | "despensa" | "equipa";
+
+const SECTION_LABEL: Record<SectionId, string> = {
+  casa: "A casa",
+  servico: "Serviço",
+  despensa: "Despensa",
+  equipa: "Equipa",
+};
+
+const SECTION_HINT: Record<SectionId, string> = {
+  casa: "Logo, tom das mensagens e paleta que o cliente vê.",
+  servico: "Mesas, turnos e encomendas para levar.",
+  despensa: "Margem alvo e catálogo de ingredientes com custos.",
+  equipa: "Quem tem acesso e com que perfil.",
+};
+
+function isSectionId(v: string | null): v is SectionId {
+  return v === "casa" || v === "servico" || v === "despensa" || v === "equipa";
+}
+
+function SectionNav({
+  sections,
+  active,
+  onChange,
+}: {
+  sections: SectionId[];
+  active: SectionId;
+  onChange: (s: SectionId) => void;
+}) {
+  return (
+    <nav
+      aria-label="Secções das definições"
+      className="flex flex-wrap gap-1 rounded-lg border border-input bg-card p-1"
+    >
+      {sections.map((s) => (
+        <button
+          key={s}
+          type="button"
+          aria-current={s === active ? "page" : undefined}
+          onClick={() => onChange(s)}
+          className={
+            "rounded-md px-3 py-1.5 text-sm transition-colors " +
+            (s === active
+              ? "bg-[hsl(var(--primary))] font-medium text-[hsl(var(--primary-foreground))]"
+              : "text-muted-foreground hover:bg-[hsl(var(--muted))] hover:text-foreground")
+          }
+        >
+          {SECTION_LABEL[s]}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
 export default function Settings() {
   const { data: restaurant, isLoading: loadingRest, isError: restError } = useActiveRestaurant();
   const restaurantId = restaurant?.id;
@@ -39,6 +97,21 @@ export default function Settings() {
   // não a identidade da casa nem a equipa.
   const { role } = useRole();
   const isOwner = role === "owner";
+
+  // O gestor não vê "A casa" nem "Equipa", por isso a secção por omissão dele é
+  // "Serviço"; se chegar por link a uma secção que não lhe pertence, cai lá.
+  const sections: SectionId[] = isOwner
+    ? ["casa", "servico", "despensa", "equipa"]
+    : ["servico", "despensa"];
+  const [searchParams, setSearchParams] = useSearchParams();
+  const fromUrl = searchParams.get("sec");
+  const section: SectionId =
+    isSectionId(fromUrl) && sections.includes(fromUrl) ? fromUrl : sections[0];
+  const setSection = (s: SectionId) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("sec", s);
+    setSearchParams(next, { replace: true });
+  };
 
   const tablesQuery = useTables(restaurantId);
   const turnsQuery = useTurns(restaurantId);
@@ -148,8 +221,7 @@ export default function Settings() {
       <header className="mb-6">
         <h1 className="font-display text-2xl font-semibold text-atlantico-900">Definições</h1>
         <p className="text-sm text-muted-foreground">
-          Mesas, turnos, catálogo da despensa, margem alvo e tom da casa. A ementa
-          e o QR do menu vivem na página{" "}
+          {SECTION_HINT[section]} A ementa e o QR do menu vivem na página{" "}
           <Link to="/ementa" className="underline">
             Ementa
           </Link>
@@ -183,10 +255,10 @@ export default function Settings() {
 
       {!error && !loading && (
         <div className="space-y-6">
-          {/* Identidade primeiro: é o que o dono procura mais vezes (logo, tom,
-              tema) e estava enterrada debaixo do catálogo da despensa — David
-              não a encontrou no tour de 29-07. owner-only (spec Roles §1). */}
-          {isOwner && restaurant && (
+          <SectionNav sections={sections} active={section} onChange={setSection} />
+
+          {/* A casa: identidade (logo, tom, tema). owner-only (spec Roles §1). */}
+          {section === "casa" && isOwner && restaurant && (
             <Card>
               <CardHeader>
                 <CardTitle>Identidade da casa</CardTitle>
@@ -203,56 +275,66 @@ export default function Settings() {
             </Card>
           )}
 
-          {isOwner && restaurantId && <EquipaCard restaurantId={restaurantId} />}
+          {section === "equipa" && isOwner && restaurantId && (
+            <EquipaCard restaurantId={restaurantId} />
+          )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Esquema de mesas</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {tables.length === 0 && (
-                <p className="rounded-md border border-dashed border-input p-4 text-sm text-muted-foreground">
-                  Ainda não tens mesas. Adiciona a primeira.
-                </p>
-              )}
-              <TableManager tables={tables} onChange={onTablesChange} />
-            </CardContent>
-          </Card>
+          {section === "servico" && (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Esquema de mesas</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {tables.length === 0 && (
+                    <p className="rounded-md border border-dashed border-input p-4 text-sm text-muted-foreground">
+                      Ainda não tens mesas. Adiciona a primeira.
+                    </p>
+                  )}
+                  <TableManager tables={tables} onChange={onTablesChange} />
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Turnos</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {turns.length === 0 && (
-                <p className="rounded-md border border-dashed border-input p-4 text-sm text-muted-foreground">
-                  Ainda não tens turnos. Adiciona o primeiro.
-                </p>
-              )}
-              <TurnManager turns={turns} onChange={onTurnsChange} />
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Turnos</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {turns.length === 0 && (
+                    <p className="rounded-md border border-dashed border-input p-4 text-sm text-muted-foreground">
+                      Ainda não tens turnos. Adiciona o primeiro.
+                    </p>
+                  )}
+                  <TurnManager turns={turns} onChange={onTurnsChange} />
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Despensa</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {restaurantId && <PantryManager restaurantId={restaurantId} />}
-            </CardContent>
-          </Card>
+              {/* Take-away: owner/gestor (não gated a owner), módulo operacional. */}
+              {restaurant && <TakeawayCard key={`ta-${restaurant.id}`} restaurant={restaurant} />}
+            </>
+          )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Margem alvo</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {restaurant && <TargetMarginField key={restaurant.id} current={restaurant.target_margin_pct ?? 65} restaurantId={restaurant.id} />}
-            </CardContent>
-          </Card>
+          {section === "despensa" && (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Margem alvo</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {restaurant && <TargetMarginField key={restaurant.id} current={restaurant.target_margin_pct ?? 65} restaurantId={restaurant.id} />}
+                </CardContent>
+              </Card>
 
-          {/* Take-away: owner/gestor (não gated a owner) — módulo operacional. */}
-          {restaurant && <TakeawayCard key={`ta-${restaurant.id}`} restaurant={restaurant} />}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Catálogo da despensa</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {restaurantId && <PantryManager restaurantId={restaurantId} />}
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
       )}
     </div>

@@ -12,11 +12,15 @@ export interface LooseResult<T> {
   error: { message: string; code?: string } | null;
 }
 
+// ATENÇÃO ao `.bind(supabase)`: `supabase.rpc` e `supabase.from` usam `this`
+// internamente (acedem a `this.rest`). Extraí-los como valor solto e chamá-los
+// perde o receptor e rebenta com "Cannot read properties of undefined (reading
+// 'rest')" — foi o que aconteceu no toggle do take-away (David, 30-07).
 export function looseRpc<T = unknown>(
   fn: string,
   args?: Record<string, unknown>,
 ): Promise<LooseResult<T>> {
-  const rpc = supabase.rpc as unknown as (
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
     fn: string,
     args?: Record<string, unknown>,
   ) => Promise<LooseResult<T>>;
@@ -26,7 +30,9 @@ export function looseRpc<T = unknown>(
 // Query builder sobre uma tabela ainda ausente dos tipos. Devolve o builder do
 // supabase-js sem tipos — usar só nos sítios comentados como contract-ahead.
 export function looseFrom(table: string) {
-  const from = supabase.from as unknown as (t: string) => ReturnType<typeof supabase.from>;
+  const from = supabase.from.bind(supabase) as unknown as (
+    t: string,
+  ) => ReturnType<typeof supabase.from>;
   return from(table);
 }
 
