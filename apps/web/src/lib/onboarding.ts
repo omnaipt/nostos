@@ -43,18 +43,42 @@ export async function runOnboarding(input: OnboardingInput): Promise<Restaurant>
   }
 
   // 2. Restaurante (owner = user). assignment_mode omitido → default 'manual'.
-  const { data: restaurant, error: restError } = await supabase
-    .from("restaurants")
-    .insert({
-      name: input.name,
-      email: input.email,
-      phone: input.phone,
-      timezone,
-      owner_id: userId,
-    })
-    .select("*")
-    .single();
-  if (restError) throw restError;
+  // O slug é NOT NULL sem default: sem ele o insert rebenta com not-null
+  // violation. Ficou latente até 30-07 porque os tipos gerados estavam
+  // desactualizados e o TS não acusava. Deriva-se do nome pelo `slugify` da BD
+  // (mesma função que gerou os slugs existentes), com sufixo numérico em caso
+  // de colisão, porque o slug é a morada pública do restaurante (/r e /m).
+  const { data: baseSlugRaw } = await supabase.rpc("slugify", { input: input.name });
+  const baseSlug = (baseSlugRaw ?? "").trim() || "restaurante";
+
+  let restaurant: Restaurant | null = null;
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const slug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`;
+    const { data, error } = await supabase
+      .from("restaurants")
+      .insert({
+        name: input.name,
+        slug,
+        email: input.email,
+        phone: input.phone,
+        timezone,
+        owner_id: userId,
+      })
+      .select("*")
+      .single();
+    if (!error) {
+      restaurant = data as Restaurant;
+      break;
+    }
+    lastError = error;
+    // 23505 = unique_violation: só o slug tem unicidade aqui, logo tentamos o
+    // sufixo seguinte. Qualquer outro erro aborta já.
+    if (error.code !== "23505") throw error;
+  }
+  if (!restaurant) {
+    throw lastError ?? new Error("Não foi possível criar o restaurante.");
+  }
 
   // 3. Membership owner (habilita RLS para os inserts seguintes).
   const { error: memberError } = await supabase.from("restaurant_members").insert({

@@ -1,8 +1,4 @@
-// Gerado por `supabase gen types typescript --project-id emuwqkdummdmacnkltte`.
-// TWEAK MANUAL (manter ao regenerar): restaurants.Insert.slug é opcional —
-// o slug é preenchido pelo trigger set_restaurant_slug (migration 0004);
-// o gerador marca-o required por ser NOT NULL sem default.
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -185,6 +181,50 @@ export type Database = {
           status?: string
         }
         Relationships: []
+      }
+      member_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          email_norm: string
+          id: string
+          invited_by: string | null
+          restaurant_id: string
+          role: string
+          status: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          email_norm: string
+          id?: string
+          invited_by?: string | null
+          restaurant_id: string
+          role: string
+          status?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          email_norm?: string
+          id?: string
+          invited_by?: string | null
+          restaurant_id?: string
+          role?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_invites_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       menu_categories: {
         Row: {
@@ -431,6 +471,118 @@ export type Database = {
           },
         ]
       }
+      order_items: {
+        Row: {
+          id: string
+          menu_item_id: string | null
+          name: string
+          order_id: string
+          price_cents: number
+          qty: number
+          restaurant_id: string
+          variant_id: string | null
+        }
+        Insert: {
+          id?: string
+          menu_item_id?: string | null
+          name: string
+          order_id: string
+          price_cents: number
+          qty: number
+          restaurant_id: string
+          variant_id?: string | null
+        }
+        Update: {
+          id?: string
+          menu_item_id?: string | null
+          name?: string
+          order_id?: string
+          price_cents?: number
+          qty?: number
+          restaurant_id?: string
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "menu_item_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          created_at: string
+          customer_name: string
+          email: string
+          id: string
+          note: string | null
+          phone: string
+          pickup_at: string | null
+          restaurant_id: string
+          status: string
+          total_cents: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name: string
+          email: string
+          id?: string
+          note?: string | null
+          phone: string
+          pickup_at?: string | null
+          restaurant_id: string
+          status?: string
+          total_cents?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string
+          email?: string
+          id?: string
+          note?: string | null
+          phone?: string
+          pickup_at?: string | null
+          restaurant_id?: string
+          status?: string
+          total_cents?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pos_product_map: {
         Row: {
           confirmed: boolean
@@ -667,6 +819,7 @@ export type Database = {
           owner_id: string
           phone: string | null
           slug: string
+          takeaway_enabled: boolean
           target_margin_pct: number
           theme: string
           timezone: string
@@ -683,7 +836,8 @@ export type Database = {
           name: string
           owner_id: string
           phone?: string | null
-          slug?: string
+          slug: string
+          takeaway_enabled?: boolean
           target_margin_pct?: number
           theme?: string
           timezone?: string
@@ -701,6 +855,7 @@ export type Database = {
           owner_id?: string
           phone?: string | null
           slug?: string
+          takeaway_enabled?: boolean
           target_margin_pct?: number
           theme?: string
           timezone?: string
@@ -1169,6 +1324,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      advance_order: {
+        Args: { p_note?: string; p_order_id: string; p_status: string }
+        Returns: undefined
+      }
       apply_inventory_count: {
         Args: { p_counts: Json; p_note: string; p_restaurant_id: string }
         Returns: Json
@@ -1177,11 +1336,22 @@ export type Database = {
         Args: { p_ingredient_id: string }
         Returns: number
       }
-      publish_menu_import: {
-        Args: { p_import_id: string; p_menu: Json; p_restaurant_id: string }
-        Returns: Json
+      invite_member: {
+        Args: { p_email: string; p_role: string }
+        Returns: string
       }
       is_restaurant_member: { Args: { target: string }; Returns: boolean }
+      is_restaurant_owner: { Args: { target: string }; Returns: boolean }
+      list_team_members: {
+        Args: { p_restaurant_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          role: string
+          user_id: string
+        }[]
+      }
+      member_role: { Args: { p_restaurant_id: string }; Returns: string }
       public_create_lead: {
         Args: {
           p_email: string
@@ -1244,7 +1414,23 @@ export type Database = {
           start_time: string
         }[]
       }
+      publish_menu_import: {
+        Args: { p_import_id: string; p_menu: Json; p_restaurant_id: string }
+        Returns: Json
+      }
       slugify: { Args: { input: string }; Returns: string }
+      submit_takeaway_order: {
+        Args: {
+          p_customer_name: string
+          p_email: string
+          p_items: Json
+          p_note: string
+          p_phone: string
+          p_pickup_at: string
+          p_slug: string
+        }
+        Returns: string
+      }
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
