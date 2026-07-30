@@ -1402,6 +1402,7 @@ export type Database = {
           name: string
           phone: string
           slug: string
+          takeaway_enabled: boolean
           theme: string
         }[]
       }
