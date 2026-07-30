@@ -7,6 +7,7 @@ import {
   CalendarCheck,
   ChefHat,
   LineChart,
+  MessageCircle,
   Package,
   QrCode,
   ShieldCheck,
@@ -236,7 +237,7 @@ export default function Landing() {
           <h2 className={"font-display text-center text-3xl font-semibold " + pine}>
             Já a funcionar, sem comissões
           </h2>
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <Feature
               icon={<CalendarCheck className="h-5 w-5" aria-hidden />}
               title="Reservas com link próprio"
@@ -256,6 +257,11 @@ export default function Landing() {
               icon={<Users className="h-5 w-5" aria-hidden />}
               title="Clientes que voltam"
               text="O nostos lembra-se por ti: aniversários, alergias, mesa preferida, no-shows. Nostos é o regresso, em grego, e é isso que vendemos."
+            />
+            <Feature
+              icon={<MessageCircle className="h-5 w-5" aria-hidden />}
+              title="Mensagens em nome da casa"
+              text="Confirmação de reserva, lembrete na véspera e estado da encomenda para levar seguem para o cliente por WhatsApp, SMS ou email — sempre em nome do teu restaurante, nunca do nostos. Só para quem deixou o contacto ao reservar ou encomendar."
             />
           </div>
         </div>
@@ -301,11 +307,65 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Mensagens ao cliente final — descreve o serviço tal como declarado à
+          Meta/WhatsApp Business Platform (verificação de acesso, 29-Jul-2026).
+          Não remover sem falar com o David: é a página que o revisor abre. */}
+      <section id="mensagens" className="bg-[hsl(var(--brand-paper))] py-16">
+        <div className="container mx-auto max-w-3xl">
+          <h2 className={"font-display text-3xl font-semibold " + pine}>
+            Mensagens automáticas, em nome do restaurante
+          </h2>
+          <p className="mt-4 leading-relaxed text-[hsl(var(--brand-pine-soft))]">
+            O nostos é a plataforma que o restaurante usa para falar com os seus clientes. Quando
+            alguém reserva mesa ou faz uma encomenda para levar, o restaurante envia pelo nostos a
+            confirmação, o lembrete da véspera e o aviso de que a encomenda está pronta. A mensagem
+            chega por WhatsApp, SMS ou email, identificada com o nome do restaurante. O nostos
+            entrega, o restaurante é o remetente.
+          </p>
+          <ul className="mt-7 space-y-4 text-[hsl(var(--brand-pine-soft))]">
+            <li className="flex gap-3">
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[hsl(var(--brand-terracotta))]" />
+              <span>
+                <strong className={pine}>Só quem pediu.</strong> O contacto é dado pelo próprio
+                cliente ao reservar ou encomendar, e serve apenas para essa reserva ou encomenda.
+                Não há listas compradas, não há envios em massa, não há promoções.
+              </span>
+            </li>
+            <li className="flex gap-3">
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[hsl(var(--brand-terracotta))]" />
+              <span>
+                <strong className={pine}>Cada casa com o seu número.</strong> O restaurante liga a
+                sua própria conta WhatsApp Business e continua dono dela; o nostos é o fornecedor
+                técnico que trata do envio.
+              </span>
+            </li>
+            <li className="flex gap-3">
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[hsl(var(--brand-terracotta))]" />
+              <span>
+                <strong className={pine}>Parar é imediato.</strong> Basta responder STOP ou pedir ao
+                restaurante; deixa de receber e o registo fica na ficha do cliente. Dados tratados
+                ao abrigo do RGPD, apenas para prestar o serviço pedido.
+              </span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
       <footer className="border-t border-[hsl(var(--brand-pine)/0.12)] py-10">
-        <div className="container flex flex-col items-center gap-3">
+        <div className="container flex flex-col items-center gap-3 text-center">
           <Mark className="h-8 w-8 text-[hsl(var(--brand-terracotta))]" aria-hidden="true" />
           <p className="text-sm text-[hsl(var(--brand-pine-soft))]">
             nostos.pt · uma plataforma OMNAI · reservas@nostos.pt
+          </p>
+          <p className="max-w-xl text-xs leading-relaxed text-[hsl(var(--brand-pine-soft))]">
+            O nostos é um produto da OMNAI Consulting, Lda · NIPC 519270592 · Rua dos Janotas 12,
+            3.º B, 2715-094 Pero Pinheiro, Portugal · hello@omnai.pt ·{" "}
+            <a className="underline underline-offset-2 hover:text-[hsl(var(--brand-terracotta))]" href="https://www.omnai.pt">
+              omnai.pt
+            </a>
+          </p>
+          <p className="text-xs text-[hsl(var(--brand-pine-soft))]">
+            © {new Date().getFullYear()} OMNAI Consulting, Lda. Todos os direitos reservados.
           </p>
         </div>
       </footer>
