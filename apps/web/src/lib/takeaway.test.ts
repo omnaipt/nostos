@@ -35,31 +35,37 @@ describe("isOrderable", () => {
     expect(isOrderable(item({ available: false }))).toBe(false);
     expect(isOrderable(item({ priceType: "per_kg" }))).toBe(false);
   });
-  it("variants entra se pelo menos uma dose tem preço", () => {
+  it("variants entra se pelo menos uma dose tem preço E id", () => {
     expect(
-      isOrderable(item({ priceType: "variants", priceCents: null, variants: [{ label: "2 pax", priceCents: 3200, unit: "dose", serves: 2 }] })),
+      isOrderable(item({ priceType: "variants", priceCents: null, variants: [{ id: "v1", label: "2 pax", priceCents: 3200, unit: "dose", serves: 2 }] })),
     ).toBe(true);
     expect(
-      isOrderable(item({ priceType: "variants", priceCents: null, variants: [{ label: "?", priceCents: null, unit: "dose", serves: null }] })),
+      isOrderable(item({ priceType: "variants", priceCents: null, variants: [{ id: "v1", label: "?", priceCents: null, unit: "dose", serves: null }] })),
+    ).toBe(false);
+    // dose com preço mas sem id (pré-0022) não é encomendável
+    expect(
+      isOrderable(item({ priceType: "variants", priceCents: null, variants: [{ id: "", label: "2 pax", priceCents: 3200, unit: "dose", serves: 2 }] })),
     ).toBe(false);
   });
 });
 
 describe("optionsForItem", () => {
-  it("fixed dá 1 opção; variants dá uma por dose com preço", () => {
+  it("fixed dá 1 opção; variants dá uma por dose com preço e id, com variant_id real", () => {
     expect(optionsForItem(item({}))).toHaveLength(1);
     const opts = optionsForItem(
       item({
         priceType: "variants",
         priceCents: null,
         variants: [
-          { label: "2 pax", priceCents: 3200, unit: "dose", serves: 2 },
-          { label: "1 pax", priceCents: 1800, unit: "dose", serves: 1 },
+          { id: "v-2pax", label: "2 pax", priceCents: 3200, unit: "dose", serves: 2 },
+          { id: "v-1pax", label: "1 pax", priceCents: 1800, unit: "dose", serves: 1 },
         ],
       }),
     );
     expect(opts.map((o) => o.label)).toEqual(["Prato · 2 pax", "Prato · 1 pax"]);
     expect(opts[0].priceCents).toBe(3200);
+    expect(opts.map((o) => o.variantId)).toEqual(["v-2pax", "v-1pax"]);
+    expect(opts.map((o) => o.key)).toEqual(["v-2pax", "v-1pax"]);
   });
 });
 

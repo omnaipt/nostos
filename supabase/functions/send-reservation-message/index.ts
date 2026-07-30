@@ -1,19 +1,15 @@
-// Edge de confirmação de reserva AGNÓSTICA ao canal (spec Reserva Proximidade
-// §6c, substitui a send-reservation-email como canal principal).
+// Edge de mensagens ao CLIENTE, agnóstica ao evento: reserva OU take-away.
+// Decisão de canais (30-07): email (Resend) é o único canal garantido; WhatsApp
+// fica stub até a Meta aprovar. SMS saiu do v1 (sem ramo de SMS aqui).
 //
-// A mensagem compõe-se UMA vez (agradecimento na voz da casa + resumo + notes
-// ecoados + ganchos do menu real) e renderiza por canal e por tom
-// (restaurants.tone, 0015). Canais v1, pela ordem de envio:
-//   1. WhatsApp — stub até a Meta aprovar o negócio (templates pré-aprovados).
-//   2. SMS via Twilio — pluggable: sem secrets TWILIO_* salta com log limpo.
-//   3. Email via Resend — recibo; sem RESEND_API_KEY faz no-op observável.
-// Best-effort como a edge antiga: NUNCA quebra o fluxo de reserva (200 sempre,
-// excepto payload inválido).
+// O campo `kind` do payload decide o conteúdo (defaults retro-compatíveis):
+//   "reservation" (ou ausente) — agradecimento de reserva (voz da casa +
+//       resumo + notes + ganchos do menu real).
+//   "takeaway_received" / "takeaway_ready" — encomenda recebida / pronta.
+// Best-effort: NUNCA quebra o fluxo (200 sempre, excepto payload inválido).
 //
-// Secrets (todos opcionais; cada canal salta sozinho):
-//   RESEND_API_KEY                          — email (domínio nostos.pt no Resend)
-//   TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN  — SMS
-//   TWILIO_FROM ou TWILIO_MESSAGING_SERVICE_SID — remetente SMS
+// Secrets (opcionais; cada canal salta sozinho):
+//   RESEND_API_KEY — email (domínio nostos.pt no Resend)
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {
@@ -21,15 +17,19 @@ import {
   type MenuRow,
   type MessageInput,
   renderEmailHtml,
-  renderSms,
   renderSubject,
+  renderTakeawayEmailHtml,
+  renderTakeawaySubject,
   selectHooks,
+  type TakeawayInput,
+  type TakeawayKind,
   THEME_ACCENT,
   type Tone,
 } from "./render.ts";
 
 interface Payload {
-  reservationId: string;
+  // Comum
+  kind?: string; // "reservation" | "takeaway_received" | "takeaway_ready"
   restaurantSlug: string;
   restaurantName: string;
   tone?: string;
@@ -37,15 +37,20 @@ interface Payload {
   toEmail?: string;
   toPhone?: string;
   customerName: string;
-  partySize: number;
-  serviceDate: string; // YYYY-MM-DD
-  reservedAt?: string; // ISO, para a hora
+  // Reserva
+  reservationId?: string;
+  partySize?: number;
+  serviceDate?: string; // YYYY-MM-DD
+  reservedAt?: string; // ISO
   timezone?: string;
   notes?: string | null;
+  // Take-away
+  orderId?: string;
+  pickupAt?: string; // "YYYY-MM-DDTHH:MM:SS" (naive local)
 }
 
 interface ChannelResult {
-  channel: "whatsapp" | "sms" | "email";
+  channel: "whatsapp" | "email";
   sent: boolean;
   skipped?: boolean;
   reason?: string;
@@ -68,10 +73,8 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-// Ganchos "para já ir sonhando" a partir do menu REAL do tenant, via a mesma
-// RPC pública do menu (anon). Pratos do dia só se a reserva for para HOJE no
-// fuso da casa; preço de mercado e por encomenda valem para qualquer data.
-// Máx. 3-4 compactos; zero ganchos = mensagem simples. Falha => sem ganchos.
+const TAKEAWAY_KINDS = new Set(["takeaway_received", "takeaway_ready"]);
+
 async function fetchHooks(slug: string, serviceDate: string, tz: string): Promise<Hook[]> {
   try {
     const url = Deno.env.get("SUPABASE_URL");
@@ -105,7 +108,6 @@ async function fetchHooks(slug: string, serviceDate: string, tz: string): Promis
 }
 
 // Identidade da casa (0019): logo + tema via a RPC pública do restaurante.
-// Best-effort: falha => sem logo, acento costeiro.
 async function fetchIdentity(
   slug: string,
 ): Promise<{ logoUrl: string | null; theme: string | null }> {
@@ -130,11 +132,12 @@ async function fetchIdentity(
   }
 }
 
-// ── Adapters de canal ────────────────────────────────────────────────────────
+// ── Canais ───────────────────────────────────────────────────────────────────
 
 async function sendEmail(
   payload: Payload,
-  input: MessageInput,
+  subject: string,
+  html: string,
 ): Promise<ChannelResult> {
   if (!payload.toEmail) {
     return { channel: "email", sent: false, skipped: true, reason: "sem email de destino" };
@@ -142,11 +145,11 @@ async function sendEmail(
   const apiKey = Deno.env.get("RESEND_API_KEY");
   if (!apiKey) {
     console.info(
-      `[send-reservation-message] EMAIL NO-OP (RESEND_API_KEY ausente) reserva=${payload.reservationId}`,
+      `[send-reservation-message] EMAIL NO-OP (RESEND_API_KEY ausente) ${payload.kind ?? "reservation"}`,
     );
     return { channel: "email", sent: false, skipped: true, reason: "RESEND_API_KEY não configurada" };
   }
-  const fromName = input.restaurantName.replace(/[\r\n"]/g, "").trim() || "nostos";
+  const fromName = payload.restaurantName.replace(/[\r\n"]/g, "").trim() || "nostos";
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -155,8 +158,8 @@ async function sendEmail(
         from: `${fromName} <${FROM_ADDRESS}>`,
         to: [payload.toEmail],
         reply_to: payload.replyTo ? [payload.replyTo] : undefined,
-        subject: renderSubject(input),
-        html: renderEmailHtml(input),
+        subject,
+        html,
       }),
     });
     if (!res.ok) {
@@ -172,59 +175,11 @@ async function sendEmail(
   }
 }
 
-async function sendSms(
-  payload: Payload,
-  input: MessageInput,
-): Promise<ChannelResult> {
-  if (!payload.toPhone) {
-    return { channel: "sms", sent: false, skipped: true, reason: "sem telefone de destino" };
-  }
-  const sid = Deno.env.get("TWILIO_ACCOUNT_SID");
-  const token = Deno.env.get("TWILIO_AUTH_TOKEN");
-  const from = Deno.env.get("TWILIO_FROM");
-  const service = Deno.env.get("TWILIO_MESSAGING_SERVICE_SID");
-  if (!sid || !token || (!from && !service)) {
-    // Pluggable por desenho (§6c): o David liga a conta, mete os secrets, e o
-    // canal acorda sem redeploy. Até lá, salto limpo e observável.
-    console.info(
-      `[send-reservation-message] SMS SKIP (secrets TWILIO_* ausentes) reserva=${payload.reservationId}`,
-    );
-    return { channel: "sms", sent: false, skipped: true, reason: "TWILIO_* não configurados" };
-  }
-  try {
-    const body = new URLSearchParams({ To: payload.toPhone, Body: renderSms(input) });
-    if (service) body.set("MessagingServiceSid", service);
-    else body.set("From", from as string);
-    const res = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${btoa(`${sid}:${token}`)}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body,
-      },
-    );
-    if (!res.ok) {
-      const detail = await res.text();
-      console.error(`[send-reservation-message] Twilio erro ${res.status}: ${detail}`);
-      return { channel: "sms", sent: false, reason: `twilio ${res.status}` };
-    }
-    const data = await res.json();
-    return { channel: "sms", sent: true, id: data.sid ?? null };
-  } catch (e) {
-    console.error("[send-reservation-message] falha de rede (Twilio):", e);
-    return { channel: "sms", sent: false, reason: "erro de rede ao contactar Twilio" };
-  }
-}
-
-function sendWhatsApp(payload: Payload): ChannelResult {
+function sendWhatsApp(ref: string): ChannelResult {
   // Stub declarado: a Business Platform exige verificação Meta + número
-  // dedicado + templates pré-aprovados (semanas). Encaixa aqui quando aprovar;
-  // o render reutiliza o SMS até haver template próprio.
+  // dedicado + templates pré-aprovados. Encaixa aqui quando aprovar.
   console.info(
-    `[send-reservation-message] WHATSAPP SKIP (stub, aguarda aprovação Meta) reserva=${payload.reservationId}`,
+    `[send-reservation-message] WHATSAPP SKIP (stub, aguarda aprovação Meta) ref=${ref}`,
   );
   return { channel: "whatsapp", sent: false, skipped: true, reason: "aguarda aprovação Meta (stub)" };
 }
@@ -240,14 +195,43 @@ Deno.serve(async (req: Request) => {
   } catch {
     return json({ sent: false, reason: "payload inválido" }, 400);
   }
-  if (!payload.reservationId || !payload.restaurantSlug || !payload.customerName) {
+  if (!payload.restaurantSlug || !payload.customerName) {
     return json({ sent: false, reason: "payload incompleto" }, 400);
   }
 
-  const tz = payload.timezone || "Europe/Lisbon";
   const tone: Tone = payload.tone === "formal" ? "formal" : "proximo";
-  const hooks = await fetchHooks(payload.restaurantSlug, payload.serviceDate, tz);
+  const kind = payload.kind ?? "reservation";
   const identity = await fetchIdentity(payload.restaurantSlug);
+  const accentHex = THEME_ACCENT[identity.theme ?? "costeiro"] ?? THEME_ACCENT.costeiro;
+
+  // ── Take-away ───────────────────────────────────────────────────────────────
+  if (TAKEAWAY_KINDS.has(kind)) {
+    let pickupLabel: string | null = null;
+    if (payload.pickupAt) {
+      const m = payload.pickupAt.match(/T(\d{2}:\d{2})/);
+      pickupLabel = m ? m[1] : null;
+    }
+    const t: TakeawayInput = {
+      restaurantName: payload.restaurantName || "nostos",
+      tone,
+      customerName: payload.customerName,
+      kind: kind as TakeawayKind,
+      pickupLabel,
+      logoUrl: identity.logoUrl,
+      accentHex,
+    };
+    const results: ChannelResult[] = [];
+    results.push(sendWhatsApp(payload.orderId ?? "takeaway"));
+    results.push(await sendEmail(payload, renderTakeawaySubject(t), renderTakeawayEmailHtml(t)));
+    return json({ sent: results.some((r) => r.sent), results });
+  }
+
+  // ── Reserva (default, retro-compatível) ─────────────────────────────────────
+  if (!payload.reservationId || !payload.serviceDate) {
+    return json({ sent: false, reason: "payload de reserva incompleto" }, 400);
+  }
+  const tz = payload.timezone || "Europe/Lisbon";
+  const hooks = await fetchHooks(payload.restaurantSlug, payload.serviceDate, tz);
 
   const serviceDateObj = new Date(`${payload.serviceDate}T12:00:00Z`);
   const dateLong = new Intl.DateTimeFormat("pt-PT", {
@@ -277,7 +261,7 @@ Deno.serve(async (req: Request) => {
     restaurantName: payload.restaurantName || "nostos",
     tone,
     customerName: payload.customerName,
-    partySize: payload.partySize,
+    partySize: payload.partySize ?? 0,
     dateLong,
     dateShort,
     timeLabel,
@@ -285,18 +269,12 @@ Deno.serve(async (req: Request) => {
     hooks,
     hasReply: !!payload.replyTo,
     logoUrl: identity.logoUrl,
-    accentHex: THEME_ACCENT[identity.theme ?? "costeiro"] ?? THEME_ACCENT.costeiro,
+    accentHex,
   };
 
-  // Ordem §6c: WhatsApp quando existir → SMS → email como recibo.
   const results: ChannelResult[] = [];
-  results.push(sendWhatsApp(payload));
-  results.push(await sendSms(payload, input));
-  results.push(await sendEmail(payload, input));
+  results.push(sendWhatsApp(payload.reservationId));
+  results.push(await sendEmail(payload, renderSubject(input), renderEmailHtml(input)));
 
-  return json({
-    sent: results.some((r) => r.sent),
-    results,
-    hooks: hooks.length,
-  });
+  return json({ sent: results.some((r) => r.sent), results, hooks: hooks.length });
 });

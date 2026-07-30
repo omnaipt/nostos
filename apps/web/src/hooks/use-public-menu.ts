@@ -8,6 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 export type PublicPriceType = "fixed" | "per_kg" | "market" | "variants";
 
 export interface PublicMenuVariant {
+  // id real da variante (0022): o take-away referencia a dose escolhida por id.
+  // Pode vir "" em ambientes pré-0022 (jsonb sem id) — nesse caso a variante
+  // não é encomendável, degrada limpo.
+  id: string;
   label: string;
   priceCents: number | null;
   unit: string;
@@ -76,6 +80,7 @@ function parseVariants(raw: unknown): PublicMenuVariant[] {
     if (typeof o.label !== "string") return [];
     return [
       {
+        id: typeof o.id === "string" ? o.id : "",
         label: o.label,
         priceCents: typeof o.price_cents === "number" ? o.price_cents : null,
         unit: typeof o.unit === "string" ? o.unit : "dose",

@@ -77,6 +77,7 @@ const ERROR_PT: Record<string, string> = {
   data_demasiado_distante: "Só aceitamos reservas até 6 meses.",
   pax_invalido: "Indique um número de pessoas entre 1 e 50.",
   dados_invalidos: "Confirme o nome e o telefone (mín. 9 dígitos).",
+  email_obrigatorio: "Precisamos de um email para lhe enviar a confirmação.",
   limite_atingido: "Já tem pedidos pendentes para esse dia. O restaurante vai falar consigo.",
 };
 
