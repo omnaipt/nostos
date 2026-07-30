@@ -43,6 +43,7 @@ export default function PublicTakeaway() {
   const [lines, setLines] = React.useState<CartLine[]>([]);
   const [name, setName] = React.useState("");
   const [phone, setPhone] = React.useState("");
+  const [email, setEmail] = React.useState("");
   const [pickup, setPickup] = React.useState("");
   const [note, setNote] = React.useState("");
   const [website, setWebsite] = React.useState(""); // honeypot
@@ -99,6 +100,10 @@ export default function PublicTakeaway() {
       setFormError("Precisamos de um telefone válido (mín. 9 dígitos).");
       return;
     }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
+      setFormError("Precisamos de um email para lhe confirmar a encomenda.");
+      return;
+    }
     if (!pickup) {
       setFormError("Escolha a hora de levantamento.");
       return;
@@ -109,6 +114,7 @@ export default function PublicTakeaway() {
         slug: slug as string,
         customerName: name.trim(),
         phone: phone.trim(),
+        email: email.trim(),
         pickupAt,
         note: note.trim() || null,
         items: toSubmitItems(lines),
@@ -124,7 +130,7 @@ export default function PublicTakeaway() {
               restaurantName: restaurant.name,
               tone: (restaurant as { tone?: string }).tone ?? "proximo",
               toPhone: phone.trim(),
-              toEmail: null,
+              toEmail: email.trim(),
               customerName: name.trim(),
               kind: "takeaway_received",
               pickupAt,
@@ -271,6 +277,9 @@ export default function PublicTakeaway() {
               </Field>
               <Field id="t-phone" label="Telefone" required hint="Avisamos quando estiver pronta.">
                 {(p) => <Input {...p} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />}
+              </Field>
+              <Field id="t-email" label="Email" required hint="Enviamos a confirmação da encomenda.">
+                {(p) => <Input {...p} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />}
               </Field>
             </div>
             <Field id="t-pickup" label="A que horas levanta?" required>

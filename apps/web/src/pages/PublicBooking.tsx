@@ -113,6 +113,10 @@ export default function PublicBooking() {
       setFormError("Precisamos de um telefone válido (mín. 9 dígitos).");
       return;
     }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
+      setFormError("Precisamos de um email para lhe enviar a confirmação.");
+      return;
+    }
     if (partySize < 1) {
       setFormError("Diga-nos quantos são.");
       return;
@@ -266,7 +270,7 @@ export default function PublicBooking() {
               </Field>
             </div>
 
-            <Field id="p-email" label="Email (opcional)" hint="Para lhe escrevermos a confirmação.">
+            <Field id="p-email" label="Email" required hint="Para lhe escrevermos a confirmação.">
               {(p) => <Input {...p} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />}
             </Field>
 

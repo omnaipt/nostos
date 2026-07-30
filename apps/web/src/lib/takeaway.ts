@@ -19,7 +19,9 @@ export interface CartLine {
 export function isOrderable(item: PublicMenuItem): boolean {
   if (!item.available || item.byOrder) return false;
   if (item.priceType === "fixed") return item.priceCents != null;
-  if (item.priceType === "variants") return item.variants.some((v) => v.priceCents != null);
+  // variants: precisa de dose com preço E com id (o servidor fixa o preço por
+  // id; sem id — ambiente pré-0022 — não é encomendável).
+  if (item.priceType === "variants") return item.variants.some((v) => v.priceCents != null && v.id !== "");
   return false; // market e per_kg fora do v1
 }
 
@@ -40,13 +42,12 @@ export function optionsForItem(item: PublicMenuItem): OrderOption[] {
     ];
   }
   return item.variants
-    .filter((v) => v.priceCents != null)
-    .map((v, i) => ({
-      key: `${item.id}:${i}`,
+    .filter((v) => v.priceCents != null && v.id !== "")
+    .map((v) => ({
+      key: v.id,
       menuItemId: item.id,
-      // variant_id real não vem na RPC pública do menu; o servidor resolve a
-      // dose pelo par (item, índice/label) na submissão. Guardamos o label.
-      variantId: null,
+      // variant_id real (0022): o servidor fixa o preço desta dose por id.
+      variantId: v.id,
       label: `${item.name} · ${v.label}`,
       priceCents: v.priceCents as number,
     }));

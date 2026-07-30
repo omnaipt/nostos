@@ -54,6 +54,7 @@ export function useSubmitTakeawayOrder() {
       slug: string;
       customerName: string;
       phone: string;
+      email: string; // obrigatório (decisão de canais 30-07: email é o único garantido)
       pickupAt: string;
       note: string | null;
       items: SubmitTakeawayItem[];
@@ -67,6 +68,7 @@ export function useSubmitTakeawayOrder() {
         p_slug: input.slug,
         p_customer_name: input.customerName,
         p_phone: input.phone,
+        p_email: input.email,
         p_pickup_at: input.pickupAt,
         p_note: input.note,
         p_items: input.items,

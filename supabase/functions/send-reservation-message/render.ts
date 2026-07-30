@@ -1,7 +1,6 @@
-// Composição e render da mensagem de agradecimento da reserva (spec Reserva
-// Proximidade §3/§6b/§6c). O conteúdo compõe-se UMA vez; cada canal renderiza
-// a mesma substância: email = HTML sóbrio, SMS = texto comprimido, WhatsApp
-// reutiliza o SMS até haver templates Meta aprovados.
+// Composição e render das mensagens ao CLIENTE (reserva + take-away).
+// Canais v1 (decisão de canais 30-07): email (Resend) é o único garantido;
+// WhatsApp fica stub até a Meta aprovar. SMS saiu do v1 — sem render de SMS.
 
 export type Tone = "proximo" | "formal";
 
@@ -59,16 +58,20 @@ const COPY: Record<Tone, {
   signoff: (rest: string) => string;
 }> = {
   proximo: {
-    subject: (rest) => `A sua mesa está guardada · ${rest}`,
+    // Revisão de copy (David, 30-07): "reservada" e não "guardada"; nada de
+    // gerúndio ("ir sonhando") nem de travessões; o nome da casa nunca leva
+    // artigo colado (pode ser masculino: "O Cantinho"), por isso as frases são
+    // construídas sem género.
+    subject: (rest) => `A sua mesa está reservada · ${rest}`,
     greeting: (name) => `Olá ${name},`,
-    thanks: (rest) => `A ${rest} agradece — a sua mesa está guardada.`,
+    thanks: () => `Agradecemos a sua reserva. A mesa fica à sua espera.`,
     notesLabel: "Pedidos",
     notesSuffix: "confirmamos consigo.",
-    hooksIntro: "Para já ir sonhando — hoje temos:",
+    hooksIntro: "Para lhe abrir o apetite, hoje temos:",
     hookTag: {
       daily: "prato do dia, só hoje",
-      market: "peixe da lota · preço do dia",
-      by_order: "por encomenda — responda a esta mensagem para encomendar",
+      market: "peixe da lota, ao preço do dia",
+      by_order: "por encomenda, responda a esta mensagem",
     },
     replyLine: "Responda a esta mensagem para qualquer pedido.",
     signoff: (rest) => `Até já,\n${rest}`,
@@ -76,14 +79,14 @@ const COPY: Record<Tone, {
   formal: {
     subject: (rest) => `Reserva confirmada · ${rest}`,
     greeting: (name) => `Caro(a) ${name},`,
-    thanks: (rest) => `A sua reserva no ${rest} está confirmada.`,
+    thanks: () => `A sua reserva está confirmada. Agradecemos a preferência.`,
     notesLabel: "Pedidos registados",
     notesSuffix: "serão confirmados pela nossa equipa.",
-    hooksIntro: "Sugestões do dia:",
+    hooksIntro: "Sugestões da nossa cozinha para hoje:",
     hookTag: {
       daily: "prato do dia",
       market: "preço de mercado",
-      by_order: "por encomenda — responda a esta mensagem para encomendar",
+      by_order: "por encomenda, responda a esta mensagem",
     },
     replyLine: "Para qualquer pedido, responda a esta mensagem.",
     signoff: (rest) => `Com os melhores cumprimentos,\n${rest}`,
@@ -167,7 +170,7 @@ export function renderEmailHtml(input: MessageInput): string {
       </ul>
       ${
     input.notes
-      ? `<p><strong>${escapeHtml(c.notesLabel)}:</strong> ${escapeHtml(input.notes)} — ${escapeHtml(c.notesSuffix)}</p>`
+      ? `<p><strong>${escapeHtml(c.notesLabel)}:</strong> ${escapeHtml(input.notes)}. ${escapeHtml(c.notesSuffix.charAt(0).toUpperCase() + c.notesSuffix.slice(1))}</p>`
       : ""
   }
       ${
@@ -180,29 +183,75 @@ export function renderEmailHtml(input: MessageInput): string {
     </div>`;
 }
 
-// SMS: a mesma substância, comprimida. Sem HTML, ganchos só por nome+tag curta,
-// alvo <320 chars (2 segmentos GSM); corta ganchos antes de cortar o essencial.
-export function renderSms(input: MessageInput): string {
-  const c = COPY[input.tone];
-  const when = input.timeLabel
-    ? `${input.dateShort} ${input.timeLabel}`
-    : input.dateShort;
-  const base = input.tone === "proximo"
-    ? `${input.restaurantName}: a sua mesa está guardada — ${when}, ${input.partySize} pessoas.`
-    : `${input.restaurantName}: reserva confirmada — ${when}, ${input.partySize} pessoas.`;
-  const notes = input.notes ? ` ${c.notesLabel}: ${input.notes} — ${c.notesSuffix}` : "";
-  const shortTag: Record<HookKind, string> = {
-    daily: "prato do dia",
-    market: "preço do dia",
-    by_order: "por encomenda",
-  };
-  const reply = input.hasReply ? ` ${c.replyLine}` : "";
+// ── Take-away (spec Roles §3): mensagens ao cliente por email ────────────────
+// "Encomenda recebida" e "A sua encomenda está pronta". Mesma voz da casa (tom
+// próximo|formal), sem ganchos de menu (não se aplicam a uma encomenda).
 
-  let sms = base + notes;
-  if (input.hooks.length > 0) {
-    const hookText = ` Hoje: ${input.hooks.map((h) => `${h.name} (${shortTag[h.kind]})`).join("; ")}.`;
-    if ((sms + hookText + reply).length <= 320) sms += hookText;
+export type TakeawayKind = "takeaway_received" | "takeaway_ready";
+
+export interface TakeawayInput {
+  restaurantName: string;
+  tone: Tone;
+  customerName: string;
+  kind: TakeawayKind;
+  /** Hora de levantamento "HH:MM" no fuso do restaurante, se conhecida. */
+  pickupLabel: string | null;
+  logoUrl?: string | null;
+  accentHex?: string;
+}
+
+const TAKEAWAY_COPY: Record<Tone, {
+  receivedSubject: (rest: string) => string;
+  readySubject: (rest: string) => string;
+  greeting: (name: string) => string;
+  received: (rest: string, pickup: string | null) => string;
+  ready: (rest: string, pickup: string | null) => string;
+  signoff: (rest: string) => string;
+}> = {
+  proximo: {
+    receivedSubject: (rest) => `Recebemos a sua encomenda · ${rest}`,
+    readySubject: (rest) => `A sua encomenda está pronta · ${rest}`,
+    greeting: (name) => `Olá ${name},`,
+    received: (_rest, pickup) =>
+      `Recebemos a sua encomenda${pickup ? ` para levantar às ${pickup}` : ""}. Paga no levantamento.`,
+    ready: (_rest, pickup) =>
+      `A sua encomenda está pronta${pickup ? ` para levantar às ${pickup}` : " para levantar"}. Ficamos à sua espera.`,
+    signoff: (rest) => `Até já,\n${rest}`,
+  },
+  formal: {
+    receivedSubject: (rest) => `Encomenda recebida · ${rest}`,
+    readySubject: (rest) => `Encomenda pronta · ${rest}`,
+    greeting: (name) => `Caro(a) ${name},`,
+    received: (_rest, pickup) =>
+      `Confirmamos a recepção da sua encomenda${pickup ? ` para levantamento às ${pickup}` : ""}. O pagamento é efectuado no levantamento.`,
+    ready: (_rest, pickup) =>
+      `A sua encomenda encontra-se pronta${pickup ? ` para levantamento às ${pickup}` : " para levantamento"}.`,
+    signoff: (rest) => `Com os melhores cumprimentos,\n${rest}`,
+  },
+};
+
+export function renderTakeawaySubject(input: TakeawayInput): string {
+  const c = TAKEAWAY_COPY[input.tone];
+  return input.kind === "takeaway_ready"
+    ? c.readySubject(input.restaurantName)
+    : c.receivedSubject(input.restaurantName);
+}
+
+export function renderTakeawayEmailHtml(input: TakeawayInput): string {
+  const c = TAKEAWAY_COPY[input.tone];
+  const body = input.kind === "takeaway_ready"
+    ? c.ready(input.restaurantName, input.pickupLabel)
+    : c.received(input.restaurantName, input.pickupLabel);
+  const accent = input.accentHex ?? THEME_ACCENT.costeiro;
+  return `
+    <div style="font-family: system-ui, sans-serif; color: #1a1a1a; line-height: 1.5;">
+      ${
+    input.logoUrl
+      ? `<img src="${escapeHtml(input.logoUrl)}" alt="${escapeHtml(input.restaurantName)}" style="max-height:120px;max-width:200px;margin-bottom:12px;" />`
+      : ""
   }
-  if ((sms + reply).length <= 320) sms += reply;
-  return sms;
+      <p>${escapeHtml(c.greeting(input.customerName))}</p>
+      <p style="color:${escapeHtml(accent)};font-weight:600;">${escapeHtml(body)}</p>
+      <p style="white-space: pre-line;">${escapeHtml(c.signoff(input.restaurantName))}</p>
+    </div>`;
 }
