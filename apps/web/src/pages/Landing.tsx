@@ -261,7 +261,12 @@ export default function Landing() {
             <Feature
               icon={<MessageCircle className="h-5 w-5" aria-hidden />}
               title="Mensagens em nome da casa"
-              text="Confirmação de reserva, lembrete na véspera e estado da encomenda para levar seguem para o cliente por WhatsApp, SMS ou email — sempre em nome do teu restaurante, nunca do nostos. Só para quem deixou o contacto ao reservar ou encomendar."
+              text="Confirmação de reserva, lembrete na véspera e estado da encomenda para levar seguem para o cliente por email e WhatsApp, sempre em nome do teu restaurante, nunca do nostos. Só para quem deixou o contacto ao reservar ou encomendar."
+            />
+            <Feature
+              icon={<ShoppingBag className="h-5 w-5" aria-hidden />}
+              title="Take-away sem comissões"
+              text="Encomendas directas no teu link, com as doses e os preços da tua carta. Caem na fila do balcão, o cliente é avisado quando está pronta, e paga ao levantar. Nenhuma plataforma leva percentagem."
             />
           </div>
         </div>
@@ -285,10 +290,58 @@ export default function Landing() {
             text="Reviews num só sítio e protecção contra mesas vazias que ninguém avisou."
           />
           <Upcoming
-            icon={<ShoppingBag className="h-5 w-5" aria-hidden />}
-            title="Take-away sem comissões"
-            text="Encomendas directas no teu link, sem plataformas a levar percentagem."
+            icon={<MessageCircle className="h-5 w-5" aria-hidden />}
+            title="WhatsApp em nome da casa"
+            text="As confirmações já saem por email; o WhatsApp entra assim que a Meta aprovar o pedido, que está submetido."
           />
+        </div>
+      </section>
+
+      {/* Preço (decisão David 30-07: um preço, tudo incluído, à vista).
+          A landing esteve meses sem preço de propósito; num mercado onde
+          ninguém publica preços (TheFork, Zonesoft, Winrest são todos "peça
+          uma proposta"), mostrá-lo passou a ser o argumento. */}
+      <section id="preco" className="bg-[hsl(var(--brand-paper))] py-20">
+        <div className="container">
+          <h2 className={"font-display text-center text-3xl font-semibold " + pine}>
+            Um preço. Tudo incluído.
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-center text-[hsl(var(--brand-pine-soft))]">
+            Sem módulos, sem escalões, sem comissão por reserva nem por encomenda. O que está aqui
+            em cima está todo lá dentro, no primeiro dia.
+          </p>
+
+          <div className="mx-auto mt-10 max-w-md rounded-2xl border border-[hsl(var(--brand-pine)/0.15)] bg-[hsl(var(--brand-cream))] p-8 text-center shadow-sm">
+            <p className="text-sm font-medium uppercase tracking-[0.14em] text-[hsl(var(--brand-terracotta))]">
+              Restaurantes fundadores
+            </p>
+            <p className={"mt-4 font-display text-5xl font-semibold " + pine}>
+              49 €<span className="text-2xl font-normal"> /mês</span>
+            </p>
+            <p className="mt-2 text-sm text-[hsl(var(--brand-pine-soft))]">
+              Durante o primeiro ano. Depois ficam nos 79 €, trancados enquanto forem clientes.
+            </p>
+            <div className="my-6 h-px bg-[hsl(var(--brand-pine)/0.12)]" />
+            <p className="text-sm text-[hsl(var(--brand-pine-soft))]">
+              Preço normal <strong className={pine}>99 € por mês</strong>, mais IVA. Sem fidelização
+              e sem hardware para comprar: sai quando quiser e leva os seus dados.
+            </p>
+          </div>
+
+          <div className="mx-auto mt-10 grid max-w-3xl gap-5 sm:grid-cols-3">
+            <Point icon={<Users className="h-5 w-5" aria-hidden />}>
+              <strong className={pine}>Menos de quatro clientes por mês.</strong> Se o nostos lhe
+              trouxer quatro reservas que não teria, já está pago.
+            </Point>
+            <Point icon={<LineChart className="h-5 w-5" aria-hidden />}>
+              <strong className={pine}>Um ponto de food cost.</strong> Numa casa que fature 30 mil
+              por mês, um ponto percentual são 300 € que ficam cá dentro.
+            </Point>
+            <Point icon={<CalendarCheck className="h-5 w-5" aria-hidden />}>
+              <strong className={pine}>Zero comissões.</strong> As plataformas de reservas cobram
+              por cada pessoa que se senta. Aqui a conta não cresce com a casa cheia.
+            </Point>
+          </div>
         </div>
       </section>
 
