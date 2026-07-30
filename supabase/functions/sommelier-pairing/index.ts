@@ -120,17 +120,26 @@ Deno.serve(async (req: Request) => {
     return json({ suggested: false, reason: "ANTHROPIC_API_KEY não configurada" });
   }
 
+  // Lista NUMERADA: o modelo devolve o índice, não o nome (David, 30-07). A
+  // correspondência por nome descartava sugestões válidas sempre que o modelo
+  // encurtava o nome ("Branco · Solar das Faias Encruzado" → "Encruzado") e a
+  // contenção ficava ambígua. Com índice não há normalização nem ambiguidade, e
+  // continua a ser impossível inventar: um índice fora da lista é descartado.
   const wineList = wines
     .map(
-      (w) =>
-        `- ${w.name}${w.price_cents != null ? ` (${(w.price_cents / 100).toFixed(2).replace(".", ",")} €)` : " (preço não indicado)"}${w.description ? ` — ${w.description}` : ""}`,
+      (w, i) =>
+        `${i + 1}. ${w.name}${w.price_cents != null ? ` (${(w.price_cents / 100).toFixed(2).replace(".", ",")} €)` : " (preço não indicado)"}${w.description ? ` — ${w.description}` : ""}`,
     )
     .join("\n");
 
   const system =
     "És o sommelier da casa num restaurante português: caloroso, directo, sem snobismo. " +
     "Sugeres APENAS vinhos da carta que te é dada, nunca inventas. Respondes SEMPRE e APENAS " +
-    "com JSON válido, sem markdown, sem texto fora do JSON.";
+    "com JSON válido, sem markdown, sem texto fora do JSON. " +
+    // Apanhado no teste de 30-07: saíam calques do inglês ("deixa-me saber") e
+    // mistura de tratamento na mesma resposta ("vai bem" com "o seu orçamento").
+    "Português de Portugal, sem calques do inglês. Trata o cliente sempre por " +
+    "\"você\" de forma implícita, e nunca mistures tratamentos na mesma resposta.";
 
   const user = `Carta de vinhos do restaurante "${restaurant.name}" (a ÚNICA lista de onde podes sugerir):
 ${wineList}
@@ -142,12 +151,12 @@ ${dishName ? `\nPrato escolhido: ${dishName}` : "\nO cliente ainda não escolheu
 
 Devolve JSON com exactamente este schema:
 {
-  "suggestions": [{"wine": "nome EXACTAMENTE como está na carta", "reason": "1-2 frases em português de Portugal, tom de sommelier simpático"}],
+  "suggestions": [{"n": número da linha da carta, "reason": "UMA frase em português de Portugal, no máximo 22 palavras, tom de sommelier simpático"}],
   "note": "frase curta final do sommelier ou null"
 }
 
 Regras:
-- 1 a 3 sugestões, por ordem de adequação. O campo "wine" tem de COPIAR o nome da carta.
+- 2 sugestões (3 só se houver mesmo três boas), por ordem de adequação. O campo "n" é o NÚMERO da linha na carta acima, nunca o nome.
 - Respeita o range de preço quando os preços existem; se nada encaixar, sugere o mais próximo e di-lo com honestidade no reason.
 - Se houver prato, harmoniza com ele; usa a preferência do cliente como critério principal.
 - Nunca sugiras águas/refrigerantes nem nada fora da lista.`;
@@ -161,8 +170,13 @@ Regras:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-5",
-        max_tokens: 1200,
+        // Haiku em vez de Sonnet (David, 30-07): medido em prod, o Sonnet com
+        // 1200 tokens demorava ~7,5 s de ponta a ponta e o Haiku com resposta
+        // curta faz o mesmo em ~1,9 s. A tarefa é escolher de uma lista dada e
+        // justificar em duas linhas, não precisa do modelo grande. O tempo é
+        // 90% geração; a base de dados e a rede são ~0,5 s estáveis.
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 500,
         system,
         messages: [{ role: "user", content: user }],
       }),
@@ -206,7 +220,10 @@ Regras:
     const seen = new Set<string>();
     const valid = parsed.suggestions
       .map((s) => {
-        const match = findWine(s.wine);
+        // Índice primeiro (contrato actual); o nome fica como salvaguarda para
+        // o caso de o modelo ignorar o schema e responder à antiga.
+        const match =
+          s.n != null && s.n >= 1 && s.n <= wines.length ? wines[s.n - 1] : findWine(s.wine ?? "");
         if (!match || seen.has(match.name)) return null;
         seen.add(match.name);
         return { wine: match.name, priceCents: match.price_cents, reason: s.reason };
@@ -236,7 +253,7 @@ Regras:
 
 function parseSuggestions(
   text: string,
-): { suggestions: { wine: string; reason: string }[]; note: string | null } | null {
+): { suggestions: { n: number | null; wine: string; reason: string }[]; note: string | null } | null {
   const cleaned = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   let raw: unknown;
   try {
@@ -259,9 +276,12 @@ function parseSuggestions(
           const r = s as Record<string, unknown>;
           const wine = typeof r.wine === "string" ? r.wine.trim().slice(0, 160) : "";
           const reason = typeof r.reason === "string" ? r.reason.trim().slice(0, 400) : "";
-          return wine && reason ? { wine, reason } : null;
+          const nRaw = typeof r.n === "number" ? r.n : Number.parseInt(String(r.n ?? ""), 10);
+          const n = Number.isInteger(nRaw) ? nRaw : null;
+          // Basta ter índice OU nome; a resolução acontece depois, contra a carta.
+          return reason && (n !== null || wine) ? { n, wine, reason } : null;
         })
-        .filter((x): x is { wine: string; reason: string } => x !== null)
+        .filter((x): x is { n: number | null; wine: string; reason: string } => x !== null)
     : [];
   if (suggestions.length === 0) return null;
   const note = typeof o.note === "string" && o.note.trim() ? o.note.trim().slice(0, 300) : null;
