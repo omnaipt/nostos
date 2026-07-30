@@ -26,6 +26,9 @@ interface Payload {
 }
 
 const FROM_ADDRESS = "equipa@nostos.pt";
+// Terracota nostos. O convite é uma mensagem interna da equipa, não uma
+// mensagem ao cliente final, por isso não segue o tema escolhido pela casa.
+const ACCENT = "#B4502A";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -128,7 +131,10 @@ Deno.serve(async (req: Request) => {
   const roleLabel = ROLE_LABEL[payload.role] ?? payload.role;
   const scope = ROLE_SCOPE[payload.role] ?? "acesso à aplicação";
   const appUrl = (payload.appUrl ?? "https://nostos.pt").replace(/\/+$/, "");
-  const loginUrl = `${appUrl}/login`;
+  // O convidado ainda não tem conta nem palavra-passe: o link leva-o
+  // directamente ao modo "criar conta", com o endereço do convite preenchido.
+  // Tem de ser este endereço, senão o trigger não encontra o convite pendente.
+  const loginUrl = `${appUrl}/login?convite=1&email=${encodeURIComponent(payload.email)}`;
 
   const html = `
     <div style="font-family: system-ui, sans-serif; color: #1a1a1a; line-height: 1.5;">
@@ -136,9 +142,12 @@ Deno.serve(async (req: Request) => {
       <p style="font-weight:600;">Foi convidado para gerir ${escapeHtml(restaurantName)} no nostos.</p>
       <p>O seu perfil é <strong>${escapeHtml(roleLabel)}</strong>, o que lhe dá ${escapeHtml(scope)}.</p>
       <p>
-        Entre em <a href="${escapeHtml(loginUrl)}">${escapeHtml(loginUrl)}</a> com este email.
-        Se ainda não tiver conta, crie-a com este mesmo endereço e o acesso fica
-        activo automaticamente.
+        <a href="${escapeHtml(loginUrl)}" style="display:inline-block;padding:10px 18px;border-radius:6px;background:${ACCENT};color:#ffffff;text-decoration:none;font-weight:600;">Criar a minha conta</a>
+      </p>
+      <p style="font-size:14px;">
+        Use o endereço <strong>${escapeHtml(payload.email)}</strong> e escolha uma
+        palavra-passe. O acesso fica activo de imediato. Se já tiver conta no
+        nostos, basta entrar com ela.
       </p>
       <p style="color:#6b6b6b;font-size:13px;">
         Se não estava à espera deste convite, ignore esta mensagem.
