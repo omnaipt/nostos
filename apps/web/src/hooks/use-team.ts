@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import { looseRpc, isMissingContract } from "@/lib/contract-rpc";
 import type { MemberRole } from "@/lib/roles";
 
@@ -89,6 +90,7 @@ export function useTeam(restaurantId: string | undefined) {
 
 export function useInviteMember(restaurantId: string | undefined) {
   const qc = useQueryClient();
+  const { data: restaurant } = useActiveRestaurant();
   return useMutation({
     mutationFn: async (input: { email: string; role: MemberRole }) => {
       const { error } = await looseRpc("invite_member", {
@@ -100,6 +102,26 @@ export function useInviteMember(restaurantId: string | undefined) {
           throw new Error("Os convites ainda não estão activos neste ambiente.");
         }
         throw new Error(error.message);
+      }
+      // Email do convite: best-effort, exactamente como as mensagens de reserva.
+      // A RPC já gravou o convite (ou deu acesso imediato), por isso uma falha
+      // de email não pode desfazer nada nem bloquear o ecrã; a pessoa entra na
+      // mesma e o convite é aceite no primeiro signup. O envio vive numa edge
+      // porque a BD não tem pg_net para falar com o Resend (decisão 30-07).
+      if (restaurantId && restaurant?.slug) {
+        try {
+          await supabase.functions.invoke("send-invite-email", {
+            body: {
+              restaurantId,
+              slug: restaurant.slug,
+              email: input.email,
+              role: input.role,
+              appUrl: window.location.origin,
+            },
+          });
+        } catch (e) {
+          console.warn("[useInviteMember] email de convite falhou (ignorado):", e);
+        }
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: TEAM_KEY(restaurantId) }),

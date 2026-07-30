@@ -25,6 +25,12 @@ export default function Dashboard() {
   const { data: restaurant } = useActiveRestaurant();
   const publicUrl = restaurant?.slug ? `${window.location.origin}/r/${restaurant.slug}` : null;
   const menuUrl = restaurant?.slug ? `${window.location.origin}/m/${restaurant.slug}` : null;
+  // Take-away só tem link quando a casa o liga nas Definições (0022); enquanto
+  // takeaway_enabled for false, a página pública rejeita as encomendas, por
+  // isso mostrar o link seria oferecer uma porta fechada.
+  const takeawayUrl = restaurant?.slug && restaurant.takeaway_enabled
+    ? `${window.location.origin}/m/${restaurant.slug}/levar`
+    : null;
   const summaryQuery = useOwnerSummary(restaurant?.id);
 
   // Margens (S3): food cost médio + pratos abaixo do alvo, derivados das fichas.
@@ -70,7 +76,7 @@ export default function Dashboard() {
         <h1 className="font-display text-3xl text-atlantico-900">{saudacao()}</h1>
         <MareDivider className="mt-3" />
       </header>
-      {(publicUrl || menuUrl) && (
+      {(publicUrl || menuUrl || takeawayUrl) && (
         <div className="mb-6 space-y-1 rounded-md border border-input bg-card p-3 text-sm">
           {publicUrl && (
             <p>
@@ -89,6 +95,14 @@ export default function Dashboard() {
               <Link to="/ementa" className="ml-2 text-muted-foreground underline">
                 QR para imprimir
               </Link>
+            </p>
+          )}
+          {takeawayUrl && (
+            <p>
+              <span className="text-muted-foreground">Take-away (link público): </span>
+              <a href={takeawayUrl} target="_blank" rel="noreferrer" className="font-medium underline">
+                {takeawayUrl}
+              </a>
             </p>
           )}
         </div>
