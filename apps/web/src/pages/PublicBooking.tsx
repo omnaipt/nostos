@@ -165,7 +165,7 @@ export default function PublicBooking() {
 
   const restaurant = restaurantQuery.data!;
 
-  // A MESA ESTÁ GUARDADA
+  // A MESA ESTÁ RESERVADA
   if (done) {
     const turn = turns.find((t) => t.id === turnId);
     return (
@@ -173,7 +173,7 @@ export default function PublicBooking() {
         <Card className="w-full max-w-md">
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
             <CheckCircle2 className="h-10 w-10 text-[hsl(var(--status-seated-fg))]" aria-hidden="true" />
-            <h2 className="text-lg font-semibold">A sua mesa está guardada</h2>
+            <h2 className="text-lg font-semibold">A sua mesa está reservada</h2>
             <p className="text-sm text-muted-foreground">
               {formatDatePt(date)}
               {turn ? ` · ${turn.label}, ${turn.start_time.slice(0, 5)}` : ""} ·{" "}
@@ -221,7 +221,7 @@ export default function PublicBooking() {
             </CardTitle>
           </div>
           <p className="text-sm text-muted-foreground">
-            Diga-nos quando vem e quantos são, que a mesa fica guardada.
+            Diga-nos quando vem e quantos são, que a mesa fica reservada.
           </p>
         </CardHeader>
         <CardContent>
