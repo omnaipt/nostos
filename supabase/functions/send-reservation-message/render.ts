@@ -58,16 +58,20 @@ const COPY: Record<Tone, {
   signoff: (rest: string) => string;
 }> = {
   proximo: {
-    subject: (rest) => `A sua mesa está guardada · ${rest}`,
+    // Revisão de copy (David, 30-07): "reservada" e não "guardada"; nada de
+    // gerúndio ("ir sonhando") nem de travessões; o nome da casa nunca leva
+    // artigo colado (pode ser masculino: "O Cantinho"), por isso as frases são
+    // construídas sem género.
+    subject: (rest) => `A sua mesa está reservada · ${rest}`,
     greeting: (name) => `Olá ${name},`,
-    thanks: (rest) => `A ${rest} agradece — a sua mesa está guardada.`,
+    thanks: () => `Agradecemos a sua reserva. A mesa fica à sua espera.`,
     notesLabel: "Pedidos",
     notesSuffix: "confirmamos consigo.",
-    hooksIntro: "Para já ir sonhando — hoje temos:",
+    hooksIntro: "Para lhe abrir o apetite, hoje temos:",
     hookTag: {
       daily: "prato do dia, só hoje",
-      market: "peixe da lota · preço do dia",
-      by_order: "por encomenda — responda a esta mensagem para encomendar",
+      market: "peixe da lota, ao preço do dia",
+      by_order: "por encomenda, responda a esta mensagem",
     },
     replyLine: "Responda a esta mensagem para qualquer pedido.",
     signoff: (rest) => `Até já,\n${rest}`,
@@ -75,14 +79,14 @@ const COPY: Record<Tone, {
   formal: {
     subject: (rest) => `Reserva confirmada · ${rest}`,
     greeting: (name) => `Caro(a) ${name},`,
-    thanks: (rest) => `A sua reserva no ${rest} está confirmada.`,
+    thanks: () => `A sua reserva está confirmada. Agradecemos a preferência.`,
     notesLabel: "Pedidos registados",
     notesSuffix: "serão confirmados pela nossa equipa.",
-    hooksIntro: "Sugestões do dia:",
+    hooksIntro: "Sugestões da nossa cozinha para hoje:",
     hookTag: {
       daily: "prato do dia",
       market: "preço de mercado",
-      by_order: "por encomenda — responda a esta mensagem para encomendar",
+      by_order: "por encomenda, responda a esta mensagem",
     },
     replyLine: "Para qualquer pedido, responda a esta mensagem.",
     signoff: (rest) => `Com os melhores cumprimentos,\n${rest}`,
@@ -166,7 +170,7 @@ export function renderEmailHtml(input: MessageInput): string {
       </ul>
       ${
     input.notes
-      ? `<p><strong>${escapeHtml(c.notesLabel)}:</strong> ${escapeHtml(input.notes)} — ${escapeHtml(c.notesSuffix)}</p>`
+      ? `<p><strong>${escapeHtml(c.notesLabel)}:</strong> ${escapeHtml(input.notes)}. ${escapeHtml(c.notesSuffix.charAt(0).toUpperCase() + c.notesSuffix.slice(1))}</p>`
       : ""
   }
       ${
@@ -208,20 +212,20 @@ const TAKEAWAY_COPY: Record<Tone, {
     receivedSubject: (rest) => `Recebemos a sua encomenda · ${rest}`,
     readySubject: (rest) => `A sua encomenda está pronta · ${rest}`,
     greeting: (name) => `Olá ${name},`,
-    received: (rest, pickup) =>
-      `a ${rest} recebeu a sua encomenda${pickup ? ` para levantar às ${pickup}` : ""}. Paga-se ao levantar.`,
-    ready: (rest, pickup) =>
-      `a sua encomenda na ${rest} está pronta${pickup ? ` para levantar às ${pickup}` : " para levantar"}. Até já.`,
+    received: (_rest, pickup) =>
+      `Recebemos a sua encomenda${pickup ? ` para levantar às ${pickup}` : ""}. Paga no levantamento.`,
+    ready: (_rest, pickup) =>
+      `A sua encomenda está pronta${pickup ? ` para levantar às ${pickup}` : " para levantar"}. Ficamos à sua espera.`,
     signoff: (rest) => `Até já,\n${rest}`,
   },
   formal: {
     receivedSubject: (rest) => `Encomenda recebida · ${rest}`,
     readySubject: (rest) => `Encomenda pronta · ${rest}`,
     greeting: (name) => `Caro(a) ${name},`,
-    received: (rest, pickup) =>
-      `a ${rest} confirma a recepção da sua encomenda${pickup ? ` para levantamento às ${pickup}` : ""}. O pagamento é efectuado no levantamento.`,
-    ready: (rest, pickup) =>
-      `a sua encomenda no ${rest} encontra-se pronta${pickup ? ` para levantamento às ${pickup}` : " para levantamento"}.`,
+    received: (_rest, pickup) =>
+      `Confirmamos a recepção da sua encomenda${pickup ? ` para levantamento às ${pickup}` : ""}. O pagamento é efectuado no levantamento.`,
+    ready: (_rest, pickup) =>
+      `A sua encomenda encontra-se pronta${pickup ? ` para levantamento às ${pickup}` : " para levantamento"}.`,
     signoff: (rest) => `Com os melhores cumprimentos,\n${rest}`,
   },
 };
