@@ -20,6 +20,14 @@ export interface ReservationMessageInput {
   serviceDate: string;
   reservedAt: string | null;
   notes: string | null;
+  /**
+   * Idioma em que o cliente fez a reserva (0026). Opcional porque quem chama
+   * hoje é o backoffice, que confirma reservas antigas sem idioma gravado. Vai
+   * no corpo à espera de que a edge passe a compor a mensagem no idioma do
+   * cliente: quem reservou em francês não devia receber a confirmação em
+   * português. A edge ignora campos que não conhece, por isso é seguro já.
+   */
+  lang?: string | null;
 }
 
 export async function sendReservationMessage(input: ReservationMessageInput): Promise<void> {
@@ -40,6 +48,7 @@ export async function sendReservationMessage(input: ReservationMessageInput): Pr
         reservedAt: input.reservedAt ?? undefined,
         timezone: input.restaurant.timezone,
         notes: input.notes ?? undefined,
+        lang: input.lang ?? undefined,
       },
     });
     if (error) {

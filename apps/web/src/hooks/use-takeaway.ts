@@ -79,7 +79,9 @@ export function useSubmitTakeawayOrder() {
       });
       if (error) {
         if (isMissingContract(error)) {
-          throw new Error("As encomendas ainda não estão activas. Tente mais logo.");
+          // Código estável em vez de frase feita: a página pública é multilingue
+          // e traduz isto para o idioma de quem está a encomendar.
+          throw new Error("encomendas_inactivas");
         }
         throw new Error(error.message);
       }

@@ -129,6 +129,14 @@ Deno.serve(async (req: Request) => {
     .from("menu_item_variants")
     .select("id, label")
     .eq("restaurant_id", payload.restaurantId);
+  // 0026: os turnos aparecem na pagina de reserva, que passou a seguir o idioma
+  // do menu. "Almoco 12:30" nao diz nada a um frances, e o turno e a escolha
+  // central da reserva.
+  const { data: turns } = await admin
+    .from("turns")
+    .select("id, label")
+    .eq("restaurant_id", payload.restaurantId)
+    .eq("active", true);
 
   if (!items?.length && !cats?.length) {
     return json({ translated: false, reason: "ementa vazia" }, 400);
@@ -156,10 +164,14 @@ Regras, por ordem de importancia:
 2. Pratos tradicionais portugueses sem equivalente real (Bacalhau a Bras, Acorda, Cataplana, Bulhao Pato) MANTEM o nome em portugues. Se houver descricao em portugues, e ai que explicas o prato em poucas palavras. O nome e o nome da casa.
 3. Vinhos: nomes de produtores, quintas, regioes, castas e denominacoes ficam EXACTAMENTE como estao. So se traduz a parte generica (Branco, Tinto, Rose, Espumante, Doce) e a descricao.
 4. Doses e formatos traduzem-se: "2 pax" para 2 pessoas no idioma de destino, "Dose" para dose inteira, "1/2 dose" para meia dose, "Jarro 0,5" para jarro de meio litro.
+4b. Turnos de servico traduzem-se pelo termo corrente da restauracao no idioma de destino: Almoco, Jantar, 2o turno jantar. Nao inventes horas nem acrescentes informacao que o rotulo nao tenha.
 5. Linguagem de ementa: curta, concreta, sem publicidade. Quem le esta de pe ou a mesa com fome.
 6. Devolve EXACTAMENTE os mesmos ids que recebeste. Nao acrescentes nem retires entradas.`;
 
-  const results: Record<string, { itens: number; categorias: number; doses: number }> = {};
+  const results: Record<
+    string,
+    { itens: number; categorias: number; doses: number; turnos: number }
+  > = {};
   let totalIn = 0;
   let totalOut = 0;
 
@@ -168,6 +180,7 @@ Regras, por ordem de importancia:
 
     const catsToDo = (cats ?? []).filter((c) => !isLocked.has(`${lang}:category:${c.id}`));
     const varsToDo = (variants ?? []).filter((v) => !isLocked.has(`${lang}:variant:${v.id}`));
+    const turnsToDo = (turns ?? []).filter((t) => !isLocked.has(`${lang}:turn:${t.id}`));
     const itemsToDo = (items ?? []).filter((i) => !isLocked.has(`${lang}:item:${i.id}`));
 
     const batches = itemsToDo.length ? chunk(itemsToDo, ITEM_BATCH) : [[]];
@@ -183,6 +196,8 @@ ${
               catsToDo.map((c) => ({ id: c.id, label: c.label })),
             )}\n\nDOSES E FORMATOS (traduz o rotulo):\n${JSON.stringify(
               varsToDo.map((v) => ({ id: v.id, label: v.label })),
+            )}\n\nTURNOS DE SERVICO (traduz o rotulo):\n${JSON.stringify(
+              turnsToDo.map((t) => ({ id: t.id, label: t.label })),
             )}\n\n`
           : ""
       }PRATOS (traduz o nome e, se existir, a descricao):
@@ -192,9 +207,10 @@ Devolve JSON com este schema exacto:
 {
   "categories": [{"id": "uuid", "name": "string"}],
   "items": [{"id": "uuid", "name": "string", "description": "string ou null"}],
-  "variants": [{"id": "uuid", "label": "string"}]
+  "variants": [{"id": "uuid", "label": "string"}],
+  "turns": [{"id": "uuid", "label": "string"}]
 }
-${primeira ? "" : 'Nesta leva envia "categories": [] e "variants": [].'}`;
+${primeira ? "" : 'Nesta leva envia "categories": [], "variants": [] e "turns": [].'}`;
 
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -233,6 +249,7 @@ ${primeira ? "" : 'Nesta leva envia "categories": [] e "variants": [].'}`;
         categories?: { id: string; name: string }[];
         items?: { id: string; name: string; description: string | null }[];
         variants?: { id: string; label: string }[];
+        turns?: { id: string; label: string }[];
       };
       try {
         parsed = JSON.parse(text.slice(s, e + 1));
@@ -243,6 +260,7 @@ ${primeira ? "" : 'Nesta leva envia "categories": [] e "variants": [].'}`;
       // Whitelist por id: o que nao estava no pedido nao entra na base de dados.
       const catIds = new Set(catsToDo.map((c) => c.id));
       const varIds = new Set(varsToDo.map((v) => v.id));
+      const turnIds = new Set(turnsToDo.map((t) => t.id));
       const itemIds = new Set(batch.map((i) => i.id));
       // Descricao so sai se existir descricao em portugues (regra 1).
       const hasDesc = new Map(batch.map((i) => [i.id, !!(i.description ?? "").trim()]));
@@ -272,6 +290,22 @@ ${primeira ? "" : 'Nesta leva envia "categories": [] e "variants": [].'}`;
           restaurant_id: payload.restaurantId,
           entity_type: "variant",
           entity_id: v.id,
+          lang,
+          name,
+          description: null,
+          source: "ai",
+          status: "rascunho",
+          updated_at: now,
+        });
+      }
+      for (const tn of parsed.turns ?? []) {
+        if (!turnIds.has(tn?.id)) continue;
+        const name = clean(tn.label, 80);
+        if (!name) continue;
+        rows.push({
+          restaurant_id: payload.restaurantId,
+          entity_type: "turn",
+          entity_id: tn.id,
           lang,
           name,
           description: null,
@@ -310,6 +344,7 @@ ${primeira ? "" : 'Nesta leva envia "categories": [] e "variants": [].'}`;
       itens: rows.filter((r) => r.entity_type === "item").length,
       categorias: rows.filter((r) => r.entity_type === "category").length,
       doses: rows.filter((r) => r.entity_type === "variant").length,
+      turnos: rows.filter((r) => r.entity_type === "turn").length,
     };
   }
 
