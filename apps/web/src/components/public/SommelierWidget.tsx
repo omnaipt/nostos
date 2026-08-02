@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { formatPriceCents } from "@/lib/types";
-import type { Lang } from "@/lib/i18n";
+import { formatPriceCentsI18n, t, type Lang } from "@/lib/i18n";
 import {
   PRICE_RANGES,
   type PriceRange,
@@ -20,25 +19,42 @@ import {
 // texto livre opcional para região/casta. As sugestões vêm SEMPRE da carta
 // da casa (whitelist na edge; nenhuma mudança na edge nesta versão).
 
-const WINE_TYPES: { code: string; label: string; query: string }[] = [
-  { code: "indiferente", label: "Tanto faz", query: "" },
-  { code: "tinto", label: "Tinto", query: "vinho tinto" },
-  { code: "branco", label: "Branco", query: "vinho branco" },
-  { code: "rose", label: "Rosé", query: "vinho rosé" },
-  { code: "espumante", label: "Espumante", query: "espumante" },
-  { code: "doce", label: "Doce / Porto", query: "vinho doce ou fortificado" },
+// Multilingue (0025): RÓTULO e VALOR são coisas diferentes e não podem ser
+// confundidos. O rótulo (`labelKey`) passa pelo dicionário e muda com o idioma
+// do cliente; o valor (`query` nos tipos, `code` nos perfis) vai dentro do
+// campo `preference` do pedido e fica SEMPRE em português, porque é isso que a
+// edge e o prompt do sommelier esperam ler. Traduzir o valor mudava aquilo que
+// se pede ao modelo, não apenas aquilo que o cliente lê.
+const WINE_TYPES: { code: string; labelKey: string; query: string }[] = [
+  { code: "indiferente", labelKey: "somTantoFaz", query: "" },
+  { code: "tinto", labelKey: "somTipoTinto", query: "vinho tinto" },
+  { code: "branco", labelKey: "somTipoBranco", query: "vinho branco" },
+  { code: "rose", labelKey: "somTipoRose", query: "vinho rosé" },
+  { code: "espumante", labelKey: "somTipoEspumante", query: "espumante" },
+  { code: "doce", labelKey: "somTipoDoce", query: "vinho doce ou fortificado" },
 ];
 
 // O toque do empregado de mesa (David 29-07): "gostas mais robusto, encorpado,
 // com acidez?" — perfil em escolha múltipla, nas palavras da mesa.
-const WINE_PROFILES: { code: string; label: string }[] = [
-  { code: "leve e fresco", label: "Leve e fresco" },
-  { code: "encorpado e robusto", label: "Encorpado" },
-  { code: "com acidez viva", label: "Acidez viva" },
-  { code: "macio e frutado", label: "Macio e frutado" },
-  { code: "seco", label: "Seco" },
-  { code: "mineral", label: "Mineral" },
+// O `code` é o texto português que segue na preferência para a edge.
+const WINE_PROFILES: { code: string; labelKey: string }[] = [
+  { code: "leve e fresco", labelKey: "somPerfilLeve" },
+  { code: "encorpado e robusto", labelKey: "somPerfilEncorpado" },
+  { code: "com acidez viva", labelKey: "somPerfilAcidez" },
+  { code: "macio e frutado", labelKey: "somPerfilFrutado" },
+  { code: "seco", labelKey: "somPerfilSeco" },
+  { code: "mineral", labelKey: "somPerfilMineral" },
 ];
+
+// Rótulo de cada escalão de preço. O código (`ate_15`, ...) é o que segue no
+// pedido; aqui só se decide o que o cliente lê.
+const PRICE_RANGE_KEYS: Record<PriceRange, string> = {
+  ate_15: "somPrecoAte15",
+  "15_25": "somPreco15a25",
+  "25_40": "somPreco25a40",
+  "40_mais": "somPreco40Mais",
+  indiferente: "somTantoFaz",
+};
 
 export function SommelierWidget({
   slug,
@@ -83,7 +99,9 @@ export function SommelierWidget({
   async function ask() {
     setLoading(true);
     setError(null);
-    const typeQuery = WINE_TYPES.find((t) => t.code === wineType)?.query ?? "";
+    // A preferência é montada em português de propósito, seja qual for o
+    // idioma do ecrã: é texto para a edge, não para o cliente.
+    const typeQuery = WINE_TYPES.find((w) => w.code === wineType)?.query ?? "";
     const pref = [
       typeQuery,
       profiles.join(", "),
@@ -105,17 +123,19 @@ export function SommelierWidget({
       if (fnError) throw fnError;
       const result = data as SommelierResult;
       if (!result.suggested || !result.suggestions) {
+        // `result.reason` vem da edge sempre em português: é um código de
+        // motivo, não texto para mostrar. O que se mostra sai do dicionário.
         setError(
           result.reason === "limite diário do sommelier atingido"
-            ? "O sommelier já atendeu muita gente hoje. Pergunta ao staff, que sabe tudo."
-            : "O sommelier não conseguiu responder agora. Tenta outra vez ou pergunta ao staff.",
+            ? t(lang, "somErroLimite")
+            : t(lang, "somErroGeral"),
         );
         return;
       }
       setSuggestions(result.suggestions);
       setNote(result.note ?? null);
     } catch {
-      setError("O sommelier não conseguiu responder agora. Tenta outra vez ou pergunta ao staff.");
+      setError(t(lang, "somErroGeral"));
     } finally {
       setLoading(false);
     }
@@ -132,27 +152,25 @@ export function SommelierWidget({
             onOpenChange(true);
           }}
         >
-          <Wine className="h-5 w-5" aria-hidden /> Pedir sugestão ao sommelier
+          <Wine className="h-5 w-5" aria-hidden /> {t(lang, "somPedir")}
         </Button>
       </div>
 
       <Dialog
         open={open}
         onOpenChange={onOpenChange}
-        title="O sommelier da casa"
-        description={
-          dish ? "Vais comer isto; nós tratamos do vinho." : "Sugestões da nossa carta, à tua medida."
-        }
+        title={t(lang, "somTitulo")}
+        description={t(lang, dish ? "somDescComPrato" : "somDescSemPrato")}
       >
         {dish && (
           <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-muted px-3 py-2">
             <p className="text-sm">
-              <span className="text-muted-foreground">Para acompanhar: </span>
+              <span className="text-muted-foreground">{t(lang, "somParaAcompanhar")} </span>
               <span className="font-medium">{dish}</span>
             </p>
             <button
               type="button"
-              aria-label="Remover prato; sugerir para a refeição em geral"
+              aria-label={t(lang, "somRemoverPrato")}
               className="text-muted-foreground hover:text-foreground"
               onClick={() => onDishChange(null)}
             >
@@ -169,7 +187,7 @@ export function SommelierWidget({
                   <div className="flex items-baseline justify-between gap-3">
                     <p className="font-semibold">{s.wine}</p>
                     <span className="shrink-0 tabular-nums text-sm text-muted-foreground">
-                      {formatPriceCents(s.priceCents)}
+                      {formatPriceCentsI18n(s.priceCents, lang)}
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">{s.reason}</p>
@@ -179,25 +197,29 @@ export function SommelierWidget({
             {note && <p className="text-sm italic text-muted-foreground">{note}</p>}
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={reset}>
-                Perguntar outra vez
+                {t(lang, "somOutraVez")}
               </Button>
               <Button size="sm" onClick={() => onOpenChange(false)}>
-                Fechar
+                {t(lang, "somFechar")}
               </Button>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <p className="text-sm font-medium">1. Que tipo de vinho?</p>
-              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Tipo de vinho">
-                {WINE_TYPES.map((t) => {
-                  const on = wineType === t.code;
+              <p className="text-sm font-medium">1. {t(lang, "somPerguntaTipo")}</p>
+              <div
+                className="flex flex-wrap gap-1.5"
+                role="group"
+                aria-label={t(lang, "somGrupoTipo")}
+              >
+                {WINE_TYPES.map((w) => {
+                  const on = wineType === w.code;
                   return (
                     <button
-                      key={t.code}
+                      key={w.code}
                       type="button"
-                      onClick={() => setWineType(t.code)}
+                      onClick={() => setWineType(w.code)}
                       aria-pressed={on}
                       className={
                         "rounded-full border px-3 py-1.5 text-sm transition-colors " +
@@ -206,7 +228,7 @@ export function SommelierWidget({
                           : "border-input text-muted-foreground hover:bg-muted")
                       }
                     >
-                      {t.label}
+                      {t(lang, w.labelKey)}
                     </button>
                   );
                 })}
@@ -214,8 +236,12 @@ export function SommelierWidget({
             </div>
 
             <div className="space-y-1.5">
-              <p className="text-sm font-medium">2. Como gostas? (escolhe os que quiseres)</p>
-              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Perfil de gosto">
+              <p className="text-sm font-medium">2. {t(lang, "somPerguntaPerfil")}</p>
+              <div
+                className="flex flex-wrap gap-1.5"
+                role="group"
+                aria-label={t(lang, "somGrupoPerfil")}
+              >
                 {WINE_PROFILES.map((p) => {
                   const on = profiles.includes(p.code);
                   return (
@@ -237,7 +263,7 @@ export function SommelierWidget({
                           : "border-input text-muted-foreground hover:bg-muted")
                       }
                     >
-                      {p.label}
+                      {t(lang, p.labelKey)}
                     </button>
                   );
                 })}
@@ -246,8 +272,12 @@ export function SommelierWidget({
 
             {regions.length > 0 && (
               <div className="space-y-1.5">
-                <p className="text-sm font-medium">3. Alguma região preferida?</p>
-                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Região">
+                <p className="text-sm font-medium">3. {t(lang, "somPerguntaRegiao")}</p>
+                <div
+                  className="flex flex-wrap gap-1.5"
+                  role="group"
+                  aria-label={t(lang, "somGrupoRegiao")}
+                >
                   {["indiferente", ...regions].map((r) => {
                     const on = region === r;
                     return (
@@ -263,7 +293,8 @@ export function SommelierWidget({
                             : "border-input text-muted-foreground hover:bg-muted")
                         }
                       >
-                        {r === "indiferente" ? "Tanto faz" : r}
+                        {/* O nome da região vem da carta e não se traduz. */}
+                        {r === "indiferente" ? t(lang, "somTantoFaz") : r}
                       </button>
                     );
                   })}
@@ -273,9 +304,13 @@ export function SommelierWidget({
 
             <div className="space-y-1.5">
               <p className="text-sm font-medium">
-                {regions.length > 0 ? "4." : "3."} Quanto queres gastar na garrafa?
+                {regions.length > 0 ? "4." : "3."} {t(lang, "somPerguntaPreco")}
               </p>
-              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Range de preço">
+              <div
+                className="flex flex-wrap gap-1.5"
+                role="group"
+                aria-label={t(lang, "somGrupoPreco")}
+              >
                 {PRICE_RANGES.map((r) => {
                   const on = priceRange === r.code;
                   return (
@@ -291,7 +326,7 @@ export function SommelierWidget({
                           : "border-input text-muted-foreground hover:bg-muted")
                       }
                     >
-                      {r.label}
+                      {t(lang, PRICE_RANGE_KEYS[r.code])}
                     </button>
                   );
                 })}
@@ -300,12 +335,12 @@ export function SommelierWidget({
 
             <div className="space-y-1.5">
               <p className="text-sm font-medium text-muted-foreground">
-                Alguma casta ou outro detalhe? (opcional)
+                {t(lang, "somCastaPergunta")}
               </p>
               <Input
-                aria-label="Casta ou outro detalhe (opcional)"
+                aria-label={t(lang, "somCastaAria")}
                 maxLength={200}
-                placeholder="Ex.: Alvarinho · sem madeira"
+                placeholder={t(lang, "somCastaPlaceholder")}
                 value={preference}
                 onChange={(e) => setPreference(e.target.value)}
                 onKeyDown={(e) => {
@@ -320,7 +355,7 @@ export function SommelierWidget({
             {error && <p className="text-sm text-destructive">{error}</p>}
 
             <Button className="w-full" disabled={loading} onClick={ask}>
-              {loading ? "O sommelier está a pensar..." : "Sugerir vinhos"}
+              {loading ? t(lang, "somAPensar") : t(lang, "somSugerir")}
             </Button>
           </div>
         )}
