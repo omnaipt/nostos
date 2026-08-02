@@ -471,6 +471,56 @@ export type Database = {
           },
         ]
       }
+      menu_translations: {
+        Row: {
+          created_at: string
+          description: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          lang: string
+          name: string | null
+          restaurant_id: string
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          lang: string
+          name?: string | null
+          restaurant_id: string
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          lang?: string
+          name?: string | null
+          restaurant_id?: string
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_translations_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           id: string
@@ -1358,6 +1408,15 @@ export type Database = {
         }[]
       }
       member_role: { Args: { p_restaurant_id: string }; Returns: string }
+      menu_translation_progress: {
+        Args: { p_restaurant: string }
+        Returns: {
+          lang: string
+          rascunhos: number
+          total_itens: number
+          validadas: number
+        }[]
+      }
       public_create_lead: {
         Args: {
           p_email: string
@@ -1382,7 +1441,7 @@ export type Database = {
         Returns: string
       }
       public_menu_by_slug: {
-        Args: { p_slug: string }
+        Args: { p_lang?: string; p_slug: string }
         Returns: {
           allergens: string[]
           available: boolean
@@ -1401,6 +1460,7 @@ export type Database = {
           variants: Json
         }[]
       }
+      public_menu_langs: { Args: { p_slug: string }; Returns: string[] }
       public_restaurant_by_slug: {
         Args: { p_slug: string }
         Returns: {

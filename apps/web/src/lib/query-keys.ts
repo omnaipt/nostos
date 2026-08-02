@@ -63,6 +63,12 @@ export const queryKeys = {
     ["saft", "unmatched", importId] as const,
   lastAppliedImport: (restaurantId: string | undefined) =>
     ["saft", restaurantId, "last-applied"] as const,
+  // Traduções do menu (0025). translationsRoot invalida progresso + linhas.
+  translationsRoot: ["translations"] as const,
+  translationProgress: (restaurantId: string | undefined) =>
+    ["translations", restaurantId, "progress"] as const,
+  translations: (restaurantId: string | undefined, lang: string) =>
+    ["translations", restaurantId, "rows", lang] as const,
   // Estatísticas (0024). Os filtros entram na chave: mudar de turno ou de dia
   // da semana é outra pergunta, não a mesma com outra roupa.
   statsRoot: ["stats"] as const,

@@ -11,10 +11,18 @@ export function normalizeName(s: string): string {
     .trim();
 }
 
-// Uma categoria é "de vinhos" se o label normalizado contiver "vinho"
+// Uma categoria é "de vinhos" se o label normalizado tiver a palavra "vinho"
 // (cobre "Vinhos", "Vinhos e Bebidas", "Carta de Vinhos", "Vinho a copo").
+//
+// Com o menu multilingue (0025) o label chega TRADUZIDO a este lado, por isso
+// aceitamos também as palavras EN/ES/FR: em inglês a categoria vinha "Wines" e
+// o sommelier desaparecia da ementa. A edge continua a decidir sobre os labels
+// portugueses (lê a tabela, não a RPC), logo a whitelist não muda com o idioma.
+// Palavra inteira e não contenção: "vin" dentro de "vinagre" não é vinho.
+const WINE_WORDS = /\b(vinho|vinhos|vino|vinos|vin|vins|wine|wines)\b/;
+
 export function isWineCategory(label: string): boolean {
-  return normalizeName(label).includes("vinho");
+  return WINE_WORDS.test(normalizeName(label));
 }
 
 export const PRICE_RANGES = [

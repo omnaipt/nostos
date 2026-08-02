@@ -18,7 +18,18 @@ interface Payload {
   dishName?: string | null;
   priceRange?: string | null;
   preference?: string | null;
+  lang?: string | null;
 }
+
+// Idioma da RESPOSTA ao cliente (0025). A carta e o prompt continuam em
+// português: o que muda é a língua em que o sommelier fala com quem está à
+// mesa, que é a mesma em que ele está a ler a ementa.
+const REPLY_LANG: Record<string, string> = {
+  pt: "português de Portugal",
+  en: "inglês",
+  es: "espanhol",
+  fr: "francês",
+};
 
 const DAILY_LIMIT = 30;
 const PRICE_LABEL: Record<string, string> = {
@@ -73,6 +84,9 @@ Deno.serve(async (req: Request) => {
   const dishName = (payload.dishName ?? "").trim().slice(0, 120) || null;
   const priceRange = PRICE_LABEL[payload.priceRange ?? ""] ? (payload.priceRange as string) : "indiferente";
   const preference = (payload.preference ?? "").trim().slice(0, 200) || null;
+  // Idioma validado contra a lista fechada: o valor entra no prompt, portanto
+  // não pode ser texto livre vindo do cliente.
+  const lang = REPLY_LANG[payload.lang ?? ""] ? (payload.lang as string) : "pt";
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
@@ -139,7 +153,15 @@ Deno.serve(async (req: Request) => {
     // Apanhado no teste de 30-07: saíam calques do inglês ("deixa-me saber") e
     // mistura de tratamento na mesma resposta ("vai bem" com "o seu orçamento").
     "Português de Portugal, sem calques do inglês. Trata o cliente sempre por " +
-    "\"você\" de forma implícita, e nunca mistures tratamentos na mesma resposta.";
+    "\"você\" de forma implícita, e nunca mistures tratamentos na mesma resposta." +
+    // Menu multilingue (0025): quem lê a ementa em francês espera que o
+    // sommelier lhe fale em francês. Só o TEXTO que escreves muda de língua;
+    // os nomes dos vinhos são os da carta e não se traduzem.
+    (lang === "pt"
+      ? ""
+      : ` IMPORTANTE: escreve os textos da resposta ("reason" e "note") em ${REPLY_LANG[lang]}, ` +
+        "com o mesmo tom e a mesma concisão. Os nomes dos vinhos ficam exactamente " +
+        "como estão na carta, sem tradução.");
 
   const user = `Carta de vinhos do restaurante "${restaurant.name}" (a ÚNICA lista de onde podes sugerir):
 ${wineList}
@@ -159,7 +181,11 @@ Regras:
 - 2 sugestões (3 só se houver mesmo três boas), por ordem de adequação. O campo "n" é o NÚMERO da linha na carta acima, nunca o nome.
 - Respeita o range de preço quando os preços existem; se nada encaixar, sugere o mais próximo e di-lo com honestidade no reason.
 - Se houver prato, harmoniza com ele; usa a preferência do cliente como critério principal.
-- Nunca sugiras águas/refrigerantes nem nada fora da lista.`;
+- Nunca sugiras águas/refrigerantes nem nada fora da lista.${
+    lang === "pt"
+      ? ""
+      : `\n- O "reason" e a "note" vão em ${REPLY_LANG[lang]}, não em português (o cliente está a ler a ementa nessa língua). Os nomes dos vinhos não se traduzem.`
+  }`;
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {

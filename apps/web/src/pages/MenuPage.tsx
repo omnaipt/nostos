@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ImportMenuCard } from "@/components/menu/ImportMenuCard";
 import { MenuManager } from "@/components/menu/MenuManager";
 import { MenuQR } from "@/components/menu/MenuQR";
+import { TranslationsCard } from "@/components/menu/TranslationsCard";
 import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 
 // /ementa — a ementa como página própria (auditoria 29-07: o editor vivia
@@ -59,6 +60,10 @@ export default function MenuPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Multilingue (0025): rascunho da IA, revisão do dono, e só o
+              validado chega à mesa. */}
+          <TranslationsCard restaurantId={restaurant.id} />
         </div>
       )}
     </div>
