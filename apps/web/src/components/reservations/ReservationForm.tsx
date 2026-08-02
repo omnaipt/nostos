@@ -157,7 +157,7 @@ export function ReservationForm({
     }
     // Data passada anterior a hoje bloqueada (walk-in para hoje permitido).
     if (date && isPastDate(date)) {
-      nextErrors.date = "Não podes criar reservas em datas passadas.";
+      nextErrors.date = "Não é possível criar reservas em datas passadas.";
     }
     // Mesa ocupada (bloqueante; só se mesa atribuída).
     const occupied = tableOccupiedError();
@@ -171,7 +171,7 @@ export function ReservationForm({
 
     if (!parsed.success) return; // já tratado acima; type-guard para o output validado
     if (!restaurant) {
-      setGlobalError("Restaurante ainda a carregar. Tenta novamente num instante.");
+      setGlobalError("Restaurante ainda a carregar. Tente novamente dentro de momentos.");
       return;
     }
 
@@ -189,7 +189,7 @@ export function ReservationForm({
           if (/duplicate key|23505/i.test(msg)) {
             setErrors((prev) => ({ ...prev, tableId: "Esta mesa já está ocupada neste turno." }));
           } else {
-            setGlobalError(msg || "Não foi possível guardar a reserva. Tenta novamente.");
+            setGlobalError(msg || "Não foi possível guardar a reserva. Tente novamente.");
           }
         },
       },
@@ -248,7 +248,7 @@ export function ReservationForm({
       <Field id="r-turn" label="Turno" error={errors.turnId} required>
         {(p) => (
           <Select {...p} value={turnId} onChange={(e) => setTurnId(e.target.value)}>
-            <option value="">Escolhe um turno</option>
+            <option value="">Escolher turno</option>
             {applicableTurns.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.label} · {t.start_time}
@@ -262,7 +262,7 @@ export function ReservationForm({
         <p className="text-xs text-muted-foreground">Não há turnos configurados para este dia.</p>
       )}
 
-      <Field id="r-table" label="Mesa (opcional)" error={errors.tableId} hint="Podes deixar por atribuir e escolher mais tarde.">
+      <Field id="r-table" label="Mesa (opcional)" error={errors.tableId} hint="Pode ficar por atribuir e ser escolhida mais tarde.">
         {(p) => (
           <Select {...p} value={tableId} onChange={(e) => setTableId(e.target.value)}>
             <option value={UNASSIGNED}>Deixar por atribuir</option>
@@ -278,7 +278,7 @@ export function ReservationForm({
       {seatsWarning && (
         <div role="status" className="flex items-start gap-2 rounded-md border border-[hsl(var(--status-pending-fg))]/30 bg-[hsl(var(--status-pending-bg))] p-3 text-sm text-[hsl(var(--status-pending-fg))]">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>{seatsWarning} Podes confirmar à mesma.</span>
+          <span>{seatsWarning} A reserva pode ser confirmada à mesma.</span>
         </div>
       )}
 

@@ -101,7 +101,7 @@ export default function MenuImportReview() {
     const { menu, problems: found } = editableToPayload(cats);
     setProblems(found);
     if (!menu) {
-      toast.error("Há itens por resolver — vê a lista por cima do botão.");
+      toast.error("Há itens por resolver. A lista aparece por cima do botão.");
       return;
     }
     publish.mutate(
@@ -124,7 +124,7 @@ export default function MenuImportReview() {
 
   function onDiscard() {
     if (!importId) return;
-    if (!window.confirm("Descartar este rascunho? A ementa actual não é tocada.")) return;
+    if (!window.confirm("Descartar este rascunho? A ementa actual não é alterada.")) return;
     discard.mutate(importId, {
       onSuccess: () => {
         toast.success("Rascunho descartado.");
@@ -148,8 +148,8 @@ export default function MenuImportReview() {
   if (!imp || !draft) {
     return (
       <HonestState title="Importação não encontrada">
-        O rascunho pode ter sido removido. Volta à ementa e importa de novo — ou
-        adiciona os pratos à mão.
+        O rascunho pode ter sido removido. Volte à ementa e importe de novo, ou adicione os
+        pratos manualmente.
       </HonestState>
     );
   }
@@ -186,7 +186,7 @@ export default function MenuImportReview() {
               · <span className="font-medium text-[hsl(var(--status-pending-fg))]">{flagged} para rever</span>
             </>
           )}
-          {imp.source_ref && ` · ${imp.source_ref}`}. Nada é publicado até carregares em
+          {imp.source_ref && ` · ${imp.source_ref}`}. Nada é publicado até carregar em
           &quot;Publicar ementa&quot;.
         </p>
       </header>
@@ -195,8 +195,8 @@ export default function MenuImportReview() {
         <div className="mb-4 flex items-start gap-2 rounded-md border border-[hsl(var(--status-pending-fg))]/40 bg-[hsl(var(--status-pending-bg))] p-3 text-sm">
           <Wine className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>
-            Detectámos páginas de carta de vinhos e NÃO as misturámos com os pratos.
-            Importa a carta em passo próprio na Ementa (botão &quot;Carta de vinhos&quot;).
+            Foram detectadas páginas de carta de vinhos, que NÃO foram misturadas com os pratos.
+            A carta importa-se em passo próprio na Ementa (botão &quot;Carta de vinhos&quot;).
           </span>
         </div>
       )}
@@ -216,7 +216,7 @@ export default function MenuImportReview() {
             />
             {cat.items.length === 0 && (
               <p className="rounded-md border border-dashed border-input p-3 text-xs text-muted-foreground">
-                Sem itens — esta categoria não será publicada.
+                Sem itens: esta categoria não será publicada.
               </p>
             )}
             {cat.items.map((item) => (

@@ -54,17 +54,17 @@ export function ImportMenuCard({ restaurantId }: { restaurantId: string }) {
     if (files.length === 0) return;
     const bad = files.find((f) => !MEDIA_KIND[f.type]);
     if (bad) {
-      toast.error(`"${bad.name}": usa fotos (JPG/PNG/WebP) ou um PDF.`);
+      toast.error(`"${bad.name}": só fotos (JPG/PNG/WebP) ou um PDF.`);
       return;
     }
     const tooBig = files.find((f) => f.size > MAX_FILE_MB * 1024 * 1024);
     if (tooBig) {
-      toast.error(`"${tooBig.name}" passa os ${MAX_FILE_MB} MB.`);
+      toast.error(`"${tooBig.name}" excede os ${MAX_FILE_MB} MB.`);
       return;
     }
     const pdfs = files.filter((f) => f.type === "application/pdf");
     if (pdfs.length > 1 || (pdfs.length === 1 && files.length > 1)) {
-      toast.error("Ou 1 PDF ou fotos — não misturar.");
+      toast.error("Ou 1 PDF ou fotos: não misturar.");
       return;
     }
     if (pdfs.length === 0 && files.length > MAX_PHOTOS) {
@@ -82,7 +82,7 @@ export function ImportMenuCard({ restaurantId }: { restaurantId: string }) {
         })),
       );
     } catch {
-      toast.error("Não foi possível ler os ficheiros. Tenta novamente.");
+      toast.error("Não foi possível ler os ficheiros. Tente novamente.");
       return;
     }
     parse.mutate(
@@ -93,13 +93,13 @@ export function ImportMenuCard({ restaurantId }: { restaurantId: string }) {
             // Estado honesto (aceitação 4): motivo claro + fallback manual.
             toast.error(
               result.reason
-                ? `Não conseguimos ler: ${result.reason}. Tenta fotos mais nítidas ou adiciona os pratos à mão em baixo.`
-                : "Não conseguimos ler o menu. Tenta fotos mais nítidas ou adiciona os pratos à mão em baixo.",
+                ? `Não foi possível ler: ${result.reason}. Tente fotos mais nítidas ou adicione os pratos manualmente em baixo.`
+                : "Não foi possível ler o menu. Tente fotos mais nítidas ou adicione os pratos manualmente em baixo.",
             );
             return;
           }
           toast.success(
-            mode === "wine_list" ? "Carta de vinhos lida. Revê antes de publicar." : "Menu lido. Revê antes de publicar.",
+            mode === "wine_list" ? "Carta de vinhos lida. Rever antes de publicar." : "Menu lido. Rever antes de publicar.",
           );
           navigate(`/ementa/rever/${result.import_id}`);
         },
@@ -120,13 +120,14 @@ export function ImportMenuCard({ restaurantId }: { restaurantId: string }) {
         {parse.isPending ? (
           <div className="flex items-center gap-3 rounded-md border border-dashed border-input p-4 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            A ler o menu… pode demorar um minuto. Nada é publicado sem a tua revisão.
+            A ler o menu… pode demorar um minuto. Nada é publicado sem revisão.
           </div>
         ) : (
           <>
             <p className="text-sm text-muted-foreground">
-              Tira fotos ao menu em papel (até {MAX_PHOTOS}) ou carrega o PDF. A IA lê,
-              tu reves, e só depois publica. A carta de vinhos entra à parte.
+              Fotografar o menu em papel (até {MAX_PHOTOS}) ou carregar o PDF. A IA lê, o
+              resultado fica para rever, e só depois é publicado. A carta de vinhos
+              importa-se à parte.
             </p>
             <div className="flex flex-wrap gap-2">
               <Button size="sm" variant="outline" onClick={() => pick("menu")}>

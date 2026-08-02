@@ -105,17 +105,17 @@ export const MIN_DISHES_FOR_QUADRANTS = 10;
 export type Quadrant = "estrela" | "cavalo" | "enigma" | "cao";
 
 export const QUADRANT_LABEL: Record<Quadrant, string> = {
-  estrela: "Vende muito, dá dinheiro",
-  cavalo: "Vende muito, dá pouco",
-  enigma: "Vende pouco, dá dinheiro",
-  cao: "Vende pouco, dá pouco",
+  estrela: "Vende muito, margem alta",
+  cavalo: "Vende muito, margem baixa",
+  enigma: "Vende pouco, margem alta",
+  cao: "Vende pouco, margem baixa",
 };
 
 export const QUADRANT_ACTION: Record<Quadrant, string> = {
-  estrela: "Proteger: nunca deixar faltar, destacar na ementa e no menu digital.",
+  estrela: "Garantir disponibilidade e dar destaque na ementa e no menu digital.",
   cavalo: "Rever a ficha, o fornecedor, ou subir o preço com cuidado.",
-  enigma: "Está escondido: mudar de posição na ementa e sugerir à mesa.",
-  cao: "Ocupa espaço e cabeça. Candidato a sair da ementa.",
+  enigma: "Pouca visibilidade: mudar de posição na ementa e sugerir à mesa.",
+  cao: "Candidato a sair da ementa.",
 };
 
 export function median(values: number[]): number {

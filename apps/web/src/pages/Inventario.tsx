@@ -50,7 +50,7 @@ export default function Inventario() {
       parsed.push({ ingredientId: id, counted: n });
     }
     if (parsed.length === 0) {
-      setFormError("Preenche pelo menos uma contagem.");
+      setFormError("Preencha pelo menos uma contagem.");
       return;
     }
     apply.mutate(
@@ -132,7 +132,7 @@ export default function Inventario() {
         <div>
           <h1 className="font-display text-2xl font-semibold text-atlantico-900">Inventário</h1>
           <p className="text-sm text-muted-foreground">
-            Conta o que está fisicamente em casa; só as linhas preenchidas geram acerto.
+            Contagem física do stock. Só as linhas preenchidas geram acerto.
           </p>
         </div>
         <Link to="/" className={buttonVariants({ variant: "outline", size: "sm" })}>

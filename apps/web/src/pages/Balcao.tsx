@@ -95,7 +95,7 @@ export default function Balcao() {
               new Date(`${date}T12:00:00`),
             )}
             {availability.isFetching && (
-              <RefreshCw className="h-3.5 w-3.5 animate-spin text-muted-foreground" aria-label="a actualizar" />
+              <RefreshCw className="h-3.5 w-3.5 animate-spin text-muted-foreground" aria-label="A actualizar" />
             )}
           </p>
         </div>
@@ -156,8 +156,8 @@ export default function Balcao() {
       {tab === "reservas" && !loading && todaysTurns.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Hoje não há turnos com serviço. Podes na mesma receber quem chegar
-            assim que houver um turno definido nas Definições.
+            Hoje não há turnos com serviço. É possível registar quem chegar assim que houver
+            um turno definido nas Definições.
           </CardContent>
         </Card>
       )}
@@ -189,7 +189,7 @@ export default function Balcao() {
           {availability.isError && (
             <Card>
               <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                Não foi possível carregar as reservas. Volta a tentar.
+                Não foi possível carregar as reservas. Tente novamente.
               </CardContent>
             </Card>
           )}
@@ -197,8 +197,8 @@ export default function Balcao() {
           {!availability.isError && reservations.length === 0 && (
             <Card>
               <CardContent className="py-12 text-center text-sm text-muted-foreground">
-                Ainda sem reservas neste turno. Toca em <strong>Nova reserva</strong> para
-                quem chega ou liga.
+                Ainda sem reservas neste turno. Use <strong>Nova reserva</strong> para registar
+                quem chega ou telefona.
               </CardContent>
             </Card>
           )}

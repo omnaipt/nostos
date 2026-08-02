@@ -36,9 +36,9 @@ export function TakeawayCard({ restaurant }: { restaurant: Restaurant }) {
           <span>
             <span className="text-sm font-medium">Aceitar encomendas para levar</span>
             <span className="mt-0.5 block text-sm text-muted-foreground">
-              Aparece um botão "Encomendar para levar" no teu menu público. O cliente
-              escolhe, deixa o telefone e a hora, e <strong>paga ao levantar</strong> —
-              sem pagamento online. As encomendas caem na fila do Balcão.
+              Aparece um botão "Encomendar para levar" no menu público. O cliente
+              escolhe, deixa o telefone e a hora, e <strong>paga ao levantar</strong>:
+              não há pagamento online. As encomendas entram na fila do Balcão.
             </span>
           </span>
         </label>

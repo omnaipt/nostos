@@ -22,14 +22,14 @@ export default function MenuPage() {
       <header className="mb-6">
         <h1 className="font-display text-2xl font-semibold text-atlantico-900">Ementa</h1>
         <p className="text-sm text-muted-foreground">
-          O que a casa serve: pratos, pratos do dia, doses e o QR do menu.
+          Pratos, pratos do dia, doses e o QR do menu.
         </p>
       </header>
 
       {isError && (
         <Card>
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Não foi possível carregar a ementa. Tenta novamente.
+            Não foi possível carregar a ementa. Tente novamente.
           </CardContent>
         </Card>
       )}

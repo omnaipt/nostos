@@ -123,7 +123,7 @@ export function CustomerDetailDialog({ customer, open, onOpenChange }: Props) {
 
             {!historyQuery.isLoading && !historyQuery.isError && history.length === 0 && (
               <p className="rounded-md border border-dashed border-input p-4 text-sm text-muted-foreground">
-                Primeira visita — ainda sem reservas anteriores.
+                Primeira visita: ainda sem reservas anteriores.
               </p>
             )}
 

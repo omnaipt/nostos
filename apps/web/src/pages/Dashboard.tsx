@@ -16,9 +16,9 @@ import { MareDivider } from "@/components/MareDivider";
 // Saudação na voz da casa, por hora do dia (direcção Costeiro 29-07).
 function saudacao(): string {
   const h = new Date().getHours();
-  if (h >= 6 && h < 13) return "Bom dia. A casa está pronta.";
-  if (h >= 13 && h < 20) return "Boa tarde. A casa está pronta.";
-  return "Boa noite. A casa está pronta.";
+  if (h >= 6 && h < 13) return "Bom dia.";
+  if (h >= 13 && h < 20) return "Boa tarde.";
+  return "Boa noite.";
 }
 
 export default function Dashboard() {
@@ -223,7 +223,7 @@ export default function Dashboard() {
                   )}
                 </>
               ) : (
-                "Cria fichas técnicas para veres o food cost e a margem de cada prato."
+                "As fichas técnicas dão o food cost e a margem de cada prato."
               )}
             </p>
             <Link
@@ -269,7 +269,7 @@ export default function Dashboard() {
                   ).toLocaleDateString("pt-PT", { day: "numeric", month: "short" })} · ${
                     lastAppliedQuery.data.invoices_count
                   } faturas`
-                : "Importa o SAF-T do dia; as vendas abatem a despensa pelas fichas."}
+                : "Importar o SAF-T do dia: as vendas abatem a despensa pelas fichas."}
             </p>
             <Link to="/fecho-dia" className={buttonVariants({ variant: "outline" })}>
               Abrir fecho do dia

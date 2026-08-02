@@ -41,7 +41,7 @@ export function MenuQR({ slug }: { slug: string }) {
       </div>
       <div className="space-y-2 text-center sm:text-left">
         <p className="text-sm text-muted-foreground">
-          Imprime este código e põe-no nas mesas. Aponta para o teu menu público:
+          Código para imprimir e colocar nas mesas. Aponta para o menu público:
         </p>
         <a
           href={url}

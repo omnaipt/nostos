@@ -128,7 +128,7 @@ export default function Pantry() {
                 </>
               ) : (
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Nenhum ainda —{" "}
+                  Nenhum ainda.{" "}
                   <Link to="/fecho-dia" className="underline">
                     importar SAF-T
                   </Link>
@@ -184,9 +184,9 @@ export default function Pantry() {
 
           <p className="mt-6 text-xs text-muted-foreground">
             O saldo é aplicado pelos movimentos (entradas, abates do fecho SAF-T, quebras e
-            ajustes). Para corrigir um saldo, regista um ajuste — os movimentos não se editam.
-            O mínimo define quando o ingrediente pede &quot;repor&quot;; deixa vazio se não
-            quiseres alerta.
+            ajustes). Para corrigir um saldo, registe um ajuste: os movimentos não se editam.
+            O mínimo define quando o ingrediente pede &quot;repor&quot;; deixar vazio dispensa
+            o alerta.
           </p>
         </>
       )}
@@ -450,7 +450,7 @@ function ManualMovementForm({
     e.preventDefault();
     const n = Number(qty.trim().replace(",", "."));
     if (!Number.isFinite(n) || n <= 0) {
-      toast.error("Indica uma quantidade maior que zero.");
+      toast.error("Indique uma quantidade maior que zero.");
       return;
     }
     // Quebra é sempre saída; ajuste segue a direcção escolhida. O sinal é

@@ -221,7 +221,7 @@ export default function Settings() {
       <header className="mb-6">
         <h1 className="font-display text-2xl font-semibold text-atlantico-900">Definições</h1>
         <p className="text-sm text-muted-foreground">
-          {SECTION_HINT[section]} A ementa e o QR do menu vivem na página{" "}
+          {SECTION_HINT[section]} A ementa e o QR do menu estão na página{" "}
           <Link to="/ementa" className="underline">
             Ementa
           </Link>
@@ -288,7 +288,7 @@ export default function Settings() {
                 <CardContent className="space-y-3">
                   {tables.length === 0 && (
                     <p className="rounded-md border border-dashed border-input p-4 text-sm text-muted-foreground">
-                      Ainda não tens mesas. Adiciona a primeira.
+                      Ainda não há mesas. Adicione a primeira.
                     </p>
                   )}
                   <TableManager tables={tables} onChange={onTablesChange} />
@@ -302,7 +302,7 @@ export default function Settings() {
                 <CardContent className="space-y-3">
                   {turns.length === 0 && (
                     <p className="rounded-md border border-dashed border-input p-4 text-sm text-muted-foreground">
-                      Ainda não tens turnos. Adiciona o primeiro.
+                      Ainda não há turnos. Adicione o primeiro.
                     </p>
                   )}
                   <TurnManager turns={turns} onChange={onTurnsChange} />
@@ -342,7 +342,7 @@ export default function Settings() {
 }
 
 function errMsg(e: unknown): string {
-  return e instanceof Error ? e.message : "Não foi possível guardar. Tenta novamente.";
+  return e instanceof Error ? e.message : "Não foi possível guardar. Tente novamente.";
 }
 
 // Margem alvo (%): abaixo disto, o prato conta como alerta em /margens e no
@@ -424,7 +424,7 @@ function LogoField({ restaurant }: { restaurant: Restaurant }) {
     };
     const ext = kinds[file.type];
     if (!ext) {
-      toast.error("Usa PNG, SVG ou JPG.");
+      toast.error("Formatos aceites: PNG, SVG ou JPG.");
       return;
     }
     if (file.size > 1024 * 1024) {
@@ -443,7 +443,7 @@ function LogoField({ restaurant }: { restaurant: Restaurant }) {
         img.src = url;
       });
       if (!bigEnough) {
-        toast.error("Imagem demasiado pequena — mínimo 128px de lado.");
+        toast.error("Imagem demasiado pequena: mínimo 128px de lado.");
         return;
       }
     }
@@ -474,7 +474,7 @@ function LogoField({ restaurant }: { restaurant: Restaurant }) {
     update.mutate(
       { id: restaurant.id, patch: { logo_url: null } },
       {
-        onSuccess: () => toast.success("Logo removido — fica o monograma"),
+        onSuccess: () => toast.success("Logo removido: fica o monograma"),
         onError: (e) => toast.error(errMsg(e)),
       },
     );
@@ -533,7 +533,7 @@ function ThemeField({ restaurant }: { restaurant: Restaurant }) {
             rel="noreferrer"
             className="text-xs text-muted-foreground underline"
           >
-            ver o meu menu
+            ver o menu público
           </a>
         )}
       </div>

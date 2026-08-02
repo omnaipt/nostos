@@ -50,7 +50,7 @@ export interface SheetSummary {
 // segue a ordem de criação); multilingue/foto/IA são iteração futura.
 
 function errMsg(e: unknown): string {
-  return e instanceof Error ? e.message : "Não foi possível guardar. Tenta novamente.";
+  return e instanceof Error ? e.message : "Não foi possível guardar. Tente novamente.";
 }
 
 interface ItemDraft {
@@ -117,7 +117,7 @@ function ItemForm({
       )}
       {priceType === "variants" && (
         <p className="text-xs text-muted-foreground">
-          Os preços vivem nas doses — editam-se na linha do prato.
+          Os preços estão nas doses e editam-se na linha do prato.
         </p>
       )}
       <Textarea
@@ -376,7 +376,7 @@ function ItemRow({
             size="sm"
             variant="outline"
             className="h-8 px-2 text-xs"
-            title="Criar ficha técnica — a IA escreve o rascunho"
+            title="Criar ficha técnica: a IA escreve o rascunho"
             onClick={onOpenSheet}
           >
             <Sparkles className="h-3.5 w-3.5" /> Ficha IA
@@ -603,8 +603,8 @@ function DailyPanel({
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Saem no menu e na página de reserva só durante o dia de hoje; amanhã
-        escondem-se sozinhos.
+        Aparecem no menu e na página de reserva só durante o dia de hoje; amanhã
+        deixam de estar visíveis.
       </p>
 
       {todays.length === 0 && !adding && (
@@ -854,7 +854,7 @@ export function MenuManager({
     <div className="space-y-3">
       {categories.length === 0 && (
         <p className="rounded-md border border-dashed border-input p-4 text-sm text-muted-foreground">
-          Ainda não tens menu. Cria a primeira categoria (ex.: Entradas, Pratos, Sobremesas).
+          Ainda não há menu. Crie a primeira categoria (ex.: Entradas, Pratos, Sobremesas).
         </p>
       )}
 
@@ -864,8 +864,8 @@ export function MenuManager({
             Fichas por validar ({pendingSheets.length})
           </p>
           <p className="text-xs text-muted-foreground">
-            Rascunhos escritos pela IA à espera do olho do chef. Valida depois de
-            confirmares quantidades e custos.
+            Rascunhos escritos pela IA, à espera de validação do chef. Validar depois de
+            confirmar quantidades e custos.
           </p>
           <ul className="divide-y divide-border/60">
             {pendingSheets.map(({ item, sheetId }) => (
