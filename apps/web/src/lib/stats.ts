@@ -96,6 +96,12 @@ export const COVERAGE_WARN_PCT = 85;
 // Quatro quadrantes por volume e margem, contra a MEDIANA do próprio menu (não
 // contra uma constante inventada: cada casa é a sua própria referência).
 
+// Abaixo disto a mediana parte um punhado de pratos quase ao meio e a
+// classificação vira sorteio: um prato a 110 unidades contra uma mediana de
+// 125 aparece como "candidato a sair da ementa", o que não se sustenta. O
+// quadro continua a mostrar-se, com a ressalva à vista.
+export const MIN_DISHES_FOR_QUADRANTS = 10;
+
 export type Quadrant = "estrela" | "cavalo" | "enigma" | "cao";
 
 export const QUADRANT_LABEL: Record<Quadrant, string> = {

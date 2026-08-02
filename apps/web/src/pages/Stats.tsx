@@ -17,6 +17,7 @@ import {
   formatEuroCents,
   formatQty,
   median,
+  MIN_DISHES_FOR_QUADRANTS,
   PERIOD_KEYS,
   PERIOD_LABEL,
   pctChange,
@@ -508,6 +509,17 @@ function MenuEngineering({
         {data.total} pratos com ficha completa, comparados com a mediana da própria casa (
         {formatQty(data.medQty)} unidades, {data.medMargin.toFixed(0)}% de margem).
       </p>
+      {data.total < MIN_DISHES_FOR_QUADRANTS && (
+        <p className="mb-3 rounded-md border border-input bg-muted/40 p-2 text-xs text-muted-foreground">
+          Com {data.total} pratos, a mediana parte quase ao meio e um prato pode mudar de quadrante
+          por muito pouco. Isto é indicativo, não veredicto. Ganha valor à medida que forem
+          preenchidas mais{" "}
+          <Link to="/margens" className="underline">
+            fichas técnicas
+          </Link>
+          .
+        </p>
+      )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {QUADRANT_ORDER.map((q) => (
           <div key={q} className={"rounded-lg border p-3 " + QUADRANT_TONE[q]}>
