@@ -14,11 +14,24 @@ import {
   usePublicRestaurant,
   usePublicTurns,
 } from "@/hooks/use-public-booking";
-import { usePublicMenu, type PublicMenuItem } from "@/hooks/use-public-menu";
+import {
+  usePublicMenu,
+  usePublicMenuLangs,
+  type PublicMenuItem,
+} from "@/hooks/use-public-menu";
 import { CasaLogo } from "@/components/CasaLogo";
 import { themeStyle } from "@/lib/themes";
 import { todayServiceDate } from "@/lib/service-date";
-import { formatPriceCents } from "@/lib/types";
+import {
+  detectLang,
+  formatPriceCentsI18n,
+  isLang,
+  LANG_LABEL,
+  LANG_LOCALE,
+  LANG_SHORT,
+  t,
+  type Lang,
+} from "@/lib/i18n";
 
 // C8 + Reserva com Proximidade v1 — página pública de reservas (/r/{slug}).
 // O padrão de qualidade é a chamada telefónica para a casa: "guarda-me a
@@ -27,22 +40,30 @@ import { formatPriceCents } from "@/lib/types";
 // aí segue o email C7). Sem auto-confirmação nem motor de disponibilidade
 // público (v1). O "hoje temos" é opcional e discreto: isto nunca pode
 // parecer um carrinho de compras (spec §7).
+//
+// Multilingue (0026): a reserva abre no idioma em que o cliente vinha a ler a
+// ementa. Sem isto, quem lia a carta em francês carregava em "Réserver une
+// table" e caía num formulário em português. O idioma escolhido segue para a
+// RPC (p_lang) e fica gravado em reservations.lang, para a casa saber em que
+// língua falar com quem chega.
 
 // Selos do "hoje temos". Um item pode acumular mais do que um.
-function badgesFor(item: PublicMenuItem, isToday: boolean): string[] {
+function badgesFor(item: PublicMenuItem, isToday: boolean, lang: Lang): string[] {
   const badges: string[] = [];
-  if (item.kind === "daily" && isToday) badges.push("prato do dia");
-  if (item.priceType === "market") badges.push("peixe da lota · preço do dia");
-  if (item.byOrder) badges.push("por encomenda · confeção lenta");
+  if (item.kind === "daily" && isToday) badges.push(t(lang, "seloPratoDia"));
+  if (item.priceType === "market") badges.push(t(lang, "seloLota"));
+  if (item.byOrder) badges.push(t(lang, "seloEncomenda"));
   return badges;
 }
 
-// "2026-07-29" → "hoje" | "terça-feira, 29 de julho" (voz de conversa).
-function formatDatePt(iso: string): string {
-  if (iso === todayServiceDate()) return "hoje";
+// "2026-07-29" → "hoje" | "terça-feira, 29 de julho" (voz de conversa). O
+// formato segue o locale do cliente: quem lê em inglês espera "Tuesday, 29
+// July" e não a ordem portuguesa traduzida à letra.
+function formatDateI18n(iso: string, lang: Lang): string {
+  if (iso === todayServiceDate()) return t(lang, "hoje");
   const [y, m, d] = iso.split("-").map(Number);
   if (!y || !m || !d) return iso;
-  return new Intl.DateTimeFormat("pt-PT", {
+  return new Intl.DateTimeFormat(LANG_LOCALE[lang], {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -51,10 +72,31 @@ function formatDatePt(iso: string): string {
 
 export default function PublicBooking() {
   const { slug } = useParams<{ slug: string }>();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const restaurantQuery = usePublicRestaurant(slug);
   // Tema do restaurante (0019); `?tema=` sobrepõe para pré-visualização.
   const style = themeStyle(searchParams.get("tema") ?? restaurantQuery.data?.theme);
+
+  // Idioma: mesmo padrão do menu público. O `?lang=` do URL manda, porque é
+  // uma escolha explícita de quem já trocou de idioma na ementa e atravessou a
+  // porta com ele; só depois a detecção pelo aparelho. Um `?lang=` que esta
+  // casa não traduziu é ignorado, mas só depois de a lista ter chegado, para a
+  // página não abrir em português e saltar de idioma a meio.
+  const langsQuery = usePublicMenuLangs(slug);
+  const availableLangs: Lang[] = langsQuery.data ?? ["pt"];
+  const urlLang = searchParams.get("lang");
+  const lang: Lang =
+    isLang(urlLang) &&
+    (!langsQuery.isSuccess || availableLangs.includes(urlLang))
+      ? urlLang
+      : detectLang(availableLangs);
+
+  function changeLang(next: Lang) {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("lang", next);
+    // `replace` para a troca de idioma não encher o histórico de voltas atrás.
+    setSearchParams(nextParams, { replace: true });
+  }
 
   const [date, setDate] = React.useState(todayServiceDate());
   const [turnId, setTurnId] = React.useState("");
@@ -68,13 +110,13 @@ export default function PublicBooking() {
   const [formError, setFormError] = React.useState<string>();
   const [done, setDone] = React.useState(false);
 
-  const turnsQuery = usePublicTurns(slug, date);
+  const turnsQuery = usePublicTurns(slug, date, lang);
   const create = useCreatePublicReservation();
 
   // "Hoje temos": pratos do dia (só se a reserva é para hoje — a RPC já os
   // limita ao próprio dia), peixe da lota (market) e por-encomenda (0013).
   // O pedido segue na p_notes da reserva (0004), sem tocar em reservations.
-  const menuQuery = usePublicMenu(slug);
+  const menuQuery = usePublicMenu(slug, lang);
   const isToday = date === todayServiceDate();
   const highlights = (menuQuery.data ?? [])
     .flatMap((c) => c.items)
@@ -89,10 +131,14 @@ export default function PublicBooking() {
 
   React.useEffect(() => {
     if (turns.length === 0) setTurnId("");
-    else if (!turns.some((t) => t.id === turnId)) setTurnId(turns[0].id);
+    else if (!turns.some((turno) => turno.id === turnId)) setTurnId(turns[0].id);
   }, [turns, turnId]);
 
   const chosenItems = highlights.filter((i) => preOrder.includes(i.id));
+  // O que o cliente escolheu vai para as notas da reserva, que quem lê é a
+  // casa: fica em português mesmo quando o cliente reservou noutro idioma. O
+  // nome do prato é o do idioma escolhido, que é o que o cliente viu e o que a
+  // sala vai ter de reconhecer ao telefone.
   const pedidos = chosenItems
     .map((i) => (i.byOrder ? `${i.name} (por encomenda)` : i.name))
     .join("; ");
@@ -102,33 +148,33 @@ export default function PublicBooking() {
     setFormError(undefined);
     if (website.trim() !== "") return; // bot apanhado no honeypot: ignora em silêncio
     if (!slug || !turnId) {
-      setFormError("Escolha um dia com serviço e um horário.");
+      setFormError(t(lang, "valDiaHora"));
       return;
     }
     if (name.trim().length < 2) {
-      setFormError("Diga-nos o seu nome.");
+      setFormError(t(lang, "valNome"));
       return;
     }
     if (phone.replace(/\D/g, "").length < 9) {
-      setFormError("Precisamos de um telefone válido (mín. 9 dígitos).");
+      setFormError(t(lang, "valTelefone"));
       return;
     }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
-      setFormError("Precisamos de um email para lhe enviar a confirmação.");
+      setFormError(t(lang, "valEmailReserva"));
       return;
     }
     if (partySize < 1) {
-      setFormError("Diga-nos quantos são.");
+      setFormError(t(lang, "valPax"));
       return;
     }
     const composedNotes = pedidos
       ? `Pedidos: ${pedidos}` + (notes.trim() ? `\n${notes}` : "")
       : notes;
     create.mutate(
-      { slug, date, turnId, name, phone, email, partySize, notes: composedNotes },
+      { slug, date, turnId, name, phone, email, partySize, notes: composedNotes, lang },
       {
         onSuccess: () => setDone(true),
-        onError: (err) => setFormError(publicBookingErrorMessage(err)),
+        onError: (err) => setFormError(publicBookingErrorMessage(err, lang)),
       },
     );
   }
@@ -136,12 +182,12 @@ export default function PublicBooking() {
   // ERRO / NÃO ENCONTRADO
   if (restaurantQuery.isError || (restaurantQuery.isSuccess && !restaurantQuery.data)) {
     return (
-      <PublicShell style={style}>
+      <PublicShell style={style} lang={lang}>
         <Card className="w-full max-w-md">
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
             {restaurantQuery.isError
-              ? "Não foi possível carregar a página. Tente novamente."
-              : "Restaurante não encontrado. Confirme o link."}
+              ? t(lang, "reservaErroPagina")
+              : t(lang, "naoEncontrado")}
           </CardContent>
         </Card>
       </PublicShell>
@@ -151,7 +197,7 @@ export default function PublicBooking() {
   // LOADING
   if (restaurantQuery.isLoading) {
     return (
-      <PublicShell style={style}>
+      <PublicShell style={style} lang={lang}>
         <Card className="w-full max-w-md">
           <CardContent className="space-y-3 py-8">
             <Skeleton className="h-8 w-2/3" />
@@ -167,29 +213,31 @@ export default function PublicBooking() {
 
   // A MESA ESTÁ RESERVADA
   if (done) {
-    const turn = turns.find((t) => t.id === turnId);
+    const turn = turns.find((turno) => turno.id === turnId);
     return (
-      <PublicShell style={style}>
+      <PublicShell style={style} lang={lang}>
         <Card className="w-full max-w-md">
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
             <CheckCircle2 className="h-10 w-10 text-[hsl(var(--status-seated-fg))]" aria-hidden="true" />
-            <h2 className="text-lg font-semibold">A sua mesa está reservada</h2>
+            <h2 className="text-lg font-semibold">{t(lang, "mesaReservada")}</h2>
             <p className="text-sm text-muted-foreground">
-              {formatDatePt(date)}
+              {formatDateI18n(date, lang)}
               {turn ? ` · ${turn.label}, ${turn.start_time.slice(0, 5)}` : ""} ·{" "}
-              {partySize} {partySize === 1 ? "pessoa" : "pessoas"} · em nome de {name.trim()}
+              {partySize} {partySize === 1 ? t(lang, "pessoa") : t(lang, "pessoas")} ·{" "}
+              {t(lang, "emNomeDe", { nome: name.trim() })}
             </p>
             {pedidos && (
               <p className="text-sm text-muted-foreground">
-                Fica também apontado: <span className="text-foreground">{pedidos}</span>.
+                {t(lang, "ficaApontado")}{" "}
+                <span className="text-foreground">{pedidos}</span>.
               </p>
             )}
             <p className="text-sm text-muted-foreground">
               {email.trim()
-                ? "Vai receber a confirmação por email. Se precisar de alguma coisa, basta responder-lhe."
+                ? t(lang, "avisoEmail")
                 : restaurant.phone
-                  ? `O ${restaurant.name} confirma consigo. Qualquer coisa, ligue: ${restaurant.phone}.`
-                  : `O ${restaurant.name} confirma consigo em breve.`}
+                  ? t(lang, "avisoTelefone", { casa: restaurant.name, tel: restaurant.phone })
+                  : t(lang, "avisoSemContacto", { casa: restaurant.name })}
             </p>
             <Button
               variant="outline"
@@ -200,7 +248,7 @@ export default function PublicBooking() {
                 setPreOrder([]);
               }}
             >
-              Fazer outra reserva
+              {t(lang, "outraReserva")}
             </Button>
           </CardContent>
         </Card>
@@ -210,7 +258,7 @@ export default function PublicBooking() {
 
   // A CONVERSA
   return (
-    <PublicShell style={style}>
+    <PublicShell style={style} lang={lang}>
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-2">
           <div className="flex items-center gap-2.5">
@@ -219,21 +267,20 @@ export default function PublicBooking() {
             <CardTitle className="text-[hsl(var(--card-foreground))]">
               {restaurant.name}
             </CardTitle>
+            <LangPicker lang={lang} available={availableLangs} onChange={changeLang} />
           </div>
-          <p className="text-sm text-muted-foreground">
-            Diga-nos quando vem e quantos são, que a mesa fica reservada.
-          </p>
+          <p className="text-sm text-muted-foreground">{t(lang, "reservaIntro")}</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4" noValidate>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="p-date" label="Que dia?" required>
+              <Field id="p-date" label={t(lang, "campoDia")} required>
                 {(p) => (
                   <Input {...p} type="date" min={todayServiceDate()} value={date}
                     onChange={(e) => { setDate(e.target.value); setTurnId(""); }} />
                 )}
               </Field>
-              <Field id="p-pax" label="Quantos são?" required>
+              <Field id="p-pax" label={t(lang, "campoPax")} required>
                 {(p) => (
                   <Input {...p} type="number" min={1} max={50} value={partySize}
                     onChange={(e) => setPartySize(Number(e.target.value))} />
@@ -241,19 +288,20 @@ export default function PublicBooking() {
               </Field>
             </div>
 
-            <Field id="p-turn" label="A que horas?" required>
+            <Field id="p-turn" label={t(lang, "campoHora")} required>
               {(p) => (
                 <Select {...p} value={turnId} onChange={(e) => setTurnId(e.target.value)}
                   disabled={turnsQuery.isLoading || turns.length === 0}>
                   {turnsQuery.isLoading ? (
-                    <option value="">A ver os horários...</option>
+                    <option value="">{t(lang, "horariosACarregar")}</option>
                   ) : turns.length === 0 ? (
-                    <option value="">Nesse dia não temos serviço</option>
+                    <option value="">{t(lang, "semServico")}</option>
                   ) : (
-                    turns.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.label} · {t.start_time.slice(0, 5)}
-                        {t.service ? ` (${t.service})` : ""}
+                    // `turno` e não `t`: o `t` desta página é o tradutor.
+                    turns.map((turno) => (
+                      <option key={turno.id} value={turno.id}>
+                        {turno.label} · {turno.start_time.slice(0, 5)}
+                        {turno.service ? ` (${turno.service})` : ""}
                       </option>
                     ))
                   )}
@@ -262,25 +310,22 @@ export default function PublicBooking() {
             </Field>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="p-name" label="O seu nome" required>
+              <Field id="p-name" label={t(lang, "campoNome")} required>
                 {(p) => <Input {...p} value={name} onChange={(e) => setName(e.target.value)} />}
               </Field>
-              <Field id="p-phone" label="Telefone" required hint="Se precisarmos de falar consigo.">
+              <Field id="p-phone" label={t(lang, "campoTelefone")} required hint={t(lang, "hintTelefone")}>
                 {(p) => <Input {...p} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />}
               </Field>
             </div>
 
-            <Field id="p-email" label="Email" required hint="Para lhe escrevermos a confirmação.">
+            <Field id="p-email" label={t(lang, "campoEmail")} required hint={t(lang, "hintEmailReserva")}>
               {(p) => <Input {...p} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />}
             </Field>
 
             {highlights.length > 0 && (
               <fieldset className="space-y-2 rounded-md border border-border p-3">
-                <legend className="px-1 text-sm font-medium">Hoje temos</legend>
-                <p className="text-xs text-muted-foreground">
-                  Se lhe apetecer, deixamos já apontado na reserva. Sem
-                  compromisso; paga-se na mesa, como sempre.
-                </p>
+                <legend className="px-1 text-sm font-medium">{t(lang, "hojeTemos")}</legend>
+                <p className="text-xs text-muted-foreground">{t(lang, "hojeTemosNota")}</p>
                 {highlights.map((item) => {
                   const checked = preOrder.includes(item.id);
                   return (
@@ -294,12 +339,12 @@ export default function PublicBooking() {
                         <span className="text-sm font-medium">{item.name}</span>
                         {item.priceType !== "market" && item.priceCents != null && (
                           <span className="text-sm tabular-nums text-muted-foreground">
-                            {formatPriceCents(item.priceCents)}
+                            {formatPriceCentsI18n(item.priceCents, lang)}
                           </span>
                         )}
                       </span>
                       <span className="flex flex-wrap gap-1.5">
-                        {badgesFor(item, isToday).map((b) => (
+                        {badgesFor(item, isToday, lang).map((b) => (
                           <span
                             key={b}
                             className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[11px] text-muted-foreground"
@@ -321,7 +366,7 @@ export default function PublicBooking() {
                             )
                           }
                         />
-                        Quero reservar também
+                        {t(lang, "queroTambem")}
                       </span>
                     </label>
                   );
@@ -329,11 +374,12 @@ export default function PublicBooking() {
               </fieldset>
             )}
 
-            <Field id="p-notes" label="Mais alguma coisa? (opcional)" hint="Alergias, uma ocasião especial, cadeira de bebé...">
+            <Field id="p-notes" label={t(lang, "campoNotas")} hint={t(lang, "hintNotas")}>
               {(p) => <Textarea {...p} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} />}
             </Field>
 
-            {/* Honeypot invisível */}
+            {/* Honeypot invisível. Fica em inglês de propósito: o rótulo é isco
+                para o bot e nunca chega a olhos humanos. */}
             <div aria-hidden="true" className="absolute left-[-9999px] top-auto h-px w-px overflow-hidden">
               <label htmlFor="p-website">Website</label>
               <input id="p-website" type="text" tabIndex={-1} autoComplete="off"
@@ -348,10 +394,10 @@ export default function PublicBooking() {
 
             <Button type="submit" className="w-full" disabled={create.isPending || turns.length === 0}>
               {create.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              {create.isPending ? "A guardar..." : "Guardem-me a mesa"}
+              {create.isPending ? t(lang, "aGuardar") : t(lang, "guardemMesa")}
             </Button>
             <p className="text-center text-xs text-muted-foreground">
-              O {restaurant.name} confirma consigo. Sem pagamento online.
+              {t(lang, "confirmaSemPagamento", { casa: restaurant.name })}
             </p>
           </form>
         </CardContent>
@@ -360,22 +406,75 @@ export default function PublicBooking() {
   );
 }
 
+// Selector de idioma. Só aparece quando a casa tem mesmo mais do que um idioma
+// validado: uma bandeira sozinha só serviria para ocupar o cabeçalho. Aqui vive
+// dentro do cartão, por isso usa os tokens do cartão e não os do hero.
+function LangPicker({
+  lang,
+  available,
+  onChange,
+}: {
+  lang: Lang;
+  available: Lang[];
+  onChange: (next: Lang) => void;
+}) {
+  if (available.length < 2) return null;
+  return (
+    <div
+      className="ml-auto flex shrink-0 items-center gap-1"
+      role="group"
+      aria-label={t(lang, "idioma")}
+    >
+      {available.map((l) => {
+        const on = l === lang;
+        return (
+          <button
+            key={l}
+            type="button"
+            lang={l}
+            aria-pressed={on}
+            aria-label={`${t(lang, "idioma")}: ${LANG_LABEL[l]}`}
+            title={LANG_LABEL[l]}
+            onClick={() => onChange(l)}
+            className={
+              "rounded-full border px-2 py-0.5 font-display text-xs transition-colors " +
+              (on
+                ? "border-transparent bg-primary text-primary-foreground"
+                : "border-input text-muted-foreground hover:bg-muted hover:text-foreground")
+            }
+          >
+            {/* Código curto e não o nome por extenso: o formulário lê-se no
+                telemóvel e quatro nomes inteiros empurravam o nome da casa
+                para fora do cabeçalho. O nome vai no title e no aria-label. */}
+            {LANG_SHORT[l]}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function PublicShell({
   children,
   style,
+  lang,
 }: {
   children: React.ReactNode;
   style?: React.CSSProperties;
+  lang: Lang;
 }) {
   return (
+    // `lang` no root para o leitor de ecrã e a tradução do browser saberem em
+    // que idioma está a página, que já não é sempre português.
     <div
+      lang={lang}
       style={style}
       className="grid min-h-screen place-items-center bg-background p-4 text-foreground"
     >
       <div className="flex w-full flex-col items-center gap-4">
         {children}
         <p className="text-xs text-muted-foreground">
-          Reservas por <span className="font-semibold">nostos</span>
+          {t(lang, "assinaturaReservas")} <span className="font-semibold">nostos</span>
         </p>
       </div>
     </div>

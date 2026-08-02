@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { LANG_LABEL } from "@/lib/i18n";
 import { useItemVariants, useMenuCategories, useMenuItems } from "@/hooks/use-menu";
+import { useTurns } from "@/hooks/use-turns";
 import {
   TRANS_LANGS,
   useGenerateTranslations,
@@ -225,6 +226,7 @@ function ReviewDialog({
   const itemsQuery = useMenuItems(restaurantId);
   const catsQuery = useMenuCategories(restaurantId);
   const variantsQuery = useItemVariants(restaurantId);
+  const turnsQuery = useTurns(restaurantId);
   const update = useUpdateTranslation(restaurantId);
   const validate = useValidateTranslations(restaurantId);
   const [onlyPending, setOnlyPending] = React.useState(false);
@@ -236,8 +238,8 @@ function ReviewDialog({
     [rows],
   );
 
-  // Só o que o cliente vê: pratos e categorias activos, e as doses desses
-  // pratos. A edge traduz exactamente este conjunto.
+  // Só o que o cliente vê: pratos e categorias activos, as doses desses pratos
+  // e os turnos activos. A edge traduz exactamente este conjunto.
   const items = React.useMemo(
     () => (itemsQuery.data ?? []).filter((i) => i.active),
     [itemsQuery.data],
@@ -250,6 +252,10 @@ function ReviewDialog({
     const ids = new Set(items.map((i) => i.id));
     return (variantsQuery.data ?? []).filter((v) => ids.has(v.item_id));
   }, [variantsQuery.data, items]);
+  const turns = React.useMemo(
+    () => (turnsQuery.data ?? []).filter((t) => t.active),
+    [turnsQuery.data],
+  );
   const itemNameById = React.useMemo(
     () => new Map(items.map((i) => [i.id, i.name])),
     [items],
@@ -259,7 +265,8 @@ function ReviewDialog({
     rowsQuery.isLoading ||
     itemsQuery.isLoading ||
     catsQuery.isLoading ||
-    variantsQuery.isLoading;
+    variantsQuery.isLoading ||
+    turnsQuery.isLoading;
 
   const traduzidos = items.filter((i) => byEntity.has(entityKey("item", i.id))).length;
   const porValidar = rows.filter((r) => r.status === "rascunho").length;
@@ -436,6 +443,27 @@ function ReviewDialog({
                   original: v.label,
                   hint: itemNameById.get(v.item_id) ?? undefined,
                   row: byEntity.get(entityKey("variant", v.id)),
+                }))
+                .filter((e) => visible(e.row))}
+              langPt={LANG_PT[lang]}
+              busyId={busyId}
+              onSave={handleSave}
+              onStatus={handleStatus}
+            />
+          )}
+
+          {/* 0026: os turnos são a escolha central da página de reserva, que
+              segue o idioma do menu. A hora desambigua rótulos repetidos. */}
+          {turns.length > 0 && (
+            <CompactSection
+              title="Turnos de serviço"
+              note="Os turnos que o cliente escolhe na página de reserva."
+              entries={turns
+                .map((t) => ({
+                  key: t.id,
+                  original: t.label,
+                  hint: `Início às ${t.start_time.slice(0, 5)}`,
+                  row: byEntity.get(entityKey("turn", t.id)),
                 }))
                 .filter((e) => visible(e.row))}
               langPt={LANG_PT[lang]}
@@ -644,8 +672,9 @@ interface CompactEntry {
   row: TranslationRow | undefined;
 }
 
-// Categorias e doses: são poucas e curtas, mas um "1/2 dose" por traduzir
-// aparece em português no meio de uma ementa inglesa.
+// Categorias, doses e turnos: são poucos e curtos, mas um "1/2 dose" por
+// traduzir aparece em português no meio de uma ementa inglesa, e um turno por
+// traduzir aparece em português na página de reserva.
 function CompactSection({
   title,
   note,

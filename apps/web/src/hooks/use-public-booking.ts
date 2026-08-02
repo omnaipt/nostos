@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { t, type Lang } from "@/lib/i18n";
 
 // C8 — reservas públicas. Toda a superfície anónima passa pelas RPCs
 // security definer (0004): info do restaurante, turnos aplicáveis e criação
@@ -41,13 +42,16 @@ export function usePublicRestaurant(slug: string | undefined) {
   });
 }
 
-export function usePublicTurns(slug: string | undefined, date: string) {
+// O idioma entra na chave da query porque o rótulo do turno vem traduzido da
+// RPC (0026): sem ele, trocar de idioma servia o "Almoço" em cache.
+export function usePublicTurns(slug: string | undefined, date: string, lang: Lang = "pt") {
   return useQuery({
-    queryKey: ["public-turns", slug, date],
+    queryKey: ["public-turns", slug, date, lang],
     queryFn: async (): Promise<PublicTurn[]> => {
       const { data, error } = await supabase.rpc("public_turns_for_date", {
         p_slug: slug as string,
         p_date: date,
+        p_lang: lang,
       });
       if (error) throw error;
       return (data ?? []) as PublicTurn[];
@@ -65,28 +69,34 @@ export interface PublicReservationInput {
   email: string;
   partySize: number;
   notes: string;
+  /** Idioma em que o cliente está a ler a página (0026): fica em reservations.lang. */
+  lang: Lang;
 }
 
 // Voz da casa (Reserva com Proximidade v1): tratamos o cliente por "si",
 // como ao telefone. Mensagens curtas, sem tom de formulário.
-const ERROR_PT: Record<string, string> = {
-  restaurante_invalido: "Restaurante não encontrado.",
-  turno_invalido: "Esse horário já não está disponível.",
-  turno_nao_aplicavel: "Esse horário não se aplica ao dia escolhido.",
-  data_passada: "Essa data já passou.",
-  data_demasiado_distante: "Só aceitamos reservas até 6 meses.",
-  pax_invalido: "Indique um número de pessoas entre 1 e 50.",
-  dados_invalidos: "Confirme o nome e o telefone (mín. 9 dígitos).",
-  email_obrigatorio: "Precisamos de um email para lhe enviar a confirmação.",
-  limite_atingido: "Já tem pedidos pendentes para esse dia. O restaurante vai falar consigo.",
+//
+// A RPC levanta códigos estáveis; a tradução acontece aqui, no idioma em que o
+// cliente está a ler. Sem isto o formulário respondia em português a quem
+// acabou de escolher francês, que é o defeito que a 0026 vem corrigir.
+const ERROR_KEYS: Record<string, string> = {
+  restaurante_invalido: "errRestauranteInvalido",
+  turno_invalido: "errTurnoInvalido",
+  turno_nao_aplicavel: "errTurnoNaoAplicavel",
+  data_passada: "errDataPassada",
+  data_demasiado_distante: "errDataDistante",
+  pax_invalido: "errPaxInvalido",
+  dados_invalidos: "errDadosInvalidos",
+  email_obrigatorio: "errEmailObrigatorio",
+  limite_atingido: "errLimiteAtingido",
 };
 
-export function publicBookingErrorMessage(err: unknown): string {
+export function publicBookingErrorMessage(err: unknown, lang: Lang = "pt"): string {
   const msg = err instanceof Error ? err.message : String(err);
-  for (const [key, pt] of Object.entries(ERROR_PT)) {
-    if (msg.includes(key)) return pt;
+  for (const [code, key] of Object.entries(ERROR_KEYS)) {
+    if (msg.includes(code)) return t(lang, key);
   }
-  return "Não conseguimos enviar o pedido. Tente novamente.";
+  return t(lang, "errReservaGeral");
 }
 
 export function useCreatePublicReservation() {
@@ -101,6 +111,7 @@ export function useCreatePublicReservation() {
         p_email: input.email,
         p_party_size: input.partySize,
         p_notes: input.notes,
+        p_lang: input.lang,
       });
       if (error) throw error;
       return data as string;

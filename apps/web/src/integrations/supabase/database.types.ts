@@ -758,6 +758,7 @@ export type Database = {
           customer_name: string
           customer_phone: string | null
           id: string
+          lang: string
           notes: string | null
           party_size: number
           reserved_at: string
@@ -773,6 +774,7 @@ export type Database = {
           customer_name: string
           customer_phone?: string | null
           id?: string
+          lang?: string
           notes?: string | null
           party_size: number
           reserved_at: string
@@ -788,6 +790,7 @@ export type Database = {
           customer_name?: string
           customer_phone?: string | null
           id?: string
+          lang?: string
           notes?: string | null
           party_size?: number
           reserved_at?: string
@@ -1430,6 +1433,7 @@ export type Database = {
       public_create_reservation: {
         Args: {
           p_email: string
+          p_lang?: string
           p_name: string
           p_notes: string
           p_party_size: number
@@ -1473,7 +1477,7 @@ export type Database = {
         }[]
       }
       public_turns_for_date: {
-        Args: { p_date: string; p_slug: string }
+        Args: { p_date: string; p_lang?: string; p_slug: string }
         Returns: {
           id: string
           label: string

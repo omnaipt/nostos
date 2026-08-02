@@ -9,12 +9,16 @@ import { queryKeys } from "@/lib/query-keys";
 // não lhe toca. É a diferença entre uma ferramenta que ajuda e uma que apaga
 // trabalho feito.
 
+// 0026: `turn` entrou porque a página de reserva passou a seguir o idioma do
+// menu, e o turno é a escolha central dessa página.
+export type TransEntity = "item" | "category" | "variant" | "turn";
+
 export type TransLang = "en" | "es" | "fr";
 export const TRANS_LANGS: TransLang[] = ["en", "es", "fr"];
 
 export interface TranslationRow {
   id: string;
-  entity_type: "item" | "category" | "variant";
+  entity_type: TransEntity;
   entity_id: string;
   lang: TransLang;
   name: string | null;

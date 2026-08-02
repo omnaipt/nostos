@@ -21,6 +21,7 @@ import {
   LANG_LABEL,
   LANG_SHORT,
   t,
+  withLang,
   type Lang,
 } from "@/lib/i18n";
 
@@ -255,7 +256,7 @@ export default function PublicMenu() {
             que é discreta — encomendar é a chamada à acção da vitrine. */}
         {restaurant.takeaway_enabled === true && (
           <Link
-            to={`/m/${slug}/levar`}
+            to={withLang(`/m/${slug}/levar`, lang)}
             className="flex items-center justify-center gap-2 rounded-[9px] bg-primary px-4 py-3 text-sm font-medium text-primary-foreground"
           >
             <ShoppingBag className="h-4 w-4" aria-hidden="true" />
@@ -268,7 +269,7 @@ export default function PublicMenu() {
             só um caminho discreto para quem chega ao menu fora da mesa. */}
         <p className="pt-2 text-center">
           <Link
-            to={`/r/${slug}`}
+            to={withLang(`/r/${slug}`, lang)}
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
           >
             <CalendarCheck className="h-4 w-4" aria-hidden="true" />

@@ -153,6 +153,12 @@ export function useSaveReservation(ctx: SaveContext | undefined) {
           serviceDate: result.reservation.service_date,
           reservedAt: result.reservation.reserved_at,
           notes: result.reservation.notes,
+          // 0026: o idioma em que o cliente reservou. Quem marca pela sala não
+          // o escolhe (fica 'pt' por defeito), mas quem reservou pelo /r em
+          // francês deixou-o gravado, e é por aqui que ele chega à mensagem.
+          // A edge ainda compõe em português; o campo segue à frente para a
+          // informação não se perder no caminho.
+          lang: (result.reservation as { lang?: string }).lang ?? "pt",
         });
       }
       await qc.invalidateQueries({ queryKey: queryKeys.availabilityRoot });
