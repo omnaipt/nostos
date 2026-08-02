@@ -74,29 +74,64 @@ export interface GenerateResult {
   results?: Record<string, { itens: number; categorias: number; doses: number }>;
 }
 
+const LANG_NOME: Record<TransLang, string> = {
+  en: "inglês",
+  es: "espanhol",
+  fr: "francês",
+};
+
+// UM idioma por invocação. A primeira versão mandava os três de uma vez e a
+// edge excedia o tempo limite a meio: o inglês ficava gravado e os outros dois
+// perdiam-se, com o ecrã a dizer só "não foi possível gerar". Cada idioma são
+// duas ou três chamadas ao modelo, e três idiomas seguidos não cabem numa
+// única invocação. Como a gravação é upsert, repetir é inofensivo.
 export function useGenerateTranslations(restaurantId: string | undefined) {
   const invalidate = useInvalidate(restaurantId);
   return useMutation({
     mutationFn: async (langs: TransLang[]): Promise<GenerateResult> => {
-      const { data, error } = await supabase.functions.invoke("translate-menu", {
-        body: { restaurantId, langs },
-      });
-      if (error) {
-        const ctx = (error as { context?: unknown }).context;
-        let reason: string | null = null;
-        if (ctx instanceof Response) {
-          reason = await ctx
-            .json()
-            .then((b: { reason?: string }) => b?.reason ?? null)
-            .catch(() => null);
+      const results: NonNullable<GenerateResult["results"]> = {};
+      const falhados: string[] = [];
+
+      for (const lang of langs) {
+        try {
+          const { data, error } = await supabase.functions.invoke("translate-menu", {
+            body: { restaurantId, langs: [lang] },
+          });
+          if (error) {
+            const ctx = (error as { context?: unknown }).context;
+            let reason: string | null = null;
+            if (ctx instanceof Response) {
+              reason = await ctx
+                .json()
+                .then((b: { reason?: string }) => b?.reason ?? null)
+                .catch(() => null);
+            }
+            throw new Error(reason ?? `a geração excedeu o tempo disponível`);
+          }
+          const res = data as GenerateResult;
+          if (!res.translated) throw new Error(res.reason ?? "razão desconhecida");
+          Object.assign(results, res.results ?? {});
+        } catch (e) {
+          falhados.push(`${LANG_NOME[lang]} (${e instanceof Error ? e.message : "erro"})`);
         }
-        throw new Error(reason ?? "não foi possível gerar as traduções");
       }
-      const res = data as GenerateResult;
-      if (!res.translated) throw new Error(res.reason ?? "não foi possível gerar as traduções");
-      return res;
+
+      // Falha parcial é o caso mais provável e tem de ser dita como tal: dizer
+      // só "não foi possível" esconde que dois idiomas ficaram prontos.
+      if (falhados.length === langs.length) {
+        throw new Error(`nenhum idioma foi traduzido. ${falhados.join("; ")}`);
+      }
+      if (falhados.length > 0) {
+        throw new Error(
+          `${Object.keys(results).length} de ${langs.length} idiomas ficaram prontos. Falhou: ${falhados.join("; ")}. Voltar a gerar retoma o que falta.`,
+        );
+      }
+      return { translated: true, results };
     },
+    // Também em erro: uma falha parcial deixa linhas gravadas, e o ecrã tem de
+    // as mostrar em vez de continuar a dizer "sem traduções".
     onSuccess: invalidate,
+    onError: invalidate,
   });
 }
 
