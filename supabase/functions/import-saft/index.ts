@@ -33,6 +33,9 @@ interface Payload {
 interface SaftLine {
   invoiceNo: string;
   invoiceDate: string | null;
+  // 0024: a HORA do documento. InvoiceDate no SAF-T é só a data; a hora vive no
+  // SystemEntryDate. Sem ela não há corte almoço/jantar nas estatísticas.
+  invoiceAt: string | null;
   posCode: string;
   posDescription: string | null;
   qty: number;
@@ -117,6 +120,15 @@ function parseSaft(xml: string): {
       if (!periodStart || invoiceDate < periodStart) periodStart = invoiceDate;
       if (!periodEnd || invoiceDate > periodEnd) periodEnd = invoiceDate;
     }
+    // SystemEntryDate: "YYYY-MM-DDThh:mm:ss" (hora local do POS, sem fuso). Só
+    // se aceita se o dia bater certo com o InvoiceDate; um SystemEntryDate de
+    // outro dia é registo de emissão diferida e mentiria sobre a refeição.
+    const sysRaw = String(inv?.SystemEntryDate ?? "").trim();
+    const invoiceAt =
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(sysRaw) &&
+      (!invoiceDate || sysRaw.slice(0, 10) === invoiceDate)
+        ? sysRaw.slice(0, 19)
+        : null;
     const gross = Number(inv?.DocumentTotals?.GrossTotal);
     if (Number.isFinite(gross)) {
       grossTotalCents += Math.round(gross * 100);
@@ -130,6 +142,7 @@ function parseSaft(xml: string): {
       lines.push({
         invoiceNo,
         invoiceDate,
+        invoiceAt,
         posCode,
         posDescription: String(l?.ProductDescription ?? "").trim() || null,
         qty: Math.round(qty * 1000) / 1000,
@@ -165,6 +178,22 @@ async function applyImport(
     .eq("source", "saft_import")
     .eq("note", tag);
   if (cleanErr) return { ok: false, error: `limpeza falhou: ${cleanErr.message}` };
+
+  // 0024 — lote histórico (apply_stock=false): entra para estatística e NÃO
+  // abate. Um SAF-T de 12 meses trazido no onboarding não pode consumir a
+  // despensa de hoje; o peixe de Março já foi cozinhado. A limpeza acima corre
+  // na mesma, para o caso de um lote ter sido aplicado antes de virar histórico.
+  const { data: impFlag } = await admin
+    .from("saft_imports")
+    .select("apply_stock")
+    .eq("id", importId)
+    .maybeSingle();
+  if (impFlag && impFlag.apply_stock === false) {
+    return {
+      ok: true,
+      report: { movements: 0, ingredientsTouched: 0, stockSkipped: true },
+    };
+  }
 
   const { data: matched, error: linesErr } = await admin
     .from("saft_import_lines")
@@ -427,6 +456,7 @@ Deno.serve(async (req: Request) => {
       import_id: imp.id,
       invoice_no: l.invoiceNo,
       invoice_date: l.invoiceDate,
+      invoice_at: l.invoiceAt,
       pos_code: l.posCode,
       pos_description: l.posDescription,
       qty: l.qty,
