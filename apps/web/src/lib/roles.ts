@@ -35,6 +35,7 @@ const ALL_NAV: NavItem[] = [
   { to: "/balcao", label: "Balcão" },
   { to: "/ementa", label: "Ementa" },
   { to: "/margens", label: "Margens" },
+  { to: "/estatisticas", label: "Estatísticas" },
   { to: "/despensa", label: "Despensa" },
   { to: "/entradas", label: "Entradas" },
   { to: "/inventario", label: "Inventário" },

@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -869,6 +869,7 @@ export type Database = {
           created_at: string
           id: string
           import_id: string
+          invoice_at: string | null
           invoice_date: string | null
           invoice_no: string
           menu_item_id: string | null
@@ -883,6 +884,7 @@ export type Database = {
           created_at?: string
           id?: string
           import_id: string
+          invoice_at?: string | null
           invoice_date?: string | null
           invoice_no: string
           menu_item_id?: string | null
@@ -897,6 +899,7 @@ export type Database = {
           created_at?: string
           id?: string
           import_id?: string
+          invoice_at?: string | null
           invoice_date?: string | null
           invoice_no?: string
           menu_item_id?: string | null
@@ -934,6 +937,7 @@ export type Database = {
       saft_imports: {
         Row: {
           applied_at: string | null
+          apply_stock: boolean
           created_at: string
           error: string | null
           filename: string | null
@@ -951,6 +955,7 @@ export type Database = {
         }
         Insert: {
           applied_at?: string | null
+          apply_stock?: boolean
           created_at?: string
           error?: string | null
           filename?: string | null
@@ -968,6 +973,7 @@ export type Database = {
         }
         Update: {
           applied_at?: string | null
+          apply_stock?: boolean
           created_at?: string
           error?: string | null
           filename?: string | null
@@ -1419,6 +1425,57 @@ export type Database = {
         Args: { p_import_id: string; p_menu: Json; p_restaurant_id: string }
         Returns: Json
       }
+      sales_by_item: {
+        Args: {
+          p_from: string
+          p_restaurant: string
+          p_to: string
+          p_turns?: string[]
+          p_weekdays?: number[]
+        }
+        Returns: {
+          days: number
+          gross_cents: number
+          item_name: string
+          menu_item_id: string
+          qty: number
+        }[]
+      }
+      sales_lines: {
+        Args: { p_from: string; p_restaurant: string; p_to: string }
+        Returns: {
+          doc_ref: string
+          gross_cents: number
+          mapped: boolean
+          menu_item_id: string
+          qty: number
+          service_date: string
+          sold_at: string
+          source: string
+          turn_id: string
+          weekday: number
+        }[]
+      }
+      sales_summary: {
+        Args: {
+          p_from: string
+          p_restaurant: string
+          p_to: string
+          p_turns?: string[]
+          p_weekdays?: number[]
+        }
+        Returns: {
+          days: number
+          docs: number
+          first_date: string
+          gross_cents: number
+          last_date: string
+          lines_mapped: number
+          lines_no_time: number
+          lines_total: number
+          units: number
+        }[]
+      }
       slugify: { Args: { input: string }; Returns: string }
       submit_takeaway_order: {
         Args: {
@@ -1430,6 +1487,10 @@ export type Database = {
           p_pickup_at: string
           p_slug: string
         }
+        Returns: string
+      }
+      turn_local: {
+        Args: { p_local: string; p_restaurant: string }
         Returns: string
       }
       unaccent: { Args: { "": string }; Returns: string }

@@ -63,4 +63,15 @@ export const queryKeys = {
     ["saft", "unmatched", importId] as const,
   lastAppliedImport: (restaurantId: string | undefined) =>
     ["saft", restaurantId, "last-applied"] as const,
+  // Estatísticas (0024). Os filtros entram na chave: mudar de turno ou de dia
+  // da semana é outra pergunta, não a mesma com outra roupa.
+  statsRoot: ["stats"] as const,
+  salesSummary: (
+    restaurantId: string | undefined,
+    f: { from: string; to: string; turnIds: string[] | null; weekdays: number[] | null },
+  ) => ["stats", restaurantId, "summary", f.from, f.to, f.turnIds, f.weekdays] as const,
+  salesByItem: (
+    restaurantId: string | undefined,
+    f: { from: string; to: string; turnIds: string[] | null; weekdays: number[] | null },
+  ) => ["stats", restaurantId, "by-item", f.from, f.to, f.turnIds, f.weekdays] as const,
 };
