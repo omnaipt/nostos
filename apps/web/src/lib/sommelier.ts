@@ -25,12 +25,15 @@ export function isWineCategory(label: string): boolean {
   return WINE_WORDS.test(normalizeName(label));
 }
 
+// Escalões de preço. Só os CÓDIGOS vivem aqui: são eles que seguem no pedido
+// à edge e não podem mudar com o idioma do cliente. Os rótulos visíveis estão
+// no dicionário (lib/i18n.ts, chaves somPreco*), traduzidos nos quatro idiomas.
 export const PRICE_RANGES = [
-  { code: "ate_15", label: "até 15 €" },
-  { code: "15_25", label: "15–25 €" },
-  { code: "25_40", label: "25–40 €" },
-  { code: "40_mais", label: "40 €+" },
-  { code: "indiferente", label: "tanto faz" },
+  { code: "ate_15" },
+  { code: "15_25" },
+  { code: "25_40" },
+  { code: "40_mais" },
+  { code: "indiferente" },
 ] as const;
 export type PriceRange = (typeof PRICE_RANGES)[number]["code"];
 
