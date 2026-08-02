@@ -23,9 +23,20 @@ describe("isWineCategory", () => {
     expect(isWineCategory("Vinho a copo")).toBe(true);
   });
 
+  it("aceita a categoria traduzida (menu multilingue)", () => {
+    expect(isWineCategory("Wines")).toBe(true);
+    expect(isWineCategory("Wine list")).toBe(true);
+    expect(isWineCategory("Vinos")).toBe(true);
+    expect(isWineCategory("Carta de vinos")).toBe(true);
+    expect(isWineCategory("Vins")).toBe(true);
+    expect(isWineCategory("Carte des vins")).toBe(true);
+  });
+
   it("rejeita categorias sem vinho", () => {
     expect(isWineCategory("Bebidas")).toBe(false);
     expect(isWineCategory("Sobremesas")).toBe(false);
     expect(isWineCategory("Entradas")).toBe(false);
+    // Contenção cega dava falso positivo aqui ("vin" dentro de "vinagre").
+    expect(isWineCategory("Vinagres e azeites")).toBe(false);
   });
 });

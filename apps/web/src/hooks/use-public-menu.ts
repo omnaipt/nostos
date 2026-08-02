@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { isLang, type Lang } from "@/lib/i18n";
 
 // Menu público (/m/{slug}). Superfície anónima via RPC security definer
 // public_menu_by_slug (0005): só categorias/itens ACTIVOS. A existência e o
@@ -90,12 +91,32 @@ function parseVariants(raw: unknown): PublicMenuVariant[] {
   });
 }
 
-export function usePublicMenu(slug: string | undefined) {
+// Idiomas com ementa traduzida E validada nesta casa (0025). Só estes aparecem
+// no selector: oferecer uma bandeira que abre metade da ementa em português é
+// pior do que não a oferecer.
+export function usePublicMenuLangs(slug: string | undefined) {
   return useQuery({
-    queryKey: ["public-menu", slug],
+    queryKey: ["public-menu-langs", slug],
+    queryFn: async (): Promise<Lang[]> => {
+      const { data, error } = await supabase.rpc("public_menu_langs", {
+        p_slug: slug as string,
+      });
+      if (error) throw error;
+      const extra = ((data ?? []) as string[]).filter(isLang);
+      return ["pt", ...extra.filter((l) => l !== "pt")];
+    },
+    enabled: !!slug,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function usePublicMenu(slug: string | undefined, lang: Lang = "pt") {
+  return useQuery({
+    queryKey: ["public-menu", slug, lang],
     queryFn: async (): Promise<PublicMenuCategory[]> => {
       const { data, error } = await supabase.rpc("public_menu_by_slug", {
         p_slug: slug as string,
+        p_lang: lang,
       });
       if (error) throw error;
       const rows = (data ?? []) as unknown as MenuRow[];

@@ -5,6 +5,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPriceCents } from "@/lib/types";
+import type { Lang } from "@/lib/i18n";
 import {
   PRICE_RANGES,
   type PriceRange,
@@ -46,6 +47,7 @@ export function SommelierWidget({
   open,
   onOpenChange,
   regions = [],
+  lang = "pt",
 }: {
   slug: string;
   dish: string | null;
@@ -53,6 +55,9 @@ export function SommelierWidget({
   open: boolean;
   onOpenChange: (o: boolean) => void;
   regions?: string[];
+  // Idioma escolhido no menu (0025): vai no pedido para o sommelier responder
+  // na língua em que o cliente está a ler a ementa.
+  lang?: Lang;
 }) {
   const [wineType, setWineType] = React.useState("indiferente");
   const [profiles, setProfiles] = React.useState<string[]>([]);
@@ -94,6 +99,7 @@ export function SommelierWidget({
           dishName: dish || null,
           priceRange,
           preference: pref || null,
+          lang,
         },
       });
       if (fnError) throw fnError;
