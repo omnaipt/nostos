@@ -18,6 +18,7 @@ import Balcao from "@/pages/Balcao";
 import Settings from "@/pages/Settings";
 import Customers from "@/pages/Customers";
 import Margins from "@/pages/Margins";
+import Stats from "@/pages/Stats";
 import MenuPage from "@/pages/MenuPage";
 import MenuImportReview from "@/pages/MenuImportReview";
 import Pantry from "@/pages/Pantry";
@@ -99,6 +100,7 @@ export default function App() {
             <Route path="/ementa/rever/:importId" element={<Backoffice><MenuImportReview /></Backoffice>} />
             <Route path="/definicoes" element={<Backoffice><Settings /></Backoffice>} />
             <Route path="/margens" element={<Backoffice><Margins /></Backoffice>} />
+            <Route path="/estatisticas" element={<Backoffice><Stats /></Backoffice>} />
             <Route path="/despensa" element={<Backoffice><Pantry /></Backoffice>} />
             <Route path="/entradas" element={<Backoffice><Entradas /></Backoffice>} />
             <Route path="/inventario" element={<Backoffice><Inventario /></Backoffice>} />
