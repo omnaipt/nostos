@@ -21,7 +21,7 @@ function errMsg(e: unknown): string {
   if (e instanceof Error && e.message.includes("ingredients_restaurant_name_key")) {
     return "Já existe um ingrediente com esse nome.";
   }
-  return e instanceof Error ? e.message : "Não foi possível guardar. Tenta novamente.";
+  return e instanceof Error ? e.message : "Não foi possível guardar. Tente novamente.";
 }
 
 // "1,80" | "1.8" | "0,0055" -> cêntimos numéricos (float, o schema aceita 4 decimais)
@@ -165,7 +165,7 @@ export function PantryManager({ restaurantId }: { restaurantId: string }) {
     <div className="space-y-3">
       {ingredients.length === 0 && (
         <p className="rounded-md border border-dashed border-input p-4 text-sm text-muted-foreground">
-          A despensa está vazia. Adiciona ingredientes com o preço de compra (ex.: Bacalhau, 12,50 € por kg)
+          A despensa está vazia. Adicione ingredientes com o preço de compra (ex.: Bacalhau, 12,50 € por kg)
           para as fichas técnicas calcularem o custo e a margem de cada prato.
         </p>
       )}

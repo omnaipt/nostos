@@ -33,7 +33,7 @@ export function AssignTableDialog({ open, onOpenChange, reservation, freeTables,
 
   function submit() {
     if (!tableId) {
-      setError("Escolhe uma mesa.");
+      setError("Escolha uma mesa.");
       return;
     }
     onAssign(reservation!.id, tableId);
@@ -55,7 +55,7 @@ export function AssignTableDialog({ open, onOpenChange, reservation, freeTables,
           <Field id="assign-table" label="Mesa livre" error={error} required>
             {(p) => (
               <Select {...p} value={tableId} onChange={(e) => setTableId(e.target.value)}>
-                <option value="">Escolhe uma mesa</option>
+                <option value="">Escolher mesa</option>
                 {freeTables.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.label} · {t.seats} lug.

@@ -108,8 +108,8 @@ export default function SaftClose() {
         <div>
           <h1 className="font-display text-2xl font-semibold text-atlantico-900">Fecho do dia (SAF-T)</h1>
           <p className="text-sm text-muted-foreground">
-            Importa o ficheiro do software de facturação; as vendas abatem a despensa pelas fichas
-            técnicas
+            Importar o ficheiro do software de facturação: as vendas abatem a despensa pelas
+            fichas técnicas
           </p>
         </div>
         <Link to="/" className={buttonVariants({ variant: "outline", size: "sm" })}>
@@ -159,7 +159,7 @@ export default function SaftClose() {
       {!importsQuery.isLoading && !importsQuery.isError && imports.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Ainda sem fechos importados. O primeiro SAF-T que importares aparece aqui.
+            Ainda sem fechos importados. O primeiro SAF-T importado aparece aqui.
           </CardContent>
         </Card>
       )}
@@ -258,7 +258,7 @@ function ImportDetail({
       {imp.status === "failed" && (
         <Card className="border-destructive/50">
           <CardContent className="py-5 text-sm">
-            <p className="font-semibold text-destructive">O import falhou.</p>
+            <p className="font-semibold text-destructive">A importação falhou.</p>
             <p className="mt-1 text-muted-foreground">{imp.error ?? "Sem detalhe do erro."}</p>
           </CardContent>
         </Card>
@@ -325,8 +325,8 @@ function ReviewQueue({
         <div>
           <h2 className="text-sm font-semibold">Conciliação</h2>
           <p className="text-xs text-muted-foreground">
-            Estes códigos do POS ainda não têm prato associado. Concilia uma vez; os próximos
-            fechos casam sozinhos.
+            Estes códigos do POS ainda não têm prato associado. Depois da primeira conciliação,
+            os próximos fechos casam automaticamente.
           </p>
         </div>
 
@@ -345,7 +345,7 @@ function ReviewQueue({
 
         {!loading && !error && groups.length === 0 && (
           <p className="rounded-md bg-[hsl(var(--status-confirmed-bg))] p-3 text-sm text-[hsl(var(--status-confirmed-fg))]">
-            Tudo conciliado. Podes aplicar o fecho.
+            Tudo conciliado. O fecho já pode ser aplicado.
           </p>
         )}
 
@@ -393,7 +393,7 @@ function ConcileRow({
 
   function confirm() {
     if (!itemId) {
-      toast.error("Escolhe o prato correspondente.");
+      toast.error("Escolha o prato correspondente.");
       return;
     }
     concile.mutate(
@@ -495,11 +495,11 @@ function AppliedSummary({
         <Card className="border-[hsl(var(--status-pending-fg))]/40">
           <CardContent className="py-4 text-sm">
             <p className="font-medium text-[hsl(var(--status-pending-fg))]">
-              Vendidos sem ficha técnica — não abatidos:
+              Vendidos sem ficha técnica (não abatidos):
             </p>
             <p className="mt-1 text-muted-foreground">{report.dishesWithoutSheet.join(", ")}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Cria a ficha técnica destes pratos para o próximo fecho os abater.
+              Criar a ficha técnica destes pratos para que o próximo fecho os abata.
             </p>
           </CardContent>
         </Card>
@@ -509,7 +509,7 @@ function AppliedSummary({
         <Card className="border-[hsl(var(--status-pending-fg))]/40">
           <CardContent className="py-4 text-sm">
             <p className="font-medium text-[hsl(var(--status-pending-fg))]">
-              Unidades incompatíveis — não abatidos:
+              Unidades incompatíveis (não abatidos):
             </p>
             <p className="mt-1 text-muted-foreground">{report.unitMismatch.join(", ")}</p>
           </CardContent>

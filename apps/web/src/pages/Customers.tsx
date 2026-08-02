@@ -82,8 +82,8 @@ export default function Customers() {
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Ainda não tens clientes. As fichas criam-se automaticamente quando registas
-                reservas com telefone.
+                Ainda não há clientes. As fichas criam-se automaticamente ao registar reservas
+                com telefone.
               </p>
             )}
           </CardContent>

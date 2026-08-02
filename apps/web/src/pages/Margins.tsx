@@ -65,7 +65,7 @@ export default function Margins() {
         <div>
           <h1 className="font-display text-2xl font-semibold text-atlantico-900">Margens do menu</h1>
           <p className="text-sm text-muted-foreground">
-            Margem alvo: {targetPct}% (muda nas Definições)
+            Margem alvo: {targetPct}% (altera-se nas Definições)
           </p>
         </div>
       </header>
@@ -153,7 +153,7 @@ function MarginRow({ row, targetPct }: { row: DishMargin; targetPct: number }) {
         <p className="text-xs text-muted-foreground">
           {!row.hasSheet ? (
             <>
-              Sem ficha técnica —{" "}
+              Sem ficha técnica.{" "}
               <Link to={`/ementa?ficha=${row.itemId}`} className="underline">
                 criar ficha (a IA escreve o rascunho)
               </Link>

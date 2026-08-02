@@ -167,10 +167,10 @@ export default function Stats() {
     <div className="container max-w-4xl py-8">
       <header className="mb-5">
         <h1 className="font-display text-2xl font-semibold text-atlantico-900">
-          O pulso da casa
+          Estatísticas de vendas
         </h1>
         <p className="text-sm text-muted-foreground">
-          O que se vendeu, quando, e quanto disso dá dinheiro.
+          Vendas por período, refeição e dia da semana, cruzadas com a margem de cada prato.
         </p>
       </header>
 
@@ -178,7 +178,7 @@ export default function Stats() {
           não sabe que pergunta fazer (spec §5.1). */}
       <div className="mb-4 flex flex-wrap gap-2">
         <QuickQuestion
-          label="Como correu o mês passado?"
+          label="Resumo do mês passado"
           onClick={() => {
             setPeriodKey("mes_passado");
             setTurnIds([]);
@@ -186,7 +186,7 @@ export default function Stats() {
           }}
         />
         <QuickQuestion
-          label="O que vendo ao fim de semana?"
+          label="Fim de semana"
           onClick={() => {
             setPeriodKey("3m");
             setTurnIds([]);
@@ -194,7 +194,7 @@ export default function Stats() {
           }}
         />
         <QuickQuestion
-          label="E o que mudou em 3 meses?"
+          label="Evolução em 3 meses"
           onClick={() => {
             setPeriodKey("3m");
             setTurnIds([]);
@@ -289,7 +289,7 @@ export default function Stats() {
                   <Link to="/fecho-dia" className="underline">
                     ficheiro SAF-T do seu programa de facturação
                   </Link>
-                  . As de take-away entram sozinhas.
+                  . As de take-away entram automaticamente.
                 </p>
               </CardContent>
             </Card>
@@ -336,12 +336,12 @@ export default function Stats() {
               <MenuEngineering data={quadrantes} />
 
               <TopList
-                title="O que mais sai"
+                title="Mais vendidos"
                 rows={ordenados.slice(0, 10)}
                 marginByItem={marginByItem}
               />
               <TopList
-                title="O que menos sai"
+                title="Menos vendidos"
                 rows={[...ordenados].reverse().slice(0, 10)}
                 marginByItem={marginByItem}
               />
@@ -503,7 +503,7 @@ function MenuEngineering({
   return (
     <section className="mb-6">
       <h2 className="mb-1 font-display text-lg font-semibold text-atlantico-900">
-        O que vende e o que dá dinheiro
+        Volume e margem por prato
       </h2>
       <p className="mb-3 text-xs text-muted-foreground">
         {data.total} pratos com ficha completa, comparados com a mediana da própria casa (
@@ -511,9 +511,9 @@ function MenuEngineering({
       </p>
       {data.total < MIN_DISHES_FOR_QUADRANTS && (
         <p className="mb-3 rounded-md border border-input bg-muted/40 p-2 text-xs text-muted-foreground">
-          Com {data.total} pratos, a mediana parte quase ao meio e um prato pode mudar de quadrante
-          por muito pouco. Isto é indicativo, não veredicto. Ganha valor à medida que forem
-          preenchidas mais{" "}
+          Com {data.total} pratos, a mediana divide a amostra quase ao meio e uma diferença
+          pequena chega para mudar um prato de quadrante. A leitura é indicativa. A fiabilidade
+          aumenta à medida que forem preenchidas mais{" "}
           <Link to="/margens" className="underline">
             fichas técnicas
           </Link>

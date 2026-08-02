@@ -264,7 +264,7 @@ export default function Availability() {
       {!errored && !loading && applicableTurns.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Não há turnos configurados para este dia. Define turnos em{" "}
+            Não há turnos configurados para este dia. Defina os turnos em{" "}
             <Link to="/definicoes?sec=servico" className="underline">
               Mesas e turnos
             </Link>

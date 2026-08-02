@@ -92,7 +92,7 @@ export function OrderQueue({ restaurant }: { restaurant: Restaurant }) {
     return (
       <Card>
         <CardContent className="py-12 text-center text-sm text-muted-foreground">
-          Sem encomendas por agora. As novas aparecem aqui sozinhas.
+          Sem encomendas de momento. As novas aparecem aqui automaticamente.
         </CardContent>
       </Card>
     );
@@ -145,7 +145,7 @@ export function OrderQueue({ restaurant }: { restaurant: Restaurant }) {
             )}
             {o.status === "aceite" && (
               <Button size="lg" className="h-11 flex-1" disabled={advance.isPending} onClick={() => move(o, "pronta")}>
-                Está pronta
+                Pronta
               </Button>
             )}
             {o.status === "pronta" && (

@@ -142,7 +142,7 @@ export function TechSheetDialog({
               reason === "ANTHROPIC_API_KEY não configurada"
                 ? "A geração por IA ainda não está activa neste ambiente."
                 : reason.startsWith("limite diário")
-                  ? "Limite diário de gerações atingido. Volta amanhã ou edita a ficha à mão."
+                  ? "Limite diário de gerações atingido. O limite renova amanhã; até lá, a ficha pode ser editada manualmente."
                   : `Não foi possível gerar o rascunho (${reason}).`,
             );
             return;
@@ -168,8 +168,8 @@ export function TechSheetDialog({
           setStatus("rascunho");
           toast.success(
             result.remaining != null
-              ? `Rascunho gerado (${result.remaining} gerações restantes hoje). Revê antes de validar.`
-              : "Rascunho gerado. Revê as quantidades antes de validar.",
+              ? `Rascunho gerado (${result.remaining} gerações restantes hoje). Rever antes de validar.`
+              : "Rascunho gerado. Rever as quantidades antes de validar.",
           );
         },
         onError: () => toast.error("Falha ao contactar a geração por IA."),
@@ -191,7 +191,7 @@ export function TechSheetDialog({
           setLines((ls) =>
             ls.map((l) => (l.key === line.key ? { ...l, ingredientId: created.id } : l)),
           );
-          toast.success(`"${created.name}" criado na despensa com custo estimado. Confirma o preço real.`);
+          toast.success(`"${created.name}" criado na despensa com custo estimado. Confirmar o preço real.`);
         },
         onError: (e) => {
           // Nome duplicado: tenta ligar ao existente em vez de falhar.
@@ -280,7 +280,7 @@ export function TechSheetDialog({
       open={open}
       onOpenChange={onOpenChange}
       title={`Ficha técnica · ${item.name}`}
-      description="Ingredientes, passos e custo por dose. A IA escreve o rascunho; tu validas."
+      description="Ingredientes, passos e custo por dose. A IA escreve o rascunho; a validação é do chef."
       className="sm:max-w-2xl"
     >
       <div className="space-y-4">
@@ -331,7 +331,7 @@ export function TechSheetDialog({
           <p className="text-sm font-medium">Ingredientes</p>
           {lines.length === 0 && (
             <p className="rounded-md border border-dashed border-input p-3 text-sm text-muted-foreground">
-              Sem ingredientes. Gera o rascunho com IA ou adiciona linhas à mão.
+              Sem ingredientes. Gerar o rascunho com IA ou adicionar linhas manualmente.
             </p>
           )}
           {lines.map((line) => {
@@ -410,7 +410,7 @@ export function TechSheetDialog({
                     variant="outline"
                     className="h-8 px-2 text-xs"
                     disabled={createIngredient.isPending}
-                    title={`Criar na despensa a ${formatCostCents(line.estCost.cents)} / ${line.estCost.unit} (custo estimado pela IA — confirmar depois)`}
+                    title={`Criar na despensa a ${formatCostCents(line.estCost.cents)} / ${line.estCost.unit} (custo estimado pela IA, a confirmar)`}
                     onClick={() => addLineToPantry(line)}
                   >
                     + Despensa
@@ -460,7 +460,7 @@ export function TechSheetDialog({
           </div>
           {costSummary.costed < costSummary.total && (
             <p className="mt-1 text-xs text-muted-foreground">
-              Liga as linhas “sem custo” a ingredientes da despensa para o food cost ficar completo.
+              Ligar as linhas “sem custo” a ingredientes da despensa completa o food cost.
             </p>
           )}
         </div>

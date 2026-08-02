@@ -16,7 +16,7 @@ export function RoleGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isLoading || allowed) return;
-    toast.error("Esta área não faz parte do teu perfil.");
+    toast.error("Esta área não faz parte do seu perfil.");
     navigate(homeForRole(role), { replace: true });
   }, [isLoading, allowed, role, navigate]);
 

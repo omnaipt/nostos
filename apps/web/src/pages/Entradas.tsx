@@ -88,7 +88,7 @@ export default function Entradas() {
   // ── Parse da fatura: pré-preenche o formulário; nada é registado ──────────
   function applyParseResult(result: ParseInvoiceResult) {
     if (!result.parsed) {
-      toast.error(result.reason ?? "Não foi possível ler a fatura. Regista à mão.");
+      toast.error(result.reason ?? "Não foi possível ler a fatura. Registe a entrada manualmente.");
       return;
     }
     const parsedLines = result.lines ?? [];
@@ -114,7 +114,7 @@ export default function Entradas() {
       };
     });
     if (drafts.length === 0) {
-      toast.error("A fatura não trouxe linhas aproveitáveis — regista à mão.");
+      toast.error("A fatura não trouxe linhas aproveitáveis. Registe a entrada manualmente.");
       return;
     }
     if (result.supplier) setSupplier(result.supplier);
@@ -124,7 +124,7 @@ export default function Entradas() {
     setLines(drafts);
     const matched = drafts.filter((d) => d.ingredientId).length;
     toast.success(
-      `Fatura lida: ${drafts.length} linha${drafts.length > 1 ? "s" : ""}, ${matched} com match. Revê e regista.`,
+      `Fatura lida: ${drafts.length} linha${drafts.length > 1 ? "s" : ""}, ${matched} com match. Rever e registar.`,
     );
   }
 
@@ -156,11 +156,11 @@ export default function Entradas() {
     e.preventDefault();
     setFormError(undefined);
     if (supplier.trim().length < 2) {
-      setFormError("Indica o fornecedor.");
+      setFormError("Indique o fornecedor.");
       return;
     }
     if (!invoiceNo.trim()) {
-      setFormError("Indica o nº da fatura.");
+      setFormError("Indique o nº da fatura.");
       return;
     }
     const parsed: PurchaseEntryLine[] = [];
@@ -226,8 +226,8 @@ export default function Entradas() {
         <div>
           <h1 className="font-display text-2xl font-semibold text-atlantico-900">Entradas de compra</h1>
           <p className="text-sm text-muted-foreground">
-            Regista as faturas de fornecedor; o saldo e o custo médio da despensa
-            actualizam-se sozinhos.
+            Registo das faturas de fornecedor. O saldo e o custo médio da despensa
+            actualizam-se automaticamente.
           </p>
         </div>
         <Link to="/" className={buttonVariants({ variant: "outline", size: "sm" })}>
@@ -246,8 +246,8 @@ export default function Entradas() {
       {!loading && ingredients.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            A despensa ainda não tem ingredientes. Cria o catálogo nas Definições
-            antes de registares entradas.
+            A despensa ainda não tem ingredientes. Crie o catálogo nas Definições
+            antes de registar entradas.
           </CardContent>
         </Card>
       )}
@@ -306,8 +306,8 @@ export default function Entradas() {
                         <Camera className="h-4 w-4" /> Carregar fatura (PDF ou foto)
                       </Button>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        ou arrasta para aqui · a leitura pré-preenche o
-                        formulário; revês e registas
+                        ou arraste para aqui · a leitura pré-preenche o
+                        formulário, para rever e registar
                       </p>
                     </>
                   )}
@@ -362,7 +362,7 @@ export default function Entradas() {
                               <span className="ml-2 text-[hsl(var(--status-seated-fg))]">match automático</span>
                             )}
                             {line.fromParse && !line.ingredientId && (
-                              <span className="ml-2">— escolhe o ingrediente</span>
+                              <span className="ml-2">· escolher o ingrediente</span>
                             )}
                           </p>
                         )}
@@ -462,8 +462,8 @@ export default function Entradas() {
                   {create.isPending ? "A registar..." : "Registar entrada"}
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  Validade estimada por categoria — o rótulo prevalece. Ajusta a
-                  data se o produto disser outra coisa.
+                  Validade estimada por categoria: o rótulo prevalece. Ajuste a
+                  data se o produto indicar outra.
                 </p>
               </form>
             </CardContent>

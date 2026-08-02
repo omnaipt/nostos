@@ -19,7 +19,7 @@ import { MEMBER_ROLES, ROLE_HINT, ROLE_LABEL, type MemberRole } from "@/lib/role
 // (desabilita despromover/remover) e também no servidor (trigger do Marco).
 
 function errMsg(e: unknown): string {
-  return e instanceof Error ? e.message : "Não foi possível guardar. Tenta novamente.";
+  return e instanceof Error ? e.message : "Não foi possível guardar. Tente novamente.";
 }
 
 export function EquipaCard({ restaurantId }: { restaurantId: string }) {
@@ -38,7 +38,7 @@ export function EquipaCard({ restaurantId }: { restaurantId: string }) {
     e.preventDefault();
     const addr = email.trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) {
-      toast.error("Indica um email válido.");
+      toast.error("Indique um email válido.");
       return;
     }
     invite.mutate(
@@ -60,7 +60,7 @@ export function EquipaCard({ restaurantId }: { restaurantId: string }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Dá acesso à tua gente por perfil. Cada perfil vê só a sua área.
+          Acesso da equipa por perfil. Cada perfil vê só a sua área.
         </p>
 
         {teamQuery.isLoading && (
@@ -85,7 +85,7 @@ export function EquipaCard({ restaurantId }: { restaurantId: string }) {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
                       {m.name ?? m.email ?? "Membro da equipa"}
-                      {m.isSelf && <span className="ml-2 text-xs font-normal text-muted-foreground">(tu)</span>}
+                      {m.isSelf && <span className="ml-2 text-xs font-normal text-muted-foreground">(a sua conta)</span>}
                       {m.pending && (
                         <span className="ml-2 rounded-full border border-[hsl(var(--status-pending-fg))]/40 bg-[hsl(var(--status-pending-bg))] px-2 py-0.5 text-[11px] font-normal text-[hsl(var(--status-pending-fg))]">
                           convite pendente
