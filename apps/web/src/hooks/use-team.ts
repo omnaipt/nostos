@@ -32,7 +32,7 @@ export interface TeamMember {
 const TEAM_KEY = (restaurantId: string | undefined) => ["team", restaurantId] as const;
 
 function asRole(v: string): MemberRole {
-  return v === "gestor" || v === "balcao" || v === "cozinha" ? v : "owner";
+  return v === "gestor" || v === "balcao" || v === "cozinha" || v === "consultor" ? v : "owner";
 }
 
 export function useTeam(restaurantId: string | undefined) {
