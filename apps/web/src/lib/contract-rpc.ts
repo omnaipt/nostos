@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 // Chamadas "à frente do contrato": os tipos gerados vêm da BD de PRODUÇÃO, por
@@ -30,10 +31,13 @@ export function looseRpc<T = unknown>(
 // Query builder sobre uma tabela ainda ausente dos tipos. Devolve o builder do
 // supabase-js sem tipos — usar só nos sítios comentados como contract-ahead.
 export function looseFrom(table: string) {
-  const from = supabase.from.bind(supabase) as unknown as (
-    t: string,
-  ) => ReturnType<typeof supabase.from>;
-  return from(table);
+  // Cliente com schema 'any': com os tipos gerados de 07-09 (0029, que trouxeram
+  // a vista admin_tenant_overview e as suas relações), ReturnType<typeof
+  // supabase.from> deixou de aceitar select com relações em tabelas
+  // contract-ahead (orders). Chamado como método para manter o `this`.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const client = supabase as unknown as SupabaseClient<any, "public", any>;
+  return client.from(table);
 }
 
 // True quando o erro é "a função/tabela ainda não existe" (fase do Marco por

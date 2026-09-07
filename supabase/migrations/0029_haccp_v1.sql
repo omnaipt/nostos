@@ -188,6 +188,7 @@ create or replace function public.haccp_now()
 returns timestamptz
 language sql
 stable
+set search_path = public
 as $$ select now() $$;
 comment on function public.haccp_now() is
   'Relogio do modulo HACCP. Producao: now(). Testes: substituida por constante na transaccao. 0029.';
