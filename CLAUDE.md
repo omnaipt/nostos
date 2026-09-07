@@ -24,3 +24,16 @@ Arquitetura espelhada do Palaestra (repo `palextra`).
 ## Migrations
 Toda a mudança de schema é uma migration versionada em supabase/migrations.
 Branch de desenvolvimento primeiro, produção depois.
+
+## Workflow de sprints (sprint-runner)
+
+Contexto pessoal e empresarial: `C:\Users\Geral\Claude_memory\CLAUDE.md`. Workflow completo: `C:\Users\Geral\Claude_memory\regras\dev-sprints.md`. Spec activa em `specs/sprint-NN.md`.
+
+Regras não negociáveis durante execução de sprint:
+
+1. A spec activa é a única fonte de verdade. Não implementar nada fora dela.
+2. Marcar um checkbox exige evidência: teste a passar ou output demonstrado nesta sessão.
+3. Item impossível ou spec errada: registar na secção Blockers da spec e passar ao seguinte. Nunca improvisar alternativas não especificadas.
+4. Não refactorizar nem "melhorar" código fora dos itens da spec; sugestões vão para Blockers como nota.
+
+Gates de qualidade deste repo: `pnpm typecheck` + `pnpm build` + `pnpm test` (e `pnpm lint`).
