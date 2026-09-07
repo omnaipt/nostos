@@ -127,7 +127,8 @@ Evidência exigida: typecheck/build; captura `specs/evidence/s02-definicoes.png`
 
 ## Blockers
 
-- **Capturas de ecrã pendentes do orquestrador** (itens 2, 3, 5, 6, 7, 8). As
+- **RESOLVIDO pelo orquestrador (07-09 17:05):** capturas em `specs/evidence/s02-*.png` feitas com `C:\dev\stoa-e2e-tmp\haccp-shots.mjs` (Edge headless 390 px, vite preview do worktree contra produção, tenant demo Lota do Cais). Ensaio real: 3 pontos habituais criados pelo botão de onboarding; registo -19,5 tentado (o harness não carregou no "±" e gravou 19,5, fora de limites) e 7,0 no Banho-maria, ambos aceites com carimbo de servidor (17:04:22 e 17:04:26 WEST), `within_limits=false`, modal de NC aberto com valor e limite pré-preenchidos, "Registar acção mais tarde" deixa os dois pontos a "desvio sem resposta" no hub. Os dados de teste ficam no tenant demo até a semente do Sprint 03 os substituir.
+- (histórico) **Capturas de ecrã pendentes do orquestrador** (itens 2, 3, 5, 6, 7, 8). As
   capturas 390 px (`specs/evidence/s02-*.png`) dependem do harness Puppeteer/Edge
   em `C:\dev\stoa-e2e-tmp` com login por credenciais de `env.mjs` e de dados reais
   num tenant de desenvolvimento. Não há tenant de desenvolvimento separado e o

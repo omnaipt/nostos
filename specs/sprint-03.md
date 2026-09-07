@@ -66,7 +66,13 @@ Evidência exigida: typecheck/build.
 
 Evidência exigida: ficheiro existe, é idempotente por leitura e usa só objectos do contrato.
 
-### 7. Gates e evidência
+### 7. Copy sem travessão
+
+- [ ] Em todos os ficheiros do módulo HACCP (`pages/Haccp*.tsx`, `components/haccp/*`, `components/settings/HaccpCard.tsx`, `lib/haccp*.ts`, `hooks/use-haccp*.ts`) substituir o travessão "—" (U+2014) e o meia-risca " – " usados como pontuação por vírgula, dois pontos ou ponto final, conforme a frase (ex.: "Registe a acção correctiva ou adie — o desvio fica visível" → "Registe a acção correctiva ou adie; o desvio fica visível"). Não tocar em código fora do HACCP. Confirmar com grep que não resta nenhum "—" nesses ficheiros.
+
+Evidência exigida: grep vazio + typecheck.
+
+### 8. Gates e evidência
 
 - [ ] `pnpm typecheck`, `pnpm test`, `pnpm build` verdes; contagem de testes no sumário.
 - [ ] Capturas de ecrã como no Sprint 02, item 9.
