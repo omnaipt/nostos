@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_email: string
+          created_at: string
+          id: string
+          payload: Json | null
+          seq: number
+          tenant_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_email: string
+          created_at?: string
+          id?: string
+          payload?: Json | null
+          seq?: number
+          tenant_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email?: string
+          created_at?: string
+          id?: string
+          payload?: Json | null
+          seq?: number
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_generations: {
         Row: {
           created_at: string
@@ -43,6 +88,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ai_generations_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ai_generations_restaurant_id_fkey"
             columns: ["restaurant_id"]
@@ -85,7 +137,537 @@ export type Database = {
             foreignKeyName: "customers_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
             referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      haccp_control_point_turns: {
+        Row: {
+          control_point_id: string
+          restaurant_id: string
+          turn_id: string
+        }
+        Insert: {
+          control_point_id: string
+          restaurant_id: string
+          turn_id: string
+        }
+        Update: {
+          control_point_id?: string
+          restaurant_id?: string
+          turn_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "haccp_control_point_turns_control_point_id_fkey"
+            columns: ["control_point_id"]
+            isOneToOne: false
+            referencedRelation: "haccp_control_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "haccp_control_point_turns_turn_id_fkey"
+            columns: ["turn_id"]
+            isOneToOne: false
+            referencedRelation: "turns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      haccp_control_points: {
+        Row: {
+          active: boolean
+          all_turns: boolean
+          created_at: string
+          created_by: string | null
+          deactivated_at: string | null
+          id: string
+          kind: string
+          max_c: number | null
+          min_c: number | null
+          name: string
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          all_turns?: boolean
+          created_at?: string
+          created_by?: string | null
+          deactivated_at?: string | null
+          id?: string
+          kind: string
+          max_c?: number | null
+          min_c?: number | null
+          name: string
+          restaurant_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          all_turns?: boolean
+          created_at?: string
+          created_by?: string | null
+          deactivated_at?: string | null
+          id?: string
+          kind?: string
+          max_c?: number | null
+          min_c?: number | null
+          name?: string
+          restaurant_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "haccp_control_points_kind_fkey"
+            columns: ["kind"]
+            isOneToOne: false
+            referencedRelation: "haccp_kind_defaults"
+            referencedColumns: ["kind"]
+          },
+          {
+            foreignKeyName: "haccp_control_points_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "haccp_control_points_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      haccp_kind_defaults: {
+        Row: {
+          kind: string
+          label: string
+          max_c: number | null
+          min_c: number | null
+          note: string | null
+          source_label: string
+          source_url: string
+        }
+        Insert: {
+          kind: string
+          label: string
+          max_c?: number | null
+          min_c?: number | null
+          note?: string | null
+          source_label: string
+          source_url: string
+        }
+        Update: {
+          kind?: string
+          label?: string
+          max_c?: number | null
+          min_c?: number | null
+          note?: string | null
+          source_label?: string
+          source_url?: string
+        }
+        Relationships: []
+      }
+      haccp_nc_verifications: {
+        Row: {
+          effective: boolean
+          id: string
+          nonconformity_id: string
+          note: string | null
+          restaurant_id: string
+          verified_at: string
+          verified_by: string
+        }
+        Insert: {
+          effective: boolean
+          id?: string
+          nonconformity_id: string
+          note?: string | null
+          restaurant_id: string
+          verified_at?: string
+          verified_by?: string
+        }
+        Update: {
+          effective?: boolean
+          id?: string
+          nonconformity_id?: string
+          note?: string | null
+          restaurant_id?: string
+          verified_at?: string
+          verified_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "haccp_nc_verifications_nonconformity_id_fkey"
+            columns: ["nonconformity_id"]
+            isOneToOne: false
+            referencedRelation: "haccp_nc_status"
+            referencedColumns: ["nonconformity_id"]
+          },
+          {
+            foreignKeyName: "haccp_nc_verifications_nonconformity_id_fkey"
+            columns: ["nonconformity_id"]
+            isOneToOne: false
+            referencedRelation: "haccp_nonconformities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "haccp_nc_verifications_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "haccp_nc_verifications_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      haccp_nonconformities: {
+        Row: {
+          description: string
+          executed_by_name: string
+          id: string
+          immediate_action: string
+          limit_text: string | null
+          measured_value: string | null
+          occurred_at: string
+          product_disposition: string
+          reading_id: string | null
+          reception_id: string | null
+          recorded_at: string
+          recorded_by: string
+          restaurant_id: string
+          root_cause_action: string
+          service_date: string
+          source: string
+          turn_id: string | null
+        }
+        Insert: {
+          description: string
+          executed_by_name: string
+          id?: string
+          immediate_action: string
+          limit_text?: string | null
+          measured_value?: string | null
+          occurred_at?: string
+          product_disposition: string
+          reading_id?: string | null
+          reception_id?: string | null
+          recorded_at?: string
+          recorded_by?: string
+          restaurant_id: string
+          root_cause_action: string
+          service_date: string
+          source: string
+          turn_id?: string | null
+        }
+        Update: {
+          description?: string
+          executed_by_name?: string
+          id?: string
+          immediate_action?: string
+          limit_text?: string | null
+          measured_value?: string | null
+          occurred_at?: string
+          product_disposition?: string
+          reading_id?: string | null
+          reception_id?: string | null
+          recorded_at?: string
+          recorded_by?: string
+          restaurant_id?: string
+          root_cause_action?: string
+          service_date?: string
+          source?: string
+          turn_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "haccp_nonconformities_reading_id_fkey"
+            columns: ["reading_id"]
+            isOneToOne: false
+            referencedRelation: "haccp_temperature_readings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "haccp_nonconformities_reception_id_fkey"
+            columns: ["reception_id"]
+            isOneToOne: false
+            referencedRelation: "haccp_receptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "haccp_nonconformities_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "haccp_nonconformities_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "haccp_nonconformities_turn_id_fkey"
+            columns: ["turn_id"]
+            isOneToOne: false
+            referencedRelation: "turns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      haccp_receptions: {
+        Row: {
+          conforming: boolean
+          delivered_on: string
+          expiry_ok: boolean
+          id: string
+          note: string | null
+          packaging_ok: boolean
+          photo_path: string | null
+          recorded_at: string
+          recorded_by: string
+          restaurant_id: string
+          service_date: string
+          supplier_id: string
+          temperature_applicable: boolean
+          temperature_c: number | null
+          turn_id: string | null
+        }
+        Insert: {
+          conforming: boolean
+          delivered_on: string
+          expiry_ok: boolean
+          id?: string
+          note?: string | null
+          packaging_ok: boolean
+          photo_path?: string | null
+          recorded_at?: string
+          recorded_by?: string
+          restaurant_id: string
+          service_date: string
+          supplier_id: string
+          temperature_applicable?: boolean
+          temperature_c?: number | null
+          turn_id?: string | null
+        }
+        Update: {
+          conforming?: boolean
+          delivered_on?: string
+          expiry_ok?: boolean
+          id?: string
+          note?: string | null
+          packaging_ok?: boolean
+          photo_path?: string | null
+          recorded_at?: string
+          recorded_by?: string
+          restaurant_id?: string
+          service_date?: string
+          supplier_id?: string
+          temperature_applicable?: boolean
+          temperature_c?: number | null
+          turn_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "haccp_receptions_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "haccp_receptions_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "haccp_receptions_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "haccp_supplier_stats"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "haccp_receptions_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "haccp_receptions_turn_id_fkey"
+            columns: ["turn_id"]
+            isOneToOne: false
+            referencedRelation: "turns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      haccp_rejections: {
+        Row: {
+          cause: string
+          description: string | null
+          id: string
+          quantity_text: string | null
+          reception_id: string
+          recorded_at: string
+          recorded_by: string
+          restaurant_id: string
+        }
+        Insert: {
+          cause: string
+          description?: string | null
+          id?: string
+          quantity_text?: string | null
+          reception_id: string
+          recorded_at?: string
+          recorded_by?: string
+          restaurant_id: string
+        }
+        Update: {
+          cause?: string
+          description?: string | null
+          id?: string
+          quantity_text?: string | null
+          reception_id?: string
+          recorded_at?: string
+          recorded_by?: string
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "haccp_rejections_reception_id_fkey"
+            columns: ["reception_id"]
+            isOneToOne: false
+            referencedRelation: "haccp_receptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "haccp_rejections_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "haccp_rejections_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      haccp_temperature_readings: {
+        Row: {
+          captured_at: string | null
+          control_point_id: string
+          id: string
+          max_c: number | null
+          min_c: number | null
+          note: string | null
+          recorded_at: string
+          recorded_by: string
+          rectifies_id: string | null
+          restaurant_id: string
+          service_date: string
+          sync_mode: string
+          turn_id: string
+          value_c: number
+          within_limits: boolean
+        }
+        Insert: {
+          captured_at?: string | null
+          control_point_id: string
+          id?: string
+          max_c?: number | null
+          min_c?: number | null
+          note?: string | null
+          recorded_at?: string
+          recorded_by?: string
+          rectifies_id?: string | null
+          restaurant_id: string
+          service_date: string
+          sync_mode: string
+          turn_id: string
+          value_c: number
+          within_limits: boolean
+        }
+        Update: {
+          captured_at?: string | null
+          control_point_id?: string
+          id?: string
+          max_c?: number | null
+          min_c?: number | null
+          note?: string | null
+          recorded_at?: string
+          recorded_by?: string
+          rectifies_id?: string | null
+          restaurant_id?: string
+          service_date?: string
+          sync_mode?: string
+          turn_id?: string
+          value_c?: number
+          within_limits?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "haccp_temperature_readings_control_point_id_fkey"
+            columns: ["control_point_id"]
+            isOneToOne: false
+            referencedRelation: "haccp_control_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "haccp_temperature_readings_rectifies_id_fkey"
+            columns: ["rectifies_id"]
+            isOneToOne: false
+            referencedRelation: "haccp_temperature_readings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "haccp_temperature_readings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "haccp_temperature_readings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "haccp_temperature_readings_turn_id_fkey"
+            columns: ["turn_id"]
+            isOneToOne: false
+            referencedRelation: "turns"
             referencedColumns: ["id"]
           },
         ]
@@ -137,6 +719,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ingredients_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ingredients_restaurant_id_fkey"
             columns: ["restaurant_id"]
@@ -221,6 +810,13 @@ export type Database = {
             foreignKeyName: "member_invites_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_invites_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
@@ -255,6 +851,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "menu_categories_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "menu_categories_restaurant_id_fkey"
             columns: ["restaurant_id"]
@@ -305,6 +908,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "menu_imports_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "menu_imports_restaurant_id_fkey"
             columns: ["restaurant_id"]
@@ -360,6 +970,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_item_variants_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
             referencedColumns: ["id"]
           },
           {
@@ -466,6 +1083,13 @@ export type Database = {
             foreignKeyName: "menu_items_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_items_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
@@ -512,6 +1136,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "menu_translations_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "menu_translations_restaurant_id_fkey"
             columns: ["restaurant_id"]
@@ -565,6 +1196,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
             referencedColumns: ["id"]
           },
           {
@@ -628,6 +1266,13 @@ export type Database = {
             foreignKeyName: "orders_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
@@ -676,10 +1321,59 @@ export type Database = {
             foreignKeyName: "pos_product_map_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_product_map_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
         ]
+      }
+      product_plans: {
+        Row: {
+          active: boolean
+          base_price_cents: number
+          billing_period: string
+          code: string
+          created_at: string
+          id: string
+          intro_months: number | null
+          intro_price_cents: number | null
+          name: string
+          unit_metric: string | null
+          unit_price_cents: number | null
+        }
+        Insert: {
+          active?: boolean
+          base_price_cents: number
+          billing_period?: string
+          code: string
+          created_at?: string
+          id?: string
+          intro_months?: number | null
+          intro_price_cents?: number | null
+          name: string
+          unit_metric?: string | null
+          unit_price_cents?: number | null
+        }
+        Update: {
+          active?: boolean
+          base_price_cents?: number
+          billing_period?: string
+          code?: string
+          created_at?: string
+          id?: string
+          intro_months?: number | null
+          intro_price_cents?: number | null
+          name?: string
+          unit_metric?: string | null
+          unit_price_cents?: number | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -733,6 +1427,13 @@ export type Database = {
             columns: ["reservation_id"]
             isOneToOne: false
             referencedRelation: "reservations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservation_events_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
             referencedColumns: ["id"]
           },
           {
@@ -812,6 +1513,13 @@ export type Database = {
             foreignKeyName: "reservations_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservations_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
@@ -855,6 +1563,13 @@ export type Database = {
             foreignKeyName: "restaurant_members_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "restaurant_members_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
@@ -862,57 +1577,99 @@ export type Database = {
       }
       restaurants: {
         Row: {
+          activated_at: string | null
           assignment_mode: string
           created_at: string
           default_duration_min: number
           email: string | null
+          haccp_photo_quota_mb: number
+          haccp_retention_months: number
+          haccp_retention_note: string
           id: string
+          is_demo: boolean
           logo_url: string | null
           name: string
+          override_reason_code: string | null
+          override_reason_note: string | null
+          override_until: string | null
           owner_id: string
+          paid_until: string | null
           phone: string | null
+          plan_code: string | null
+          price_override_cents: number | null
           slug: string
+          status: string
+          suspended_at: string | null
           takeaway_enabled: boolean
           target_margin_pct: number
           theme: string
           timezone: string
           tone: string
+          trial_ends_at: string | null
           vertical: string
         }
         Insert: {
+          activated_at?: string | null
           assignment_mode?: string
           created_at?: string
           default_duration_min?: number
           email?: string | null
+          haccp_photo_quota_mb?: number
+          haccp_retention_months?: number
+          haccp_retention_note?: string
           id?: string
+          is_demo?: boolean
           logo_url?: string | null
           name: string
+          override_reason_code?: string | null
+          override_reason_note?: string | null
+          override_until?: string | null
           owner_id: string
+          paid_until?: string | null
           phone?: string | null
+          plan_code?: string | null
+          price_override_cents?: number | null
           slug: string
+          status?: string
+          suspended_at?: string | null
           takeaway_enabled?: boolean
           target_margin_pct?: number
           theme?: string
           timezone?: string
           tone?: string
+          trial_ends_at?: string | null
           vertical?: string
         }
         Update: {
+          activated_at?: string | null
           assignment_mode?: string
           created_at?: string
           default_duration_min?: number
           email?: string | null
+          haccp_photo_quota_mb?: number
+          haccp_retention_months?: number
+          haccp_retention_note?: string
           id?: string
+          is_demo?: boolean
           logo_url?: string | null
           name?: string
+          override_reason_code?: string | null
+          override_reason_note?: string | null
+          override_until?: string | null
           owner_id?: string
+          paid_until?: string | null
           phone?: string | null
+          plan_code?: string | null
+          price_override_cents?: number | null
           slug?: string
+          status?: string
+          suspended_at?: string | null
           takeaway_enabled?: boolean
           target_margin_pct?: number
           theme?: string
           timezone?: string
           tone?: string
+          trial_ends_at?: string | null
           vertical?: string
         }
         Relationships: []
@@ -982,6 +1739,13 @@ export type Database = {
             foreignKeyName: "saft_import_lines_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saft_import_lines_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
@@ -1043,6 +1807,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "saft_imports_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "saft_imports_restaurant_id_fkey"
             columns: ["restaurant_id"]
@@ -1134,6 +1905,13 @@ export type Database = {
             foreignKeyName: "stock_movements_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
@@ -1179,6 +1957,58 @@ export type Database = {
             foreignKeyName: "supplier_product_aliases_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_product_aliases_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          name_norm: string
+          nif: string | null
+          restaurant_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          name_norm: string
+          nif?: string | null
+          restaurant_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          name_norm?: string
+          nif?: string | null
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suppliers_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
@@ -1216,6 +2046,13 @@ export type Database = {
           sort_order?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "tables_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tables_restaurant_id_fkey"
             columns: ["restaurant_id"]
@@ -1265,6 +2102,13 @@ export type Database = {
             columns: ["ingredient_id"]
             isOneToOne: false
             referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tech_sheet_ingredients_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
             referencedColumns: ["id"]
           },
           {
@@ -1332,6 +2176,13 @@ export type Database = {
             foreignKeyName: "tech_sheets_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tech_sheets_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
@@ -1373,6 +2224,13 @@ export type Database = {
             foreignKeyName: "turns_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turns_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
@@ -1380,7 +2238,79 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      admin_tenant_overview: {
+        Row: {
+          base_price_cents: number | null
+          created_at: string | null
+          effective_price_cents: number | null
+          id: string | null
+          is_demo: boolean | null
+          is_overdue: boolean | null
+          name: string | null
+          override_reason: string | null
+          paid_until: string | null
+          plan_code: string | null
+          status: string | null
+          user_count: number | null
+        }
+        Relationships: []
+      }
+      haccp_nc_status: {
+        Row: {
+          effective: boolean | null
+          nonconformity_id: string | null
+          occurred_at: string | null
+          open_hours: number | null
+          overdue: boolean | null
+          restaurant_id: string | null
+          service_date: string | null
+          status: string | null
+          verified_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "haccp_nonconformities_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "haccp_nonconformities_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      haccp_supplier_stats: {
+        Row: {
+          last_reception_at: string | null
+          last_rejection_at: string | null
+          name: string | null
+          receptions_count: number | null
+          rejections_count: number | null
+          restaurant_id: string | null
+          supplier_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suppliers_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       advance_order: {
@@ -1390,6 +2320,99 @@ export type Database = {
       apply_inventory_count: {
         Args: { p_counts: Json; p_note: string; p_restaurant_id: string }
         Returns: Json
+      }
+      haccp_burst_check: {
+        Args: { p_from: string; p_restaurant_id: string; p_to: string }
+        Returns: {
+          control_points: number
+          readings: number
+          recorded_by: string
+          window_start: string
+        }[]
+      }
+      haccp_expected_readings: {
+        Args: { p_from: string; p_restaurant_id: string; p_to: string }
+        Returns: {
+          closes_at: string
+          control_point_id: string
+          control_point_name: string
+          kind: string
+          nc_id: string
+          nc_status: string
+          opens_at: string
+          reading_id: string
+          recorded_at: string
+          service_date: string
+          status: string
+          sync_mode: string
+          turn_id: string
+          turn_label: string
+          value_c: number
+          within_limits: boolean
+        }[]
+      }
+      haccp_now: { Args: never; Returns: string }
+      haccp_period_summary: {
+        Args: { p_from: string; p_restaurant_id: string; p_to: string }
+        Returns: Json
+      }
+      haccp_purge_expired: { Args: { p_restaurant_id: string }; Returns: Json }
+      haccp_record_temperature: {
+        Args: {
+          p_captured_at?: string
+          p_control_point_id: string
+          p_note?: string
+          p_rectifies_id?: string
+          p_turn_id: string
+          p_value_c: number
+        }
+        Returns: {
+          id: string
+          service_date: string
+          sync_mode: string
+          within_limits: boolean
+        }[]
+      }
+      haccp_service_date: {
+        Args: { p_at?: string; p_restaurant_id: string }
+        Returns: string
+      }
+      haccp_storage_usage_bytes: {
+        Args: { p_restaurant_id: string }
+        Returns: number
+      }
+      haccp_turn_status: {
+        Args: { p_restaurant_id: string; p_service_date?: string }
+        Returns: {
+          closes_at: string
+          control_point_id: string
+          control_point_name: string
+          kind: string
+          nc_id: string
+          nc_status: string
+          opens_at: string
+          reading_id: string
+          recorded_at: string
+          service_date: string
+          status: string
+          sync_mode: string
+          turn_id: string
+          turn_label: string
+          value_c: number
+          within_limits: boolean
+        }[]
+      }
+      haccp_turn_window: {
+        Args: {
+          p_restaurant_id: string
+          p_service_date: string
+          p_turn_id: string
+        }
+        Returns: {
+          closes_at: string
+          cutoff_at: string
+          opens_at: string
+        }[]
       }
       ingredient_avg_cost: {
         Args: { p_ingredient_id: string }
@@ -1401,6 +2424,7 @@ export type Database = {
       }
       is_restaurant_member: { Args: { target: string }; Returns: boolean }
       is_restaurant_owner: { Args: { target: string }; Returns: boolean }
+      is_restaurant_reader: { Args: { target: string }; Returns: boolean }
       list_team_members: {
         Args: { p_restaurant_id: string }
         Returns: {
@@ -1576,12 +2600,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1605,11 +2629,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1630,11 +2654,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1655,11 +2679,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1672,11 +2696,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

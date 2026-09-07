@@ -1,0 +1,434 @@
+ plan  
+-------
+ 1..85
+(1 row)
+
+                     is                      
+---------------------------------------------
+ ok 1 - roles: member_role devolve consultor
+(1 row)
+
+                            is                             
+-----------------------------------------------------------
+ ok 2 - roles: consultor le restaurants do seu restaurante
+(1 row)
+
+                         is                          
+-----------------------------------------------------
+ ok 3 - roles: consultor le turns do seu restaurante
+(1 row)
+
+                                is                                
+------------------------------------------------------------------
+ ok 4 - roles: consultor le restaurant_members do seu restaurante
+(1 row)
+
+                     is                      
+---------------------------------------------
+ ok 5 - roles: consultor NAO le reservations
+(1 row)
+
+                    is                     
+-------------------------------------------
+ ok 6 - roles: consultor NAO le menu_items
+(1 row)
+
+                     is                     
+--------------------------------------------
+ ok 7 - roles: consultor NAO le ingredients
+(1 row)
+
+                       is                        
+-------------------------------------------------
+ ok 8 - roles: owner continua a ler reservations
+(1 row)
+
+                    is                    
+------------------------------------------
+ ok 9 - pontos: min_c herdado do tipo (0)
+(1 row)
+
+                    is                     
+-------------------------------------------
+ ok 10 - pontos: max_c herdado do tipo (5)
+(1 row)
+
+                  throws_ok                   
+----------------------------------------------
+ ok 11 - pontos: cozinha nao cria ponto (RLS)
+(1 row)
+
+                               is                                
+-----------------------------------------------------------------
+ ok 12 - pontos: cross-tenant nao le pontos de outro restaurante
+(1 row)
+
+                        throws_ok                        
+---------------------------------------------------------
+ ok 13 - pontos: delete levanta haccp_ponto_nao_apagavel
+(1 row)
+
+                throws_ok                 
+------------------------------------------
+ ok 14 - pontos: min_c >= max_c rejeitado
+(1 row)
+
+                             throws_ok                             
+-------------------------------------------------------------------
+ ok 15 - pontos: associacao a turno de outro restaurante rejeitada
+(1 row)
+
+                              is                               
+---------------------------------------------------------------
+ ok 16 - registos: recorded_at e do servidor, ignora o cliente
+(1 row)
+
+                            is                            
+----------------------------------------------------------
+ ok 17 - registos: 5,0 em frio positivo (0..5) e conforme
+(1 row)
+
+                  is                  
+--------------------------------------
+ ok 18 - registos: 5,1 nao e conforme
+(1 row)
+
+                     isnt                     
+----------------------------------------------
+ ok 19 - registos: rectificacao valida aceite
+(1 row)
+
+                             throws_ok                              
+--------------------------------------------------------------------
+ ok 20 - registos: segunda rectificacao do mesmo original rejeitada
+(1 row)
+
+                         throws_ok                         
+-----------------------------------------------------------
+ ok 21 - registos: turno que nao corre nesse dia rejeitado
+(1 row)
+
+                 throws_ok                  
+--------------------------------------------
+ ok 22 - registos: ponto inactivo rejeitado
+(1 row)
+
+                   throws_ok                    
+------------------------------------------------
+ ok 23 - pontos de outro restaurante rejeitados
+(1 row)
+
+                   throws_ok                   
+-----------------------------------------------
+ ok 24 - registos: antes de opens_at rejeitado
+(1 row)
+
+                    throws_ok                    
+-------------------------------------------------
+ ok 25 - registos: depois de closes_at rejeitado
+(1 row)
+
+                                    is                                     
+---------------------------------------------------------------------------
+ ok 26 - registos: diferido na janela antes do cutoff aceite como deferred
+(1 row)
+
+                       throws_ok                       
+-------------------------------------------------------
+ ok 27 - registos: diferido depois do cutoff rejeitado
+(1 row)
+
+                     throws_ok                     
+---------------------------------------------------
+ ok 28 - registos: captured_at no futuro rejeitado
+(1 row)
+
+                   throws_ok                    
+------------------------------------------------
+ ok 29 - registos: consultor nao insere registo
+(1 row)
+
+                        throws_ok                        
+---------------------------------------------------------
+ ok 30 - registos: UPDATE levanta haccp_registo_imutavel
+(1 row)
+
+                        throws_ok                        
+---------------------------------------------------------
+ ok 31 - registos: DELETE levanta haccp_registo_imutavel
+(1 row)
+
+                          isnt                           
+---------------------------------------------------------
+ ok 32 - nc: NC de temperatura com reading valido criada
+(1 row)
+
+                       throws_ok                       
+-------------------------------------------------------
+ ok 33 - nc: reading_id de outro restaurante rejeitado
+(1 row)
+
+                        throws_ok                        
+---------------------------------------------------------
+ ok 34 - nc: verificacao pelo mesmo utilizador rejeitada
+(1 row)
+
+                      lives_ok                       
+-----------------------------------------------------
+ ok 35 - nc: verificacao por outro utilizador aceite
+(1 row)
+
+                       throws_ok                       
+-------------------------------------------------------
+ ok 36 - nc: segunda verificacao da mesma NC rejeitada
+(1 row)
+
+                lives_ok                 
+-----------------------------------------
+ ok 37 - nc: consultor verifica eficacia
+(1 row)
+
+             throws_ok             
+-----------------------------------
+ ok 38 - nc: consultor nao cria NC
+(1 row)
+
+                     is                     
+--------------------------------------------
+ ok 39 - nc: NC aberta ha 49 h esta overdue
+(1 row)
+
+                               throws_ok                               
+-----------------------------------------------------------------------
+ ok 40 - recepcao: fornecedor duplicado por nome normalizado rejeitado
+(1 row)
+
+                          throws_ok                           
+--------------------------------------------------------------
+ ok 41 - recepcao: temperature_applicable sem valor rejeitada
+(1 row)
+
+                          lives_ok                           
+-------------------------------------------------------------
+ ok 42 - recepcao: recusa sobre recepcao nao conforme aceite
+(1 row)
+
+                          is                           
+-------------------------------------------------------
+ ok 43 - recepcao: haccp_supplier_stats conta 1 recusa
+(1 row)
+
+                            is                            
+----------------------------------------------------------
+ ok 44 - recepcao: haccp_supplier_stats conta 2 recepcoes
+(1 row)
+
+                         throws_ok                          
+------------------------------------------------------------
+ ok 45 - recepcao: recusa sobre recepcao conforme rejeitada
+(1 row)
+
+                     throws_ok                      
+----------------------------------------------------
+ ok 46 - recepcao: delivered_on no futuro rejeitado
+(1 row)
+
+                          throws_ok                          
+-------------------------------------------------------------
+ ok 47 - recepcao: fornecedor de outro restaurante rejeitado
+(1 row)
+
+                         ok                          
+-----------------------------------------------------
+ ok 48 - recepcao: consultor le haccp_supplier_stats
+(1 row)
+
+                     throws_ok                     
+---------------------------------------------------
+ ok 49 - recepcao: consultor nao insere fornecedor
+(1 row)
+
+                           is                            
+---------------------------------------------------------
+ ok 50 - recepcao: usage 0 para restaurante sem objectos
+(1 row)
+
+                          throws_ok                           
+--------------------------------------------------------------
+ ok 51 - recepcao: usage de nao membro devolve nao_autorizado
+(1 row)
+
+                        is                         
+---------------------------------------------------
+ ok 52 - estado: Almoco/P1c por_verificar as 13:00
+(1 row)
+
+                     is                     
+--------------------------------------------
+ ok 53 - estado: Jantar/P1c futuro as 13:00
+(1 row)
+
+                          is                           
+-------------------------------------------------------
+ ok 54 - estado: P2c (so Jantar) nao aparece no Almoco
+(1 row)
+
+                      is                      
+----------------------------------------------
+ ok 55 - estado: Almoco/P1c conforme apos 4,0
+(1 row)
+
+                           is                            
+---------------------------------------------------------
+ ok 56 - estado: Almoco/P1c desvio_sem_resposta apos 7,0
+(1 row)
+
+                       is                        
+-------------------------------------------------
+ ok 57 - estado: Almoco/P1c desvio_aberto com NC
+(1 row)
+
+                             is                              
+-------------------------------------------------------------
+ ok 58 - estado: Almoco/P1c desvio_resolvido com verificacao
+(1 row)
+
+                              is                              
+--------------------------------------------------------------
+ ok 59 - estado: Jantar/P1c em_falta as 06:30 do dia seguinte
+(1 row)
+
+                              is                              
+--------------------------------------------------------------
+ ok 60 - estado: Jantar/P2c em_falta as 06:30 do dia seguinte
+(1 row)
+
+                     is                      
+---------------------------------------------
+ ok 61 - estado: period_summary expected = 3
+(1 row)
+
+                     is                      
+---------------------------------------------
+ ok 62 - estado: period_summary recorded = 1
+(1 row)
+
+                     is                     
+--------------------------------------------
+ ok 63 - estado: period_summary missing = 2
+(1 row)
+
+                        is                        
+--------------------------------------------------
+ ok 64 - estado: burst detecta 3 registos em 90 s
+(1 row)
+
+                      is                      
+----------------------------------------------
+ ok 65 - estado: burst nao detecta 2 registos
+(1 row)
+
+                    throws_ok                    
+-------------------------------------------------
+ ok 66 - estado: intervalo de 100 dias rejeitado
+(1 row)
+
+                  is                   
+---------------------------------------
+ ok 67 - retencao: default de 24 meses
+(1 row)
+
+                              is                              
+--------------------------------------------------------------
+ ok 68 - retencao: cozinha nao altera retencao (RLS bloqueia)
+(1 row)
+
+                          throws_ok                           
+--------------------------------------------------------------
+ ok 69 - retencao: purga por nao owner devolve nao_autorizado
+(1 row)
+
+                            is                            
+----------------------------------------------------------
+ ok 70 - retencao: purga apaga 1 reading fora da retencao
+(1 row)
+
+                            is                             
+-----------------------------------------------------------
+ ok 71 - retencao: purga apaga 1 recepcao fora da retencao
+(1 row)
+
+                           is                            
+---------------------------------------------------------
+ ok 72 - retencao: purga apaga 1 recusa fora da retencao
+(1 row)
+
+                                is                                 
+-------------------------------------------------------------------
+ ok 73 - retencao: purga apaga 1 nao conformidade fora da retencao
+(1 row)
+
+                              is                              
+--------------------------------------------------------------
+ ok 74 - retencao: purga apaga 1 verificacao fora da retencao
+(1 row)
+
+                             is                              
+-------------------------------------------------------------
+ ok 75 - retencao: purga apaga 1 fotografia fora da retencao
+(1 row)
+
+                           is                           
+--------------------------------------------------------
+ ok 76 - retencao: reading dentro da retencao sobrevive
+(1 row)
+
+                ok                
+----------------------------------
+ ok 77 - rls: haccp_kind_defaults
+(1 row)
+
+                ok                 
+-----------------------------------
+ ok 78 - rls: haccp_control_points
+(1 row)
+
+                   ok                   
+----------------------------------------
+ ok 79 - rls: haccp_control_point_turns
+(1 row)
+
+                   ok                    
+-----------------------------------------
+ ok 80 - rls: haccp_temperature_readings
+(1 row)
+
+           ok           
+------------------------
+ ok 81 - rls: suppliers
+(1 row)
+
+              ok               
+-------------------------------
+ ok 82 - rls: haccp_receptions
+(1 row)
+
+              ok               
+-------------------------------
+ ok 83 - rls: haccp_rejections
+(1 row)
+
+                 ok                 
+------------------------------------
+ ok 84 - rls: haccp_nonconformities
+(1 row)
+
+                 ok                  
+-------------------------------------
+ ok 85 - rls: haccp_nc_verifications
+(1 row)
+
+ finish 
+--------
+(0 rows)
+
