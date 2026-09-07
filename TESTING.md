@@ -144,3 +144,29 @@ não foram geradas: dependem do harness Puppeteer/Edge em `C:\dev\stoa-e2e-tmp` 
 login (credenciais de `env.mjs`) e de dados reais num tenant de desenvolvimento, que
 não existe (o executor não escreve em produção). Registado em Blockers da spec como
 "capturas com dados pendentes do orquestrador".
+
+## Verificação independente (auditor, 2026-09-07)
+
+Relatório item a item: `specs/sprint-02-verification.md`. Gates reproduzidos nesta
+máquina na forma simples: **typecheck ✅, test 163 ✅, build ✅**.
+
+Veredicto por item:
+
+| Item | Título | Veredicto |
+|---|---|---|
+| 1 | Role consultor, navegação e rotas | entregue (ressalva: consultor alcança páginas de escrita por URL directo; RLS protege) |
+| 2 | Hub `/haccp`: estado do turno | entregue, capturas pendentes |
+| 3 | Registar em dois toques (A2) | entregue, capturas pendentes; display de rectificação "corrigido: X → Y (nota)" parcial |
+| 4 | Fila offline com sincronização diferida | parcial (não finge conformidade ✓; faltam chip por-ponto "por sincronizar" e os dois instantes captado/recebido) |
+| 5 | Não conformidades e verificação (C1) | entregue, capturas pendentes |
+| 6 | Recepção e recusa (B1, B2) | entregue, capturas pendentes |
+| 7 | Pontos de controlo (A1) e fornecedores | entregue, capturas pendentes |
+| 8 | Definições: cartão HACCP (NG7 exacto) | entregue, capturas pendentes |
+| 9 | Gates e evidência | entregue (scope OK exceto `TESTING.md` na raiz, doc) |
+
+Verificações-chave: (b) `recorded_at`/`recorded_by` nunca enviados pelo cliente —
+**PASS**; (c) fila offline não finge conformidade — **PASS**; (d) texto NG7 exacto
+— **PASS**; (a) consultor só acede a `/haccp/*` — **PASS**, mas "nunca vê botões de
+escrita" tem ressalva (páginas `/haccp/registar` e `/haccp/recepcao` acessíveis por
+URL directo, sem link na app, protegidas pela RLS); (e) scope respeitado exceto
+`TESTING.md` (documentação na raiz, fora da lista literal do item 9).
