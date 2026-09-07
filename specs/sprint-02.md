@@ -111,6 +111,13 @@ Evidência exigida: typecheck/build; captura `specs/evidence/s02-definicoes.png`
 - [ ] Nenhuma alteração fora de: `apps/web/src/{pages,components/haccp,components/settings,hooks,lib,App.tsx,lib/roles.ts,lib/query-keys.ts,lib/types.ts}` e `specs/`. Se precisar de tocar noutro ficheiro, justificar no sumário.
 - [ ] Capturas de ecrã: o executor tenta `pnpm --filter @stoa/web build` seguido de `vite preview` com o harness de screenshots existente em `C:\dev\stoa-e2e-tmp` (ver `backoffice.mjs` como referência: puppeteer-core com Edge, login com credenciais de `env.mjs`). Se as credenciais ou o Edge não estiverem disponíveis, regista em Blockers "capturas pendentes para o orquestrador" e segue.
 
+## Estado de arranque (orquestrador, 07-09 16:35)
+
+- Migração 0029 aplicada ao remoto; `apps/web/src/integrations/supabase/database.types.ts` regenerado e commitado (inclui todas as tabelas, vistas e RPCs `haccp_*`, `suppliers`, e as colunas novas de `restaurants`). Usar `supabase.from("haccp_...")` e `supabase.rpc("haccp_...")` TIPADOS; `looseFrom`/`looseRpc` só se faltar algo (e nesse caso registar em Blockers).
+- `useMemberRole` (hooks/use-member-role.ts) degrada para `owner` qualquer role fora de `MEMBER_ROLES`; por isso o item 1 (acrescentar `"consultor"` a `MEMBER_ROLES`) é obrigatório ANTES de qualquer outra coisa, senão um consultor real veria o Dashboard como owner.
+- Contrato: `docs/specs/haccp-v1-contract.md`. Erros de RPC chegam como `error.message` com o texto exacto (ex.: `haccp_fora_da_janela`).
+- Não existe tenant de desenvolvimento separado: o executor NÃO cria dados em produção. Para capturas, usar o `vite preview` com a UI em estados vazios e, quando precisar de dados, fixtures locais via mocks nos testes; capturas com dados reais ficam para o orquestrador (registar em Blockers "capturas com dados pendentes do orquestrador").
+
 ## Decisões
 
 - 2026-09-07 (orquestrador): desvio sem NC não bloqueia a cozinha; fica coral e visível no hub, no dossiê e nos alertas. Bloquear o serviço por um formulário seria preenchido a mentir.
