@@ -155,7 +155,7 @@ export default function HaccpRegistar() {
         note,
         rectifiesId,
       });
-      // Hora do servidor (carimbo recorded_at) — o colaborador percebe que não
+      // Hora do servidor (carimbo recorded_at): o colaborador percebe que não
       // é o relógio do telemóvel.
       const { data } = await supabase
         .from("haccp_temperature_readings")
@@ -358,7 +358,7 @@ export default function HaccpRegistar() {
             </h2>
             <p className="mb-4 text-sm text-muted-foreground">
               A leitura ({formatTemp(nc.value)} °C) está fora dos limites. Registe a
-              acção correctiva ou adie — o desvio fica visível como “desvio sem resposta”.
+              acção correctiva ou adie; o desvio fica visível como “desvio sem resposta”.
             </p>
             <NonconformityForm
               defaults={{

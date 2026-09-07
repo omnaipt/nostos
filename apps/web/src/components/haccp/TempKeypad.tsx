@@ -38,7 +38,7 @@ export function TempKeypad({
         aria-live="polite"
         className="flex h-20 items-center justify-center rounded-xl border border-input bg-muted/30 text-5xl font-semibold tabular-nums"
       >
-        {text === "" ? <span className="text-muted-foreground">—</span> : text}
+        {text === "" ? <span className="text-muted-foreground">0,0</span> : text}
         <span className="ml-2 text-2xl text-muted-foreground">°C</span>
       </div>
 

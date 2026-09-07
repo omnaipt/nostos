@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 // utilizador). Depois de verificada, fica só de leitura.
 
 function dt(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "";
   return new Intl.DateTimeFormat("pt-PT", {
     day: "numeric",
     month: "short",
@@ -144,7 +144,7 @@ export default function HaccpNcDetail() {
               label="Valor medido / limite"
               value={
                 nc.measured_value || nc.limit_text
-                  ? `${nc.measured_value ?? "—"} (limite ${nc.limit_text ?? "—"})`
+                  ? `${nc.measured_value ?? "sem valor"} (limite ${nc.limit_text ?? "não definido"})`
                   : null
               }
             />

@@ -110,4 +110,21 @@ export const queryKeys = {
     ["haccp", restaurantId, "supplier-stats"] as const,
   haccpStorageUsage: (restaurantId: string | undefined) =>
     ["haccp", restaurantId, "storage-usage"] as const,
+  // Sprint 03 — dossiê, vista mensal, alertas e anti-métrica. Tudo por intervalo
+  // (from/to) entra na chave: outro período é outra pergunta.
+  haccpPeriodSummary: (restaurantId: string | undefined, from: string, to: string) =>
+    ["haccp", restaurantId, "period-summary", from, to] as const,
+  haccpExpectedReadings: (restaurantId: string | undefined, from: string, to: string) =>
+    ["haccp", restaurantId, "expected-readings", from, to] as const,
+  haccpReadingsRange: (restaurantId: string | undefined, from: string, to: string) =>
+    ["haccp", restaurantId, "readings-range", from, to] as const,
+  haccpReceptionsRange: (restaurantId: string | undefined, from: string, to: string) =>
+    ["haccp", restaurantId, "receptions-range", from, to] as const,
+  haccpNcRange: (restaurantId: string | undefined, from: string, to: string) =>
+    ["haccp", restaurantId, "nc-range", from, to] as const,
+  haccpBurst: (restaurantId: string | undefined, from: string, to: string) =>
+    ["haccp", restaurantId, "burst", from, to] as const,
+  haccpReadingsExist: (restaurantId: string | undefined) =>
+    ["haccp", restaurantId, "readings-exist"] as const,
+  haccpProfileName: (userId: string | undefined) => ["haccp", "profile-name", userId] as const,
 };

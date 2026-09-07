@@ -6,6 +6,10 @@ import { useIngredients } from "@/hooks/use-ingredients";
 import { useItemVariants, useMenuItems } from "@/hooks/use-menu";
 import { useTechSheetLines, useTechSheets } from "@/hooks/use-tech-sheets";
 import { useLastAppliedImport } from "@/hooks/use-saft";
+import { useHaccpServiceDate, useHaccpTurnStatus } from "@/hooks/use-haccp-status";
+import { useHaccpNonconformities } from "@/hooks/use-haccp-nc";
+import { useHaccpAlerts } from "@/hooks/use-haccp-alerts";
+import { HaccpAlertsBanner } from "@/components/haccp/HaccpAlertsBanner";
 import { computeMenuMargins } from "@/lib/types";
 import { computePantrySummary } from "@/lib/stock";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -70,12 +74,28 @@ export default function Dashboard() {
     [ingredientsQuery.data],
   );
   const lastAppliedQuery = useLastAppliedImport(restaurant?.id);
+
+  // HACCP (S3): estado de hoje, NC abertas e alertas para o cartão do Dashboard.
+  const haccpToday = useHaccpServiceDate(restaurant?.id).data;
+  const haccpStatusQuery = useHaccpTurnStatus(restaurant?.id, haccpToday);
+  const haccpNcQuery = useHaccpNonconformities(restaurant?.id);
+  const { alerts: haccpAlerts } = useHaccpAlerts(restaurant?.id);
+  const haccp = React.useMemo(() => {
+    const groups = haccpStatusQuery.data ?? [];
+    const recorded = groups.reduce((a, g) => a + g.verifiedCount, 0);
+    const expected = groups.reduce((a, g) => a + g.total, 0);
+    const ncOpen = (haccpNcQuery.data ?? []).filter((n) => n.nc_status === "aberta").length;
+    return { recorded, expected, ncOpen };
+  }, [haccpStatusQuery.data, haccpNcQuery.data]);
+
   return (
     <div className="container py-8">
       <header className="mb-6">
         <h1 className="font-display text-3xl text-atlantico-900">{saudacao()}</h1>
         <MareDivider className="mt-3" />
       </header>
+
+      <HaccpAlertsBanner alerts={haccpAlerts} />
       {(publicUrl || menuUrl || takeawayUrl) && (
         <div className="mb-6 space-y-1 rounded-md border border-input bg-card p-3 text-sm">
           {publicUrl && (
@@ -234,6 +254,39 @@ export default function Dashboard() {
             >
               Abrir margens
             </Link>
+          </CardContent>
+        </Card>
+        <Card className={haccp.ncOpen > 0 ? "border-destructive/50" : undefined}>
+          <CardHeader><CardTitle>HACCP</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Hoje:{" "}
+                <strong className="text-foreground">
+                  {haccp.recorded} de {haccp.expected}
+                </strong>{" "}
+                verificações
+                {haccp.ncOpen > 0 && (
+                  <>
+                    {" · "}
+                    <strong className="text-destructive">
+                      {haccp.ncOpen} NC aberta{haccp.ncOpen > 1 ? "s" : ""}
+                    </strong>
+                  </>
+                )}
+              </p>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-atlantico-700"
+                  style={{ width: `${haccp.expected > 0 ? Math.round((haccp.recorded / haccp.expected) * 100) : 0}%` }}
+                  aria-hidden="true"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Link to="/haccp" className={buttonVariants({ variant: "outline" })}>Abrir HACCP</Link>
+              <Link to="/haccp/dossie" className={buttonVariants({ variant: "outline" })}>Dossiê</Link>
+            </div>
           </CardContent>
         </Card>
         <Card className={pantry && pantry.belowMinCount > 0 ? "border-destructive/50" : undefined}>
