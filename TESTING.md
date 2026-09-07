@@ -170,3 +170,58 @@ Verificações-chave: (b) `recorded_at`/`recorded_by` nunca enviados pelo client
 escrita" tem ressalva (páginas `/haccp/registar` e `/haccp/recepcao` acessíveis por
 URL directo, sem link na app, protegidas pela RLS); (e) scope respeitado exceto
 `TESTING.md` (documentação na raiz, fora da lista literal do item 9).
+
+---
+
+# Sprint 03 — HACCP: dossiê, vista mensal, alertas, anti-métrica, semente
+
+Actualizado a 2026-09-07. Spec: `specs/sprint-03.md`.
+
+## Gates (2026-09-07, Windows, pnpm 10.6 + Turborepo)
+
+| Gate | Comando | Resultado |
+|---|---|---|
+| Typecheck | `pnpm typecheck` | ✅ `tsc --noEmit` sem erros |
+| Testes unitários | `pnpm test` | ✅ 19 ficheiros, **183 testes** verdes (eram 163; +20: `haccp-stats.test.ts` 11, `haccp-alerts.test.ts` 7, +2 em `haccp-offline-queue`) |
+| Build | `pnpm build` | ✅ `vite build` OK (aviso pré-existente de chunk >500 kB, não bloqueia) |
+
+## Semente de demonstração (item 6, aplicada pelo orquestrador)
+
+`supabase/seed/haccp_demo_lota_do_cais.sql` validada em Postgres 16 local com stub
+Supabase (corrida duas vezes: **idempotente**) e aplicada ao tenant demo em produção,
+com o mesmo resultado: **409 registos, 3 desvios, 1 diferido, 1 rectificação, 6
+recepções, 1 recusa, 3 NC, 1 verificação, 8 células em falta, 1 grupo de burst**. O
+executor/auditor não tem Postgres local nem acesso ao remoto; validou por leitura
+(idempotência, datas relativas, 2 membros, só objectos do contrato).
+
+## Capturas de ecrã (pendentes do orquestrador)
+
+`s03-dossie-ecra.png`, `s03-dossie-print.pdf` (ou PNG da pré-visualização, com pelo
+menos uma linha EM FALTA, um desvio e uma recusa), `s03-mensal.png`, `s03-dashboard.png`,
+`s03-hub-burst.png`. Dependem do harness Puppeteer/Edge com login e da semente aplicada
+ao tenant demo — fora do alcance do executor/auditor, como no Sprint 02.
+
+## Verificação independente (auditor, 2026-09-07)
+
+Relatório item a item: `specs/sprint-03-verification.md`. Gates reproduzidos nesta
+máquina na forma simples: **typecheck ✅, test 183 ✅, build ✅**.
+
+Veredicto por item:
+
+| Item | Título | Veredicto |
+|---|---|---|
+| 1 | Dossiê para inspecção `/haccp/dossie` (E1) | entregue, capturas pendentes |
+| 2 | Vista mensal por ponto de controlo (A3) | entregue, captura pendente |
+| 3 | Alertas in-app (A3 e C1) | entregue, captura pendente |
+| 4 | Anti-métrica: registos em bloco | entregue, captura pendente |
+| 5 | Ajuda de primeira utilização | entregue |
+| 6 | Semente de demonstração | validada (orquestrador + leitura) |
+| 7 | Copy sem travessão | entregue (ressalva: 1 "—" em comentário do seed SQL, fora da lista literal) |
+| 8 | Gates e evidência | entregue, capturas pendentes |
+
+Verificações-chave: (a) impressão não esconde EM FALTA e imprime-o a negrito —
+**PASS**; (b) nota de retenção + "não substitui o plano HACCP" no dossiê — **PASS**;
+(c) nenhum alerta por email/push (só in-app, `<Link>`) — **PASS**; (d) grep de "—" no
+conjunto de ficheiros do item 7 — **vazio/PASS** (ressalva: 1 ocorrência em comentário
+do seed SQL, fora da lista); (e) `git diff --name-only HEAD~1` todo dentro do scope
+HACCP — **PASS**.
