@@ -60,6 +60,11 @@ const ALLOWED: Record<MemberRole, string[]> = {
   consultor: ["/haccp"],
 };
 
+// Sub-rotas do HACCP que são inteiramente de ESCRITA (registo de temperaturas,
+// recepção de mercadoria). O consultor lê o módulo mas não escreve, por isso
+// não pode alcançá-las nem por URL directo (o resto de /haccp/* mantém-se).
+export const WRITE_ONLY_HACCP = ["/haccp/registar", "/haccp/recepcao"];
+
 export function navForRole(role: MemberRole): NavItem[] {
   const allow = new Set(ALLOWED[role]);
   return ALL_NAV.filter((n) => allow.has(n.to));
@@ -77,6 +82,15 @@ export function homeForRole(role: MemberRole): string {
 // "/" casa exacto (é o Início); o resto por prefixo de segmento, para apanhar
 // sub-rotas (ex.: /ementa/rever/:id herda de /ementa).
 export function canAccess(role: MemberRole, pathname: string): boolean {
+  // Consultor é leitura: as sub-rotas de escrita do HACCP ficam-lhe vedadas
+  // mesmo por URL directo (a RLS do servidor é a defesa real; isto evita
+  // renderizar botões de escrita que só falhariam no servidor).
+  if (
+    role === "consultor" &&
+    WRITE_ONLY_HACCP.some((p) => pathname === p || pathname.startsWith(p + "/"))
+  ) {
+    return false;
+  }
   return ALLOWED[role].some((p) =>
     p === "/" ? pathname === "/" : pathname === p || pathname.startsWith(p + "/"),
   );

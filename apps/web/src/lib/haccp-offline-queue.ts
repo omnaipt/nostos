@@ -42,6 +42,20 @@ export function markAttempt(items: HaccpQueueItem[], localId: string): HaccpQueu
   );
 }
 
+// Há um registo ainda por sincronizar para este ponto+turno? Usado pela UI para
+// mostrar o chip "por sincronizar" (âmbar tracejado) sem duplicar a leitura da
+// fila. O caller garante que só compara com o dia de serviço actual (os itens
+// da fila são captados no presente).
+export function hasPendingSync(
+  items: HaccpQueueItem[],
+  controlPointId: string,
+  turnId: string,
+): boolean {
+  return items.some(
+    (it) => it.controlPointId === controlPointId && it.turnId === turnId,
+  );
+}
+
 // ── Persistência (localStorage) ─────────────────────────────────────────────
 
 export function loadQueue(): HaccpQueueItem[] {

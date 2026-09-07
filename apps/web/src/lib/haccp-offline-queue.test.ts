@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   enqueue,
+  hasPendingSync,
   markAttempt,
   peek,
   remove,
@@ -57,5 +58,13 @@ describe("fila offline HACCP (reducer puro)", () => {
     const original = enqueue([], item("a"));
     enqueue(original, item("b"));
     expect(original).toHaveLength(1);
+  });
+
+  it("hasPendingSync casa por ponto+turno", () => {
+    const q = enqueue([], item("a", { controlPointId: "cp1", turnId: "t1" }));
+    expect(hasPendingSync(q, "cp1", "t1")).toBe(true);
+    expect(hasPendingSync(q, "cp1", "t2")).toBe(false);
+    expect(hasPendingSync(q, "cp2", "t1")).toBe(false);
+    expect(hasPendingSync([], "cp1", "t1")).toBe(false);
   });
 });

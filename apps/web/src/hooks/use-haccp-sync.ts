@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { recordTemperature } from "@/hooks/use-haccp-record";
 import {
   enqueue,
+  hasPendingSync,
   loadQueue,
   makeQueueItem,
   markAttempt,
@@ -38,6 +39,8 @@ export interface HaccpSyncState {
   pendingCount: number;
   trying: boolean; // algum item já passou das 20 tentativas
   enqueueLocal: (input: Omit<HaccpQueueItem, "localId" | "attempts">) => void;
+  // Há um registo na fila para este ponto+turno (chip "por sincronizar")?
+  isPendingSync: (controlPointId: string, turnId: string) => boolean;
   flush: () => void;
 }
 
@@ -124,5 +127,10 @@ export function useHaccpSync(
   }, [flush]);
 
   const trying = queue.some((q) => q.attempts >= MAX_ATTEMPTS_BANNER);
-  return { pendingCount: queue.length, trying, enqueueLocal, flush };
+  const isPendingSync = React.useCallback(
+    (controlPointId: string, turnId: string) =>
+      hasPendingSync(queue, controlPointId, turnId),
+    [queue],
+  );
+  return { pendingCount: queue.length, trying, enqueueLocal, isPendingSync, flush };
 }

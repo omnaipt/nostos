@@ -16,7 +16,7 @@ import {
 import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import { useHaccpServiceDate, useHaccpTurnStatus } from "@/hooks/use-haccp-status";
 import { useHaccpControlPoints } from "@/hooks/use-haccp-points";
-import { useRecordTemperature } from "@/hooks/use-haccp-record";
+import { useHaccpTurnReadings, useRecordTemperature } from "@/hooks/use-haccp-record";
 import { useCreateNonconformity } from "@/hooks/use-haccp-nc";
 import { useHaccpSync } from "@/hooks/use-haccp-sync";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +44,10 @@ function limitText(cp: HaccpControlPoint | undefined): string | null {
 function fmt(n: number): string {
   return String(n).replace(".", ",");
 }
+// Sempre com 1 casa decimal ("4,0"), para as etiquetas de rectificação (spec).
+function fmt1(n: number): string {
+  return n.toFixed(1).replace(".", ",");
+}
 
 function isNetwork(err: unknown): boolean {
   if (typeof navigator !== "undefined" && navigator.onLine === false) return true;
@@ -67,12 +71,30 @@ export default function HaccpRegistar() {
   const serviceDate = serviceDateQuery.data;
   const statusQuery = useHaccpTurnStatus(restaurantId, serviceDate);
   const pointsQuery = useHaccpControlPoints(restaurantId);
+  const readingsQuery = useHaccpTurnReadings(restaurantId, turnId, serviceDate);
   const record = useRecordTemperature(restaurantId);
   const createNc = useCreateNonconformity(restaurantId);
 
   const cpById = React.useMemo(
     () => new Map((pointsQuery.data ?? []).map((p) => [p.id, p as HaccpControlPoint])),
     [pointsQuery.data],
+  );
+  // Registos brutos indexados por id, para as etiquetas de diferido (dois
+  // instantes) e de rectificação (valor original), que a RPC de estado não dá.
+  const readingsById = React.useMemo(
+    () => new Map((readingsQuery.data ?? []).map((r) => [r.id, r])),
+    [readingsQuery.data],
+  );
+  const fmtClock = React.useCallback(
+    (iso: string | null | undefined) =>
+      iso
+        ? new Intl.DateTimeFormat("pt-PT", {
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: timezone,
+          }).format(new Date(iso))
+        : "",
+    [timezone],
   );
   const nameByPoint = React.useMemo(() => {
     const m = new Map<string, string>();
@@ -239,6 +261,10 @@ export default function HaccpRegistar() {
         {points.map((p) => {
           const done = p.status !== "por_verificar";
           const highlight = p.control_point_id === firstPending;
+          const pendingSync = !!turnId && sync.isPendingSync(p.control_point_id, turnId);
+          const reading = p.reading_id ? readingsById.get(p.reading_id) : undefined;
+          const original =
+            reading?.rectifies_id != null ? readingsById.get(reading.rectifies_id) : undefined;
           return (
             <div
               key={p.control_point_id}
@@ -253,10 +279,25 @@ export default function HaccpRegistar() {
                   <p className="text-xs text-muted-foreground">
                     {limitText(cpById.get(p.control_point_id)) ?? ""}
                     {p.value_c != null && <> · leitura: {formatTemp(p.value_c)} °C</>}
-                    {p.sync_mode === "deferred" && <> · sincronizado em diferido</>}
+                    {p.sync_mode === "deferred" &&
+                      (reading?.captured_at ? (
+                        <>
+                          {" "}
+                          · sincronizado em diferido: captado às {fmtClock(reading.captured_at)},
+                          recebido às {fmtClock(reading.recorded_at)}
+                        </>
+                      ) : (
+                        <> · sincronizado em diferido</>
+                      ))}
                   </p>
+                  {original && reading && (
+                    <p className="text-xs text-muted-foreground">
+                      corrigido: {fmt1(original.value_c)} → {fmt1(reading.value_c)}
+                      {reading.note ? ` (${reading.note})` : ""}
+                    </p>
+                  )}
                 </div>
-                <HaccpChip status={p.status} />
+                <HaccpChip status={p.status} pendingSync={pendingSync} />
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {!done ? (

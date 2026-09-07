@@ -48,6 +48,14 @@ describe("canAccess", () => {
     expect(canAccess("consultor", "/haccpxpto")).toBe(false);
   });
 
+  it("consultor não alcança as sub-rotas de escrita do HACCP nem por URL", () => {
+    expect(canAccess("consultor", "/haccp/registar/x")).toBe(false);
+    expect(canAccess("consultor", "/haccp/recepcao")).toBe(false);
+    // ... mas a cozinha (escrita) acede a essas mesmas rotas.
+    expect(canAccess("cozinha", "/haccp/registar/x")).toBe(true);
+    expect(canAccess("cozinha", "/haccp/recepcao")).toBe(true);
+  });
+
   it("sub-rotas herdam do prefixo; '/' casa exacto", () => {
     expect(canAccess("cozinha", "/ementa/rever/abc")).toBe(true);
     expect(canAccess("owner", "/ementa/rever/abc")).toBe(true);

@@ -69,6 +69,9 @@ export default function Haccp() {
   const sync = useHaccpSync(restaurantId, (id) => nameByPoint.get(id));
 
   const groups = statusQuery.data ?? [];
+  // Chips "por sincronizar" só fazem sentido no dia de serviço actual: os itens
+  // da fila offline são captados no presente.
+  const isToday = !!viewDate && viewDate === today;
   const noControlPoints = (pointsQuery.data ?? []).length === 0 && !pointsQuery.isLoading;
   const loading = serviceDateQuery.isLoading || statusQuery.isLoading || pointsQuery.isLoading;
 
@@ -152,6 +155,7 @@ export default function Haccp() {
             group={g}
             timezone={timezone}
             showButton={!isConsultor}
+            isPending={(cpId) => isToday && sync.isPendingSync(cpId, g.turnId)}
           />
         ))}
       </div>
@@ -163,10 +167,12 @@ function TurnCard({
   group: g,
   timezone,
   showButton,
+  isPending,
 }: {
   group: HaccpTurnGroup;
   timezone: string | undefined;
   showButton: boolean;
+  isPending: (controlPointId: string) => boolean;
 }) {
   return (
     <Card>
@@ -185,7 +191,7 @@ function TurnCard({
               className="flex items-center justify-between gap-2 py-2"
             >
               <span className="min-w-0 truncate text-sm">{p.control_point_name}</span>
-              <HaccpChip status={p.status} />
+              <HaccpChip status={p.status} pendingSync={isPending(p.control_point_id)} />
             </li>
           ))}
         </ul>

@@ -87,6 +87,15 @@ export const queryKeys = {
     ["haccp", restaurantId, "service-date"] as const,
   haccpTurnStatus: (restaurantId: string | undefined, serviceDate: string) =>
     ["haccp", restaurantId, "turn-status", serviceDate] as const,
+  // Registos brutos de um turno/dia (item 4): a RPC de estado não devolve
+  // captured_at nem o valor rectificado, por isso a página de registo lê a
+  // tabela directamente (RLS SELECT para readers) para as etiquetas de diferido
+  // e de correcção.
+  haccpTurnReadings: (
+    restaurantId: string | undefined,
+    turnId: string | undefined,
+    serviceDate: string | undefined,
+  ) => ["haccp", restaurantId, "turn-readings", turnId ?? "", serviceDate ?? ""] as const,
   haccpNonconformities: (restaurantId: string | undefined) =>
     ["haccp", restaurantId, "nonconformities"] as const,
   haccpNonconformity: (id: string | undefined) => ["haccp", "nc", id] as const,

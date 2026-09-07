@@ -52,7 +52,17 @@ export function HaccpLayout({ children }: { children: React.ReactNode }) {
 }
 
 // Chip de estado por célula (dia, turno, ponto). Cores por tom Costeiro.
-export function HaccpChip({ status }: { status: string }) {
+// `pendingSync` tem precedência: um registo ainda na fila offline mostra-se
+// "por sincronizar" (âmbar tracejado) em vez do estado do servidor, sem fingir
+// que já está conforme/verificado.
+export function HaccpChip({ status, pendingSync }: { status: string; pendingSync?: boolean }) {
+  if (pendingSync) {
+    return (
+      <span className="inline-flex items-center rounded-full border border-dashed border-ambar-600 px-2.5 py-0.5 text-xs font-medium text-ambar-600">
+        por sincronizar
+      </span>
+    );
+  }
   const meta = statusMeta(status);
   return (
     <span

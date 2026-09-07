@@ -157,3 +157,35 @@ Evidência exigida: typecheck/build; captura `specs/evidence/s02-definicoes.png`
 - Detalhe da verificação de NC: o nome de "quem verificou" fica limitado pela RLS
   (`profiles` é self-only), por isso mostra-se "por si" / "por outro membro" + a
   data; a alternativa (RPC que exponha nomes) é do backend, fora de scope.
+
+## Correcções pós-auditoria (executor, 2026-09-07)
+
+Fecho dos quatro pontos assinalados pela verificação independente
+(`specs/sprint-02-verification.md`). Gates verdes na forma simples: `pnpm
+typecheck` ✅, `pnpm test` ✅ **165 testes** (163 → +1 caso em `roles.test.ts`,
++1 em `haccp-offline-queue.test.ts`), `pnpm build` ✅.
+
+- **Item 1 / ressalva (a)** — `lib/roles.ts` ganha `WRITE_ONLY_HACCP =
+  ["/haccp/registar", "/haccp/recepcao"]`; `canAccess("consultor", path)` devolve
+  falso para esses prefixos (o resto de `/haccp/*` mantém-se em leitura). O
+  `RoleGate` já usa `canAccess`, por isso o consultor passa a ser redirigido
+  mesmo por URL directo. +2 casos em `roles.test.ts` (consultor em
+  `/haccp/registar/x` e `/haccp/recepcao` → false; cozinha nos mesmos → true).
+- **Item 4 / chip "por sincronizar"** — função pura
+  `hasPendingSync(items, controlPointId, turnId)` em
+  `lib/haccp-offline-queue.ts` (com teste); exposta como `isPendingSync` em
+  `useHaccpSync`. `HaccpChip` ganha o variante âmbar tracejado "por sincronizar",
+  com precedência sobre o estado do servidor. Renderizado na lista de
+  `/haccp/registar/:turnId` e nos chips do hub (só no dia de serviço actual — os
+  itens da fila são captados no presente).
+- **Item 4 / dois instantes no diferido** e **Item 3 / display de rectificação** —
+  novo hook `useHaccpTurnReadings(restaurantId, turnId, serviceDate)` em
+  `hooks/use-haccp-record.ts` (queryKey em `lib/query-keys.ts`) que lê
+  `haccp_temperature_readings` (RLS SELECT para readers). Na página de registo:
+  (a) `sync_mode = 'deferred'` mostra "sincronizado em diferido: captado às HH:MM,
+  recebido às HH:MM" (ambos no fuso do restaurante); (b) um registo com
+  `rectifies_id` mostra "corrigido: `<original>` → `<novo>` (`<nota>`)" com 1
+  casa decimal. A invalidação já era coberta pelo prefixo `["haccp", restaurantId]`
+  no `onSuccess` de `useRecordTemperature` (abrange o hook novo e
+  `haccp_turn_status`). "Corrigir leitura" mantém a nota obrigatória (≥ 5
+  caracteres).
