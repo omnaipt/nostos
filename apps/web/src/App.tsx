@@ -26,6 +26,13 @@ import Entradas from "@/pages/Entradas";
 import Inventario from "@/pages/Inventario";
 import SaftClose from "@/pages/SaftClose";
 import KitchenSheet from "@/pages/KitchenSheet";
+import Haccp from "@/pages/Haccp";
+import HaccpRegistar from "@/pages/HaccpRegistar";
+import HaccpRecepcao from "@/pages/HaccpRecepcao";
+import HaccpNc from "@/pages/HaccpNc";
+import HaccpNcDetail from "@/pages/HaccpNcDetail";
+import HaccpPontos from "@/pages/HaccpPontos";
+import HaccpFornecedores from "@/pages/HaccpFornecedores";
 import PublicBooking from "@/pages/PublicBooking";
 import PublicMenu from "@/pages/PublicMenu";
 import PublicTakeaway from "@/pages/PublicTakeaway";
@@ -105,6 +112,14 @@ export default function App() {
             <Route path="/entradas" element={<Backoffice><Entradas /></Backoffice>} />
             <Route path="/inventario" element={<Backoffice><Inventario /></Backoffice>} />
             <Route path="/fecho-dia" element={<Backoffice><SaftClose /></Backoffice>} />
+            {/* HACCP (sprint 02) */}
+            <Route path="/haccp" element={<Backoffice><Haccp /></Backoffice>} />
+            <Route path="/haccp/registar/:turnId" element={<Backoffice><HaccpRegistar /></Backoffice>} />
+            <Route path="/haccp/recepcao" element={<Backoffice><HaccpRecepcao /></Backoffice>} />
+            <Route path="/haccp/nc" element={<Backoffice><HaccpNc /></Backoffice>} />
+            <Route path="/haccp/nc/:id" element={<Backoffice><HaccpNcDetail /></Backoffice>} />
+            <Route path="/haccp/pontos" element={<Backoffice><HaccpPontos /></Backoffice>} />
+            <Route path="/haccp/fornecedores" element={<Backoffice><HaccpFornecedores /></Backoffice>} />
             <Route
               path="/fichas/:menuItemId/imprimir"
               element={

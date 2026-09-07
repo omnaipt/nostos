@@ -29,6 +29,33 @@ describe("canAccess", () => {
     expect(canAccess("cozinha", "/balcao")).toBe(false);
   });
 
+  it("cozinha e balcão acedem ao HACCP e às suas sub-rotas", () => {
+    expect(canAccess("cozinha", "/haccp")).toBe(true);
+    expect(canAccess("cozinha", "/haccp/registar/x")).toBe(true);
+    expect(canAccess("balcao", "/haccp")).toBe(true);
+    expect(canAccess("balcao", "/haccp/recepcao")).toBe(true);
+  });
+
+  it("consultor só acede a /haccp e suas sub-rotas, mais nada", () => {
+    expect(canAccess("consultor", "/haccp")).toBe(true);
+    expect(canAccess("consultor", "/haccp/nc/abc")).toBe(true);
+    expect(canAccess("consultor", "/haccp/pontos")).toBe(true);
+    expect(canAccess("consultor", "/")).toBe(false);
+    expect(canAccess("consultor", "/balcao")).toBe(false);
+    expect(canAccess("consultor", "/despensa")).toBe(false);
+    expect(canAccess("consultor", "/definicoes")).toBe(false);
+    // '/haccp' não casa por prefixo cru: uma rota irmã não pertence ao consultor.
+    expect(canAccess("consultor", "/haccpxpto")).toBe(false);
+  });
+
+  it("consultor não alcança as sub-rotas de escrita do HACCP nem por URL", () => {
+    expect(canAccess("consultor", "/haccp/registar/x")).toBe(false);
+    expect(canAccess("consultor", "/haccp/recepcao")).toBe(false);
+    // ... mas a cozinha (escrita) acede a essas mesmas rotas.
+    expect(canAccess("cozinha", "/haccp/registar/x")).toBe(true);
+    expect(canAccess("cozinha", "/haccp/recepcao")).toBe(true);
+  });
+
   it("sub-rotas herdam do prefixo; '/' casa exacto", () => {
     expect(canAccess("cozinha", "/ementa/rever/abc")).toBe(true);
     expect(canAccess("owner", "/ementa/rever/abc")).toBe(true);
@@ -44,11 +71,14 @@ describe("homeForRole", () => {
     expect(homeForRole("owner")).toBe("/");
     expect(homeForRole("gestor")).toBe("/");
   });
+  it("consultor abre no HACCP", () => {
+    expect(homeForRole("consultor")).toBe("/haccp");
+  });
 });
 
 describe("navForRole", () => {
-  it("balcão só tem Balcão e Clientes, por esta ordem", () => {
-    expect(navForRole("balcao").map((n) => n.to)).toEqual(["/balcao", "/clientes"]);
+  it("balcão tem Balcão, HACCP e Clientes, pela ordem do ALL_NAV", () => {
+    expect(navForRole("balcao").map((n) => n.to)).toEqual(["/balcao", "/haccp", "/clientes"]);
   });
   it("cozinha não vê Definições nem Reservas", () => {
     const tos = navForRole("cozinha").map((n) => n.to);
@@ -61,5 +91,9 @@ describe("navForRole", () => {
     expect(tos).toContain("/");
     expect(tos).toContain("/balcao");
     expect(tos).toContain("/definicoes");
+    expect(tos).toContain("/haccp");
+  });
+  it("consultor só vê o HACCP na navegação", () => {
+    expect(navForRole("consultor").map((n) => n.to)).toEqual(["/haccp"]);
   });
 });

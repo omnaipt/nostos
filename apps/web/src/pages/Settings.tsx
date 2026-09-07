@@ -10,6 +10,7 @@ import { PantryManager } from "@/components/menu/PantryManager";
 import { CasaLogo } from "@/components/CasaLogo";
 import { EquipaCard } from "@/components/settings/EquipaCard";
 import { TakeawayCard } from "@/components/settings/TakeawayCard";
+import { HaccpCard } from "@/components/settings/HaccpCard";
 import { useRole } from "@/contexts/RoleContext";
 import { useActiveRestaurant, useUpdateRestaurant } from "@/hooks/use-active-restaurant";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,13 +37,14 @@ function tablesToRows(
 // impraticável, porque o catálogo da despensa tem dezenas de linhas e empurrava
 // a margem alvo e o take-away para fora do ecrã. A secção activa vai no URL
 // (?sec=) para poder ser partilhada e sobreviver ao refresh.
-type SectionId = "casa" | "servico" | "despensa" | "equipa";
+type SectionId = "casa" | "servico" | "despensa" | "equipa" | "haccp";
 
 const SECTION_LABEL: Record<SectionId, string> = {
   casa: "A casa",
   servico: "Serviço",
   despensa: "Despensa",
   equipa: "Equipa",
+  haccp: "HACCP",
 };
 
 const SECTION_HINT: Record<SectionId, string> = {
@@ -50,10 +52,13 @@ const SECTION_HINT: Record<SectionId, string> = {
   servico: "Mesas, turnos e encomendas para levar.",
   despensa: "Margem alvo e catálogo de ingredientes com custos.",
   equipa: "Quem tem acesso e com que perfil.",
+  haccp: "Retenção, quota de fotografias e purga de registos.",
 };
 
 function isSectionId(v: string | null): v is SectionId {
-  return v === "casa" || v === "servico" || v === "despensa" || v === "equipa";
+  return (
+    v === "casa" || v === "servico" || v === "despensa" || v === "equipa" || v === "haccp"
+  );
 }
 
 function SectionNav({
@@ -101,8 +106,8 @@ export default function Settings() {
   // O gestor não vê "A casa" nem "Equipa", por isso a secção por omissão dele é
   // "Serviço"; se chegar por link a uma secção que não lhe pertence, cai lá.
   const sections: SectionId[] = isOwner
-    ? ["casa", "servico", "despensa", "equipa"]
-    : ["servico", "despensa"];
+    ? ["casa", "servico", "despensa", "equipa", "haccp"]
+    : ["servico", "despensa", "haccp"];
   const [searchParams, setSearchParams] = useSearchParams();
   const fromUrl = searchParams.get("sec");
   const section: SectionId =
@@ -334,6 +339,10 @@ export default function Settings() {
                 </CardContent>
               </Card>
             </>
+          )}
+
+          {section === "haccp" && restaurant && (
+            <HaccpCard restaurant={restaurant} isOwner={isOwner} />
           )}
         </div>
       )}

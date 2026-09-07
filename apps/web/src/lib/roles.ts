@@ -5,14 +5,15 @@
 // risco aceitável no v1. A RLS endurece só o crítico (identidade/equipa),
 // isso é do Marco (fase A). Contrato congelado: os slugs abaixo.
 
-export type MemberRole = "owner" | "gestor" | "balcao" | "cozinha";
-export const MEMBER_ROLES: MemberRole[] = ["owner", "gestor", "balcao", "cozinha"];
+export type MemberRole = "owner" | "gestor" | "balcao" | "cozinha" | "consultor";
+export const MEMBER_ROLES: MemberRole[] = ["owner", "gestor", "balcao", "cozinha", "consultor"];
 
 export const ROLE_LABEL: Record<MemberRole, string> = {
   owner: "Dono",
   gestor: "Gestor",
   balcao: "Balcão",
   cozinha: "Cozinha",
+  consultor: "Consultor",
 };
 
 export const ROLE_HINT: Record<MemberRole, string> = {
@@ -20,6 +21,8 @@ export const ROLE_HINT: Record<MemberRole, string> = {
   gestor: "Tudo operacional; não gere equipa nem identidade.",
   balcao: "Reservas de todos os canais, clientes e take-away.",
   cozinha: "Fichas técnicas, despensa, entradas e inventário.",
+  consultor:
+    "Só o módulo HACCP, em leitura, mais a verificação de eficácia de não conformidades.",
 };
 
 export interface NavItem {
@@ -39,6 +42,7 @@ const ALL_NAV: NavItem[] = [
   { to: "/despensa", label: "Despensa" },
   { to: "/entradas", label: "Entradas" },
   { to: "/inventario", label: "Inventário" },
+  { to: "/haccp", label: "HACCP" },
   { to: "/fecho-dia", label: "Fecho do dia" },
   { to: "/clientes", label: "Clientes" },
   { to: "/definicoes", label: "Definições" },
@@ -50,9 +54,16 @@ const ALL_NAV: NavItem[] = [
 const ALLOWED: Record<MemberRole, string[]> = {
   owner: ALL_NAV.map((n) => n.to),
   gestor: ALL_NAV.map((n) => n.to),
-  balcao: ["/balcao", "/clientes"],
-  cozinha: ["/ementa", "/despensa", "/entradas", "/inventario"],
+  balcao: ["/balcao", "/clientes", "/haccp"],
+  cozinha: ["/ementa", "/despensa", "/entradas", "/inventario", "/haccp"],
+  // Consultor: leitura externa do HACCP e nada mais (contrato §1).
+  consultor: ["/haccp"],
 };
+
+// Sub-rotas do HACCP que são inteiramente de ESCRITA (registo de temperaturas,
+// recepção de mercadoria). O consultor lê o módulo mas não escreve, por isso
+// não pode alcançá-las nem por URL directo (o resto de /haccp/* mantém-se).
+export const WRITE_ONLY_HACCP = ["/haccp/registar", "/haccp/recepcao"];
 
 export function navForRole(role: MemberRole): NavItem[] {
   const allow = new Set(ALLOWED[role]);
@@ -64,12 +75,22 @@ export function navForRole(role: MemberRole): NavItem[] {
 export function homeForRole(role: MemberRole): string {
   if (role === "balcao") return "/balcao";
   if (role === "cozinha") return "/ementa";
+  if (role === "consultor") return "/haccp";
   return "/";
 }
 
 // "/" casa exacto (é o Início); o resto por prefixo de segmento, para apanhar
 // sub-rotas (ex.: /ementa/rever/:id herda de /ementa).
 export function canAccess(role: MemberRole, pathname: string): boolean {
+  // Consultor é leitura: as sub-rotas de escrita do HACCP ficam-lhe vedadas
+  // mesmo por URL directo (a RLS do servidor é a defesa real; isto evita
+  // renderizar botões de escrita que só falhariam no servidor).
+  if (
+    role === "consultor" &&
+    WRITE_ONLY_HACCP.some((p) => pathname === p || pathname.startsWith(p + "/"))
+  ) {
+    return false;
+  }
   return ALLOWED[role].some((p) =>
     p === "/" ? pathname === "/" : pathname === p || pathname.startsWith(p + "/"),
   );

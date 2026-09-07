@@ -80,4 +80,34 @@ export const queryKeys = {
     restaurantId: string | undefined,
     f: { from: string; to: string; turnIds: string[] | null; weekdays: number[] | null },
   ) => ["stats", restaurantId, "by-item", f.from, f.to, f.turnIds, f.weekdays] as const,
+  // HACCP (0029). haccpRoot invalida estado do turno, NC, recepções, pontos,
+  // fornecedores e uso de storage numa só chamada após uma escrita.
+  haccpRoot: ["haccp"] as const,
+  haccpServiceDate: (restaurantId: string | undefined) =>
+    ["haccp", restaurantId, "service-date"] as const,
+  haccpTurnStatus: (restaurantId: string | undefined, serviceDate: string) =>
+    ["haccp", restaurantId, "turn-status", serviceDate] as const,
+  // Registos brutos de um turno/dia (item 4): a RPC de estado não devolve
+  // captured_at nem o valor rectificado, por isso a página de registo lê a
+  // tabela directamente (RLS SELECT para readers) para as etiquetas de diferido
+  // e de correcção.
+  haccpTurnReadings: (
+    restaurantId: string | undefined,
+    turnId: string | undefined,
+    serviceDate: string | undefined,
+  ) => ["haccp", restaurantId, "turn-readings", turnId ?? "", serviceDate ?? ""] as const,
+  haccpNonconformities: (restaurantId: string | undefined) =>
+    ["haccp", restaurantId, "nonconformities"] as const,
+  haccpNonconformity: (id: string | undefined) => ["haccp", "nc", id] as const,
+  haccpReceptions: (restaurantId: string | undefined) =>
+    ["haccp", restaurantId, "receptions"] as const,
+  haccpControlPoints: (restaurantId: string | undefined) =>
+    ["haccp", restaurantId, "control-points"] as const,
+  haccpKindDefaults: ["haccp", "kind-defaults"] as const,
+  haccpSuppliers: (restaurantId: string | undefined) =>
+    ["haccp", restaurantId, "suppliers"] as const,
+  haccpSupplierStats: (restaurantId: string | undefined) =>
+    ["haccp", restaurantId, "supplier-stats"] as const,
+  haccpStorageUsage: (restaurantId: string | undefined) =>
+    ["haccp", restaurantId, "storage-usage"] as const,
 };

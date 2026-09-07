@@ -60,13 +60,19 @@ Evidência exigida: typecheck/build.
 
 ### 6. Semente de demonstração para a Lota do Cais
 
-- [ ] Ficheiro `supabase/seed/haccp_demo_lota_do_cais.sql`, idempotente (apaga antes os registos HACCP desse tenant e reinsere), com datas RELATIVAS a `current_date`, executado como `postgres`/service role com `set_config('haccp.seed','on',true)`: 4 pontos de controlo (Frigorífico peixe frio positivo, Arca congeladora congelação, Banho-maria quente, Expositor de sobremesas expositor), 2 fornecedores (Lota de Cascais, Hortas do Saloio), 45 dias de registos nos turnos existentes do tenant (Almoço e Jantar diários; ler os `turn_id` reais por label, não hardcodar), com valores plausíveis com variabilidade (±0,8 °C), 3 desvios (um com NC verificada, um com NC aberta há 60 h, um sem resposta), 6 recepções (uma recusada por temperatura insuficiente, com NC), 2 dias com um turno em falta, 1 registo diferido, 1 rectificação. Nenhum registo no dia actual (para a demo começar limpa no turno em curso).
+- [ ] Ficheiro `supabase/seed/haccp_demo_lota_do_cais.sql`, idempotente (apaga antes os registos HACCP desse tenant e reinsere), com datas RELATIVAS a `current_date`, executado como `postgres`/service role com `set_config('haccp.seed','on',true)`: 4 pontos de controlo (Frigorífico peixe frio positivo, Arca congeladora congelação, Banho-maria quente, Expositor de sobremesas expositor), 2 fornecedores (Lota de Cascais, Hortas do Saloio), 45 dias de registos nos turnos existentes do tenant (slug `lota-do-cais-demo`, fuso Europe/Lisbon; turnos reais verificados a 07-09: "Almoço" 12:30 todos os dias, "Jantar" 19:30 todos os dias, "2º turno jantar" 21:30 só sexta e sábado; ler os `turn_id` reais por `restaurant_id` + `label`, não hardcodar; nas sextas e sábados o Jantar fecha às 21:30 e o 2º turno também tem registos), com valores plausíveis com variabilidade (±0,8 °C), 3 desvios (um com NC verificada, um com NC aberta há 60 h, um sem resposta), 6 recepções (uma recusada por temperatura insuficiente, com NC), 2 dias com um turno em falta, 1 registo diferido, 1 rectificação. Nenhum registo no dia actual (para a demo começar limpa no turno em curso). Utilizadores: o tenant tem 2 membros (um `owner` e um `balcao`); a semente lê os `user_id` de `restaurant_members` desse restaurante ordenados por `created_at` e usa o owner como `recorded_by` da maioria dos registos e das NC, e o segundo membro como `verified_by` das verificações (a regra "verificador diferente de quem registou" é validada pelo gatilho mesmo em modo semente). Se só existir 1 membro, a semente aborta com mensagem clara em vez de violar a regra.
 - [ ] O ficheiro NÃO é executado pelo executor (o executor não tem acesso ao remoto); o orquestrador aplica-o ao tenant demo e regista o resultado em `TESTING.md`. O executor valida a sintaxe e a idempotência contra o Postgres local se tiver um; senão, regista em Blockers "validação da semente pendente do orquestrador".
 - [ ] `README.md` do repo ganha uma secção curta "HACCP: semente de demonstração" com o comando de aplicação.
 
 Evidência exigida: ficheiro existe, é idempotente por leitura e usa só objectos do contrato.
 
-### 7. Gates e evidência
+### 7. Copy sem travessão
+
+- [ ] Em todos os ficheiros do módulo HACCP (`pages/Haccp*.tsx`, `components/haccp/*`, `components/settings/HaccpCard.tsx`, `lib/haccp*.ts`, `hooks/use-haccp*.ts`) substituir o travessão "—" (U+2014) e o meia-risca " – " usados como pontuação por vírgula, dois pontos ou ponto final, conforme a frase (ex.: "Registe a acção correctiva ou adie — o desvio fica visível" → "Registe a acção correctiva ou adie; o desvio fica visível"). Não tocar em código fora do HACCP. Confirmar com grep que não resta nenhum "—" nesses ficheiros.
+
+Evidência exigida: grep vazio + typecheck.
+
+### 8. Gates e evidência
 
 - [ ] `pnpm typecheck`, `pnpm test`, `pnpm build` verdes; contagem de testes no sumário.
 - [ ] Capturas de ecrã como no Sprint 02, item 9.

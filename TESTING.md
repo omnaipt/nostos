@@ -97,3 +97,76 @@ configurada (nota, não regressão). Um único desvio documentado e justificado
 (`haccp_now()` sem revoke de public). Nada em `apps/web` foi alterado, como exigido
 pelo scope. Pendente: aplicação da migração ao ambiente Supabase e a bateria de
 testes manuais acima, que requerem Postgres real e não foram executáveis nesta máquina.
+
+---
+
+# Sprint 02 — HACCP v1 (UI)
+
+Actualizado a 2026-09-07. Spec: `specs/sprint-02.md`.
+
+## Gates (2026-09-07, Windows, pnpm 10.6 + Turborepo)
+
+| Gate | Comando | Resultado |
+|---|---|---|
+| Typecheck | `pnpm typecheck` | ✅ `tsc --noEmit` sem erros |
+| Testes unitários | `pnpm test` | ✅ 17 ficheiros, **163 testes** verdes (eram 135; +24 em 3 ficheiros HACCP novos, +4 casos em `roles.test.ts`) |
+| Build | `pnpm build` | ✅ `vite build` OK (aviso pré-existente de chunk >500 kB, não bloqueia) |
+| Lint | `pnpm lint` | ⚠️ 0 tarefas — `@stoa/web` continua sem script `lint` (não é regressão) |
+
+Ficheiros de teste novos: `haccp-keypad.test.ts` (10), `haccp-offline-queue.test.ts`
+(7), `haccp-photo.test.ts` (7).
+
+## Teste manual da fila offline (item 4, modo avião)
+
+Só validável num telemóvel real com rede a falhar. Passos:
+
+1. Autenticar como `cozinha`, abrir `/haccp` e um turno com janela aberta em
+   `/haccp/registar/:turnId`.
+2. Activar modo avião no telemóvel (`navigator.onLine === false`).
+3. Registar uma temperatura: o ponto fica com o registo em fila (toast "Sem rede:
+   registo em fila para sincronizar") e o banner do hub mostra "1 registo por
+   sincronizar". Confirmar que o ponto NÃO aparece como conforme.
+4. Desactivar o modo avião: no evento `online` a fila esvazia por ordem; o registo
+   é aceite com `sync_mode='deferred'` e o banner desaparece.
+5. Caso limite (cutoff): manter offline até depois das 06:00 do dia seguinte e só
+   então voltar a ter rede → o servidor devolve `haccp_fora_da_janela`; a UI
+   descarta o item da fila e mostra toast persistente "1 registo de &lt;ponto&gt;
+   não foi aceite: a janela fechou antes de sincronizar. Fica em falta."
+
+A lógica pura da fila (FIFO, remove idempotente, markAttempt) está coberta por
+`haccp-offline-queue.test.ts`; o passo manual valida a integração com o evento
+`online` e o servidor.
+
+## Capturas de ecrã (pendentes do orquestrador)
+
+As capturas 390 px pedidas nos itens 2, 3, 5, 6, 7 e 8 (`specs/evidence/s02-*.png`)
+não foram geradas: dependem do harness Puppeteer/Edge em `C:\dev\stoa-e2e-tmp` com
+login (credenciais de `env.mjs`) e de dados reais num tenant de desenvolvimento, que
+não existe (o executor não escreve em produção). Registado em Blockers da spec como
+"capturas com dados pendentes do orquestrador".
+
+## Verificação independente (auditor, 2026-09-07)
+
+Relatório item a item: `specs/sprint-02-verification.md`. Gates reproduzidos nesta
+máquina na forma simples: **typecheck ✅, test 163 ✅, build ✅**.
+
+Veredicto por item:
+
+| Item | Título | Veredicto |
+|---|---|---|
+| 1 | Role consultor, navegação e rotas | entregue (ressalva: consultor alcança páginas de escrita por URL directo; RLS protege) |
+| 2 | Hub `/haccp`: estado do turno | entregue, capturas pendentes |
+| 3 | Registar em dois toques (A2) | entregue, capturas pendentes; display de rectificação "corrigido: X → Y (nota)" parcial |
+| 4 | Fila offline com sincronização diferida | parcial (não finge conformidade ✓; faltam chip por-ponto "por sincronizar" e os dois instantes captado/recebido) |
+| 5 | Não conformidades e verificação (C1) | entregue, capturas pendentes |
+| 6 | Recepção e recusa (B1, B2) | entregue, capturas pendentes |
+| 7 | Pontos de controlo (A1) e fornecedores | entregue, capturas pendentes |
+| 8 | Definições: cartão HACCP (NG7 exacto) | entregue, capturas pendentes |
+| 9 | Gates e evidência | entregue (scope OK exceto `TESTING.md` na raiz, doc) |
+
+Verificações-chave: (b) `recorded_at`/`recorded_by` nunca enviados pelo cliente —
+**PASS**; (c) fila offline não finge conformidade — **PASS**; (d) texto NG7 exacto
+— **PASS**; (a) consultor só acede a `/haccp/*` — **PASS**, mas "nunca vê botões de
+escrita" tem ressalva (páginas `/haccp/registar` e `/haccp/recepcao` acessíveis por
+URL directo, sem link na app, protegidas pela RLS); (e) scope respeitado exceto
+`TESTING.md` (documentação na raiz, fora da lista literal do item 9).

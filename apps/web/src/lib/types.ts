@@ -12,6 +12,7 @@
 // Regenerar tipos: `supabase gen types typescript --project-id emuwqkdummdmacnkltte`.
 
 import type {
+  Database,
   Tables,
   TablesInsert,
   TablesUpdate,
@@ -362,3 +363,47 @@ export function computeMenuMargins(
     completeCount: completeWithPrice.length,
   };
 }
+
+// ── HACCP (0029) ────────────────────────────────────────────────────────────
+// Aliases de domínio sobre os tipos gerados. Fonte de verdade: a migração 0029
+// e o contrato docs/specs/haccp-v1-contract.md.
+
+export type HaccpControlPoint = Tables<"haccp_control_points">;
+export type HaccpControlPointInsert = TablesInsert<"haccp_control_points">;
+export type HaccpControlPointUpdate = TablesUpdate<"haccp_control_points">;
+export type HaccpKindDefault = Tables<"haccp_kind_defaults">;
+export type Supplier = Tables<"suppliers">;
+export type HaccpReception = Tables<"haccp_receptions">;
+export type HaccpRejection = Tables<"haccp_rejections">;
+export type HaccpNonconformity = Tables<"haccp_nonconformities">;
+export type HaccpNcStatus = Tables<"haccp_nc_status">;
+export type HaccpSupplierStat = Tables<"haccp_supplier_stats">;
+
+// Linha do estado do turno (RPC haccp_turn_status / haccp_expected_readings).
+export type HaccpTurnStatusRow =
+  Database["public"]["Functions"]["haccp_turn_status"]["Returns"][number];
+
+// Causa de recusa (contrato §2, haccp_rejections.cause).
+export type HaccpRejectionCause =
+  | "higiene_deficiente"
+  | "requisitos_embalagem"
+  | "validade_ultrapassada"
+  | "temperatura_insuficiente"
+  | "caracteristicas_organolepticas";
+
+export const HACCP_REJECTION_CAUSE_LABEL: Record<HaccpRejectionCause, string> = {
+  higiene_deficiente: "Higiene deficiente",
+  requisitos_embalagem: "Requisitos de embalagem",
+  validade_ultrapassada: "Validade ultrapassada",
+  temperatura_insuficiente: "Temperatura insuficiente",
+  caracteristicas_organolepticas: "Características organolépticas inadequadas",
+};
+
+// Destino do produto numa não conformidade (item 5). Texto livre no servidor;
+// aqui damos as opções tipificadas + "Outro" para texto.
+export const HACCP_DISPOSITION_OPTIONS: string[] = [
+  "Rejeitado/eliminado",
+  "Reprocessado (cozinhado a ≥ 75 °C)",
+  "Transferido para outro equipamento",
+  "Consumido de imediato",
+];
