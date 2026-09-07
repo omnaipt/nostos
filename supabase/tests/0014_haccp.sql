@@ -54,13 +54,13 @@ insert into public.turns (id, restaurant_id, label, start_time, weekdays) values
 
 -- Linhas de negocio em A que o consultor NAO deve ler.
 insert into public.reservations (id, restaurant_id, customer_name, party_size, reserved_at, service_date) values
-  ('re000001-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Cliente', 2, now(), current_date);
+  ('ee000001-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Cliente', 2, now(), current_date);
 insert into public.menu_categories (id, restaurant_id, label) values
-  ('mc000001-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Pratos');
+  ('ac000001-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Pratos');
 insert into public.menu_items (id, restaurant_id, category_id, name, price_cents) values
-  ('mi000001-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'mc000001-0000-0000-0000-000000000001', 'Bitoque', 1000);
+  ('a1000001-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ac000001-0000-0000-0000-000000000001', 'Bitoque', 1000);
 insert into public.ingredients (id, restaurant_id, name, unit) values
-  ('in000001-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Batata', 'kg');
+  ('1a000001-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Batata', 'kg');
 
 -- Relogio inicial: segunda-feira 2026-09-07 13:00 (Almoco aberto, Jantar futuro).
 create or replace function public.haccp_now() returns timestamptz language sql stable as $$
@@ -68,14 +68,14 @@ create or replace function public.haccp_now() returns timestamptz language sql s
 
 -- Pontos de controlo de C (estado): created_at antigo para contarem no dia D.
 insert into public.haccp_control_points (id, restaurant_id, name, kind, all_turns, created_at) values
-  ('cp000001-0000-0000-0000-000000000001', '99999999-9999-9999-9999-999999999999', 'Frio C1', 'frio_positivo', true,  '2026-01-01 00:00:00+00'),
-  ('cp000002-0000-0000-0000-000000000002', '99999999-9999-9999-9999-999999999999', 'Frio C2', 'frio_positivo', false, '2026-01-01 00:00:00+00');
+  ('c9000001-0000-0000-0000-000000000001', '99999999-9999-9999-9999-999999999999', 'Frio C1', 'frio_positivo', true,  '2026-01-01 00:00:00+00'),
+  ('c9000002-0000-0000-0000-000000000002', '99999999-9999-9999-9999-999999999999', 'Frio C2', 'frio_positivo', false, '2026-01-01 00:00:00+00');
 insert into public.haccp_control_point_turns (control_point_id, turn_id, restaurant_id) values
-  ('cp000002-0000-0000-0000-000000000002', 'cc000002-0000-0000-0000-000000000002', '99999999-9999-9999-9999-999999999999');
+  ('c9000002-0000-0000-0000-000000000002', 'cc000002-0000-0000-0000-000000000002', '99999999-9999-9999-9999-999999999999');
 
 -- Ponto de controlo de B (para readings de purga e teste cross-tenant).
 insert into public.haccp_control_points (id, restaurant_id, name, kind, all_turns, created_at) values
-  ('pb000000-0000-0000-0000-0000000000bb', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Frio B1', 'frio_positivo', true, '2026-01-01 00:00:00+00');
+  ('9b000000-0000-0000-0000-0000000000bb', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Frio B1', 'frio_positivo', true, '2026-01-01 00:00:00+00');
 
 -- Fornecedor B (para recepcao/recusa de purga e teste cross-tenant de recepcao).
 insert into public.suppliers (id, restaurant_id, name, name_norm) values
@@ -88,12 +88,12 @@ set local haccp.seed = 'on';
 insert into public.haccp_temperature_readings
   (id, restaurant_id, control_point_id, turn_id, service_date, value_c, sync_mode, recorded_by, recorded_at) values
   ('bb000000-0000-0000-0000-0000000000b1', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-     'pb000000-0000-0000-0000-0000000000bb', 'bb000001-0000-0000-0000-000000000001',
+     '9b000000-0000-0000-0000-0000000000bb', 'bb000001-0000-0000-0000-000000000001',
      (current_date - interval '1 month')::date, 3.0, 'online',
      '22222222-2222-2222-2222-222222222222', now());
 insert into public.haccp_temperature_readings
   (restaurant_id, control_point_id, turn_id, service_date, value_c, sync_mode, recorded_by, recorded_at) values
-  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'pb000000-0000-0000-0000-0000000000bb',
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '9b000000-0000-0000-0000-0000000000bb',
      'bb000001-0000-0000-0000-000000000001', (current_date - interval '25 months')::date, 3.0, 'online',
      '22222222-2222-2222-2222-222222222222', now());
 
@@ -128,11 +128,11 @@ insert into storage.objects (bucket_id, name, metadata, created_at) values
 -- C: fixture de registos em bloco (anti-metrica), dia 2026-09-04, fora do dia D.
 insert into public.haccp_temperature_readings
   (restaurant_id, control_point_id, turn_id, service_date, value_c, sync_mode, recorded_by, recorded_at) values
-  ('99999999-9999-9999-9999-999999999999', 'cp000001-0000-0000-0000-000000000001', 'cc000001-0000-0000-0000-000000000001', '2026-09-04', 3.0, 'online', '88888888-8888-8888-8888-888888888888', '2026-09-04 13:00:00+01'),
-  ('99999999-9999-9999-9999-999999999999', 'cp000001-0000-0000-0000-000000000001', 'cc000001-0000-0000-0000-000000000001', '2026-09-04', 3.0, 'online', '88888888-8888-8888-8888-888888888888', '2026-09-04 13:00:30+01'),
-  ('99999999-9999-9999-9999-999999999999', 'cp000001-0000-0000-0000-000000000001', 'cc000001-0000-0000-0000-000000000001', '2026-09-04', 3.0, 'online', '88888888-8888-8888-8888-888888888888', '2026-09-04 13:01:00+01'),
-  ('99999999-9999-9999-9999-999999999999', 'cp000001-0000-0000-0000-000000000001', 'cc000001-0000-0000-0000-000000000001', '2026-09-04', 3.0, 'online', '77777777-7777-7777-7777-777777777777', '2026-09-04 13:00:00+01'),
-  ('99999999-9999-9999-9999-999999999999', 'cp000001-0000-0000-0000-000000000001', 'cc000001-0000-0000-0000-000000000001', '2026-09-04', 3.0, 'online', '77777777-7777-7777-7777-777777777777', '2026-09-04 13:00:30+01');
+  ('99999999-9999-9999-9999-999999999999', 'c9000001-0000-0000-0000-000000000001', 'cc000001-0000-0000-0000-000000000001', '2026-09-04', 3.0, 'online', '88888888-8888-8888-8888-888888888888', '2026-09-04 13:00:00+01'),
+  ('99999999-9999-9999-9999-999999999999', 'c9000001-0000-0000-0000-000000000001', 'cc000001-0000-0000-0000-000000000001', '2026-09-04', 3.0, 'online', '88888888-8888-8888-8888-888888888888', '2026-09-04 13:00:30+01'),
+  ('99999999-9999-9999-9999-999999999999', 'c9000001-0000-0000-0000-000000000001', 'cc000001-0000-0000-0000-000000000001', '2026-09-04', 3.0, 'online', '88888888-8888-8888-8888-888888888888', '2026-09-04 13:01:00+01'),
+  ('99999999-9999-9999-9999-999999999999', 'c9000001-0000-0000-0000-000000000001', 'cc000001-0000-0000-0000-000000000001', '2026-09-04', 3.0, 'online', '77777777-7777-7777-7777-777777777777', '2026-09-04 13:00:00+01'),
+  ('99999999-9999-9999-9999-999999999999', 'c9000001-0000-0000-0000-000000000001', 'cc000001-0000-0000-0000-000000000001', '2026-09-04', 3.0, 'online', '77777777-7777-7777-7777-777777777777', '2026-09-04 13:00:30+01');
 
 set local haccp.seed = 'off';
 
@@ -263,9 +263,10 @@ select throws_ok($$ select public.haccp_record_temperature(
     'a4000000-0000-0000-0000-000000000004', 'aa000001-0000-0000-0000-000000000001', 4.0) $$,
   'P0001', 'haccp_ponto_inactivo', 'registos: ponto inactivo rejeitado');                         -- 22
 -- Ponto de outro restaurante (RLS esconde-o -> ponto inexistente).
+-- A RLS esconde o ponto de B antes do gatilho, por isso a RPC devolve haccp_ponto_inexistente.
 select throws_ok($$ select public.haccp_record_temperature(
-    'pb000000-0000-0000-0000-0000000000bb', 'aa000001-0000-0000-0000-000000000001', 4.0) $$,
-  'pontos de outro restaurante rejeitados');                                                      -- 23
+    '9b000000-0000-0000-0000-0000000000bb', 'aa000001-0000-0000-0000-000000000001', 4.0) $$,
+  'P0001', 'haccp_ponto_inexistente', 'pontos de outro restaurante rejeitados');                  -- 23
 
 -- Antes de opens_at (11:00 < 11:30).
 reset role;
@@ -322,9 +323,10 @@ select throws_ok($$ select public.haccp_record_temperature(
 
 -- Consultor nao insere.
 set local request.jwt.claims = '{"sub":"cccccccc-cccc-cccc-cccc-cccccccccccc","role":"authenticated"}';
+-- A RLS rejeita o INSERT do consultor com 42501 antes de o gatilho correr.
 select throws_ok($$ select public.haccp_record_temperature(
     'a1000000-0000-0000-0000-000000000001', 'aa000001-0000-0000-0000-000000000001', 4.0) $$,
-  'registos: consultor nao insere registo');                                                      -- 29
+  '42501', null, 'registos: consultor nao insere registo');                                       -- 29
 
 -- Imutabilidade absoluta (bypass RLS como superuser para chegar ao gatilho).
 reset role;
@@ -507,22 +509,22 @@ set local request.jwt.claims = '{"sub":"77777777-7777-7777-7777-777777777777","r
 
 -- 13:00: Almoco por verificar, Jantar futuro, P2c ausente do Almoco.
 select is((select status from public.haccp_turn_status('99999999-9999-9999-9999-999999999999')
-           where turn_id = 'cc000001-0000-0000-0000-000000000001' and control_point_id = 'cp000001-0000-0000-0000-000000000001'),
+           where turn_id = 'cc000001-0000-0000-0000-000000000001' and control_point_id = 'c9000001-0000-0000-0000-000000000001'),
   'por_verificar', 'estado: Almoco/P1c por_verificar as 13:00');                                  -- 52
 select is((select status from public.haccp_turn_status('99999999-9999-9999-9999-999999999999')
-           where turn_id = 'cc000002-0000-0000-0000-000000000002' and control_point_id = 'cp000001-0000-0000-0000-000000000001'),
+           where turn_id = 'cc000002-0000-0000-0000-000000000002' and control_point_id = 'c9000001-0000-0000-0000-000000000001'),
   'futuro', 'estado: Jantar/P1c futuro as 13:00');                                                -- 53
 select is((select count(*)::int from public.haccp_turn_status('99999999-9999-9999-9999-999999999999')
-           where turn_id = 'cc000001-0000-0000-0000-000000000001' and control_point_id = 'cp000002-0000-0000-0000-000000000002'),
+           where turn_id = 'cc000001-0000-0000-0000-000000000001' and control_point_id = 'c9000002-0000-0000-0000-000000000002'),
   0, 'estado: P2c (so Jantar) nao aparece no Almoco');                                            -- 54
 
 -- Regista 4,0 no Almoco/P1c -> conforme.
 set local request.jwt.claims = '{"sub":"88888888-8888-8888-8888-888888888888","role":"authenticated"}';
 create temp table _crec4 as select * from public.haccp_record_temperature(
-  'cp000001-0000-0000-0000-000000000001', 'cc000001-0000-0000-0000-000000000001', 4.0);
+  'c9000001-0000-0000-0000-000000000001', 'cc000001-0000-0000-0000-000000000001', 4.0);
 set local request.jwt.claims = '{"sub":"77777777-7777-7777-7777-777777777777","role":"authenticated"}';
 select is((select status from public.haccp_turn_status('99999999-9999-9999-9999-999999999999')
-           where turn_id = 'cc000001-0000-0000-0000-000000000001' and control_point_id = 'cp000001-0000-0000-0000-000000000001'),
+           where turn_id = 'cc000001-0000-0000-0000-000000000001' and control_point_id = 'c9000001-0000-0000-0000-000000000001'),
   'conforme', 'estado: Almoco/P1c conforme apos 4,0');                                            -- 55
 
 -- 13:01: regista 7,0 -> desvio_sem_resposta.
@@ -533,10 +535,10 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"88888888-8888-8888-8888-888888888888","role":"authenticated"}';
 create temp table _cdev as
   select id from public.haccp_record_temperature(
-    'cp000001-0000-0000-0000-000000000001', 'cc000001-0000-0000-0000-000000000001', 7.0);
+    'c9000001-0000-0000-0000-000000000001', 'cc000001-0000-0000-0000-000000000001', 7.0);
 set local request.jwt.claims = '{"sub":"77777777-7777-7777-7777-777777777777","role":"authenticated"}';
 select is((select status from public.haccp_turn_status('99999999-9999-9999-9999-999999999999')
-           where turn_id = 'cc000001-0000-0000-0000-000000000001' and control_point_id = 'cp000001-0000-0000-0000-000000000001'),
+           where turn_id = 'cc000001-0000-0000-0000-000000000001' and control_point_id = 'c9000001-0000-0000-0000-000000000001'),
   'desvio_sem_resposta', 'estado: Almoco/P1c desvio_sem_resposta apos 7,0');                      -- 56
 
 -- NC sobre o registo -> desvio_aberto.
@@ -549,7 +551,7 @@ create temp table _cnc as
     returning id
   ) select id from x;
 select is((select status from public.haccp_turn_status('99999999-9999-9999-9999-999999999999')
-           where turn_id = 'cc000001-0000-0000-0000-000000000001' and control_point_id = 'cp000001-0000-0000-0000-000000000001'),
+           where turn_id = 'cc000001-0000-0000-0000-000000000001' and control_point_id = 'c9000001-0000-0000-0000-000000000001'),
   'desvio_aberto', 'estado: Almoco/P1c desvio_aberto com NC');                                    -- 57
 
 -- Verificacao por outro utilizador -> desvio_resolvido.
@@ -558,7 +560,7 @@ insert into public.haccp_nc_verifications (restaurant_id, nonconformity_id, effe
   values ('99999999-9999-9999-9999-999999999999', (select id from _cnc), true);
 set local request.jwt.claims = '{"sub":"77777777-7777-7777-7777-777777777777","role":"authenticated"}';
 select is((select status from public.haccp_turn_status('99999999-9999-9999-9999-999999999999')
-           where turn_id = 'cc000001-0000-0000-0000-000000000001' and control_point_id = 'cp000001-0000-0000-0000-000000000001'),
+           where turn_id = 'cc000001-0000-0000-0000-000000000001' and control_point_id = 'c9000001-0000-0000-0000-000000000001'),
   'desvio_resolvido', 'estado: Almoco/P1c desvio_resolvido com verificacao');                     -- 58
 
 -- 06:30 do dia seguinte: Jantar sem registos em_falta.
@@ -568,10 +570,10 @@ create or replace function public.haccp_now() returns timestamptz language sql s
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"77777777-7777-7777-7777-777777777777","role":"authenticated"}';
 select is((select status from public.haccp_expected_readings('99999999-9999-9999-9999-999999999999', '2026-09-07', '2026-09-07')
-           where turn_id = 'cc000002-0000-0000-0000-000000000002' and control_point_id = 'cp000001-0000-0000-0000-000000000001'),
+           where turn_id = 'cc000002-0000-0000-0000-000000000002' and control_point_id = 'c9000001-0000-0000-0000-000000000001'),
   'em_falta', 'estado: Jantar/P1c em_falta as 06:30 do dia seguinte');                            -- 59
 select is((select status from public.haccp_expected_readings('99999999-9999-9999-9999-999999999999', '2026-09-07', '2026-09-07')
-           where turn_id = 'cc000002-0000-0000-0000-000000000002' and control_point_id = 'cp000002-0000-0000-0000-000000000002'),
+           where turn_id = 'cc000002-0000-0000-0000-000000000002' and control_point_id = 'c9000002-0000-0000-0000-000000000002'),
   'em_falta', 'estado: Jantar/P2c em_falta as 06:30 do dia seguinte');                            -- 60
 
 -- Sumario do periodo.
@@ -595,10 +597,15 @@ select throws_ok($$ select public.haccp_expected_readings('99999999-9999-9999-99
 -- ════════════════════════════════════════════════════════════════════════════
 -- GRUPO retencao / purga (10)
 -- ════════════════════════════════════════════════════════════════════════════
+-- Ler o default como postgres: o role activo ainda era o consultor/owner de C,
+-- cuja RLS esconde o restaurante A e devolveria NULL.
+reset role;
+reset request.jwt.claims;
 select is((select haccp_retention_months from public.restaurants where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), 24,
   'retencao: default de 24 meses');                                                               -- 67
 
 -- Cozinha nao altera retencao (RLS: update e owner/gestor).
+set local role authenticated;
 set local request.jwt.claims = '{"sub":"44444444-4444-4444-4444-444444444444","role":"authenticated"}';
 update public.restaurants set haccp_retention_months = 36 where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 select is((select haccp_retention_months from public.restaurants where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), 24,

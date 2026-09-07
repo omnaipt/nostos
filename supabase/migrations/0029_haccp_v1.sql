@@ -617,7 +617,7 @@ set search_path = public
 as $$
 declare v_rid uuid; v_id uuid;
 begin
-  select restaurant_id into v_rid from public.haccp_control_points where id = p_control_point_id;
+  select cp.restaurant_id into v_rid from public.haccp_control_points cp where cp.id = p_control_point_id;
   if v_rid is null then raise exception 'haccp_ponto_inexistente'; end if;
   insert into public.haccp_temperature_readings
     (restaurant_id, control_point_id, turn_id, value_c, within_limits, sync_mode, captured_at, note, rectifies_id, service_date)
