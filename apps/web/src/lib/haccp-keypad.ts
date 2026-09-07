@@ -1,4 +1,4 @@
-// Teclado numérico de temperaturas (item 3, A2) — lógica pura, sem React.
+// Teclado numérico de temperaturas (item 3, A2): lógica pura, sem React.
 // Regras: sinal negativo à frente, vírgula decimal única, no máximo UMA casa
 // decimal, intervalo válido -60..200 °C (o mesmo do CHECK da tabela). O input
 // é acumulado como texto ("3,5", "-18") e só se converte a número no fim.

@@ -5,7 +5,7 @@ import { queryKeys } from "@/lib/query-keys";
 // Registo de temperatura (item 3, A2) via RPC haccp_record_temperature. O
 // servidor resolve o restaurante a partir do ponto, carimba recorded_at/by e
 // valida a janela. Os erros chegam como error.message com o texto exacto do
-// contrato (ex.: haccp_fora_da_janela) — a UI mapeia-os para copy honesta.
+// contrato (ex.: haccp_fora_da_janela); a UI mapeia-os para copy honesta.
 
 export interface RecordTemperatureInput {
   controlPointId: string;

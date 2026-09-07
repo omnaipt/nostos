@@ -104,7 +104,7 @@ export function useHaccpSync(
             );
           } else {
             // Outro erro de negócio (ponto inactivo, turno não corre): não vale
-            // a pena retentar em loop — descarta com aviso honesto.
+            // a pena retentar em loop; descarta com aviso honesto.
             toast.error(`1 registo de ${ponto} não foi aceite (${msg}).`, {
               duration: Infinity,
             });

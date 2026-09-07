@@ -32,7 +32,10 @@ import HaccpRecepcao from "@/pages/HaccpRecepcao";
 import HaccpNc from "@/pages/HaccpNc";
 import HaccpNcDetail from "@/pages/HaccpNcDetail";
 import HaccpPontos from "@/pages/HaccpPontos";
+import HaccpPonto from "@/pages/HaccpPonto";
 import HaccpFornecedores from "@/pages/HaccpFornecedores";
+import HaccpDossie from "@/pages/HaccpDossie";
+import HaccpDossiePrint from "@/pages/HaccpDossiePrint";
 import PublicBooking from "@/pages/PublicBooking";
 import PublicMenu from "@/pages/PublicMenu";
 import PublicTakeaway from "@/pages/PublicTakeaway";
@@ -119,7 +122,18 @@ export default function App() {
             <Route path="/haccp/nc" element={<Backoffice><HaccpNc /></Backoffice>} />
             <Route path="/haccp/nc/:id" element={<Backoffice><HaccpNcDetail /></Backoffice>} />
             <Route path="/haccp/pontos" element={<Backoffice><HaccpPontos /></Backoffice>} />
+            <Route path="/haccp/pontos/:id" element={<Backoffice><HaccpPonto /></Backoffice>} />
             <Route path="/haccp/fornecedores" element={<Backoffice><HaccpFornecedores /></Backoffice>} />
+            <Route path="/haccp/dossie" element={<Backoffice><HaccpDossie /></Backoffice>} />
+            {/* Página de impressão do dossiê: sem chrome, como a ficha de cozinha. */}
+            <Route
+              path="/haccp/dossie/imprimir"
+              element={
+                <ProtectedRoute>
+                  <HaccpDossiePrint />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/fichas/:menuItemId/imprimir"
               element={

@@ -1,9 +1,10 @@
 import * as React from "react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Pencil, Plus } from "lucide-react";
+import { ChevronRight, Pencil, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Field } from "@/components/ui/field";
@@ -26,14 +27,14 @@ import type { HaccpKindDefault, Turn } from "@/lib/types";
 // outros. Sem apagar (desactivar mantém o histórico).
 
 function fmt(n: number | null): string {
-  return n == null ? "—" : String(n).replace(".", ",");
+  return n == null ? "" : String(n).replace(".", ",");
 }
 
 function limitsLabel(cp: { min_c: number | null; max_c: number | null }): string {
   if (cp.min_c != null && cp.max_c != null) return `${fmt(cp.min_c)} a ${fmt(cp.max_c)} °C`;
   if (cp.max_c != null) return `≤ ${fmt(cp.max_c)} °C`;
   if (cp.min_c != null) return `≥ ${fmt(cp.min_c)} °C`;
-  return "—";
+  return "sem limite";
 }
 
 export default function HaccpPontos() {
@@ -118,7 +119,7 @@ export default function HaccpPontos() {
               (cp.active ? "" : "opacity-60")
             }
           >
-            <div className="min-w-0">
+            <Link to={`/haccp/pontos/${cp.id}`} className="min-w-0 flex-1 hover:opacity-80">
               <p className="truncate text-sm font-medium">
                 {cp.name}
                 {!cp.active && <span className="ml-2 text-xs text-muted-foreground">(inactivo)</span>}
@@ -127,12 +128,21 @@ export default function HaccpPontos() {
                 {kinds.find((k) => k.kind === cp.kind)?.label ?? cp.kind} · {limitsLabel(cp)} ·{" "}
                 {cp.all_turns ? "todos os turnos" : `${cp.turnIds.length} turno(s)`}
               </p>
+            </Link>
+            <div className="flex items-center gap-1">
+              {canWrite && cp.active && (
+                <Button size="icon" variant="ghost" aria-label="Editar" onClick={() => setEditing(cp)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              )}
+              <Link
+                to={`/haccp/pontos/${cp.id}`}
+                className={buttonVariants({ variant: "ghost", size: "icon" })}
+                aria-label="Ver vista mensal"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Link>
             </div>
-            {canWrite && cp.active && (
-              <Button size="icon" variant="ghost" aria-label="Editar" onClick={() => setEditing(cp)}>
-                <Pencil className="h-4 w-4" />
-              </Button>
-            )}
           </div>
         ))}
       </div>
@@ -221,7 +231,7 @@ function ControlPointDialog({
   }
 
   function parse(v: string): number | null {
-    if (v.trim() === "" || v.trim() === "—") return null;
+    if (v.trim() === "") return null;
     const n = Number(v.replace(",", "."));
     return Number.isFinite(n) ? n : NaN;
   }

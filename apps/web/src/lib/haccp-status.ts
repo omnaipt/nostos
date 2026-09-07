@@ -1,4 +1,4 @@
-// Semântica de estado por célula (dia, turno, ponto) — contrato HACCP §5.
+// Semântica de estado por célula (dia, turno, ponto), contrato HACCP §5.
 // Puro: só rótulos e "tom" de cor (mapeado depois para tokens Costeiro). Nada
 // de React aqui, para poder testar e reutilizar no hub, na lista e no dossiê.
 

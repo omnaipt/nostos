@@ -152,7 +152,7 @@ export function useDeactivateControlPoint(restaurantId: string | undefined) {
 }
 
 // Onboarding rápido: 3 pontos habituais, todos em todos os turnos. Os limites
-// herdam do kind (gatilho) — enviamos só nome, tipo e all_turns.
+// herdam do kind (gatilho); enviamos só nome, tipo e all_turns.
 export function useCreateDefaultControlPoints(restaurantId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({

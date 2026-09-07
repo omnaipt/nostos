@@ -1,10 +1,11 @@
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { Thermometer } from "lucide-react";
+import { FileText, Thermometer } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buttonVariants } from "@/components/ui/button";
 import { HaccpLayout, HaccpChip } from "@/components/haccp/HaccpLayout";
+import { HaccpAlertsBanner } from "@/components/haccp/HaccpAlertsBanner";
 import { useRole } from "@/contexts/RoleContext";
 import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import {
@@ -14,6 +15,10 @@ import {
 } from "@/hooks/use-haccp-status";
 import { useHaccpControlPoints } from "@/hooks/use-haccp-points";
 import { useHaccpSync } from "@/hooks/use-haccp-sync";
+import { useHaccpAlerts } from "@/hooks/use-haccp-alerts";
+import { useHaccpBurst, useHaccpHasReadings, type BurstGroup } from "@/hooks/use-haccp-burst";
+import { useTeam } from "@/hooks/use-team";
+import { ROLE_LABEL } from "@/lib/roles";
 import { shiftIsoDate } from "@/lib/service-date";
 
 // Hub /haccp (item 2, A3): estado do turno de hoje. Cabeçalho com o dia de
@@ -68,6 +73,11 @@ export default function Haccp() {
   }, [statusQuery.data]);
   const sync = useHaccpSync(restaurantId, (id) => nameByPoint.get(id));
 
+  const { alerts } = useHaccpAlerts(restaurantId);
+  const canSeeBurst = role === "owner" || role === "gestor" || role === "consultor";
+  const burstQuery = useHaccpBurst(restaurantId, canSeeBurst);
+  const hasReadingsQuery = useHaccpHasReadings(restaurantId);
+
   const groups = statusQuery.data ?? [];
   // Chips "por sincronizar" só fazem sentido no dia de serviço actual: os itens
   // da fila offline são captados no presente.
@@ -75,8 +85,16 @@ export default function Haccp() {
   const noControlPoints = (pointsQuery.data ?? []).length === 0 && !pointsQuery.isLoading;
   const loading = serviceDateQuery.isLoading || statusQuery.isLoading || pointsQuery.isLoading;
 
+  // Cartão de arranque (item 5): há pontos mas nunca houve registos. Some após
+  // o primeiro registo. Não para consultor (não regista).
+  const showStartCard =
+    !isConsultor && !noControlPoints && !pointsQuery.isLoading && hasReadingsQuery.data === false;
+
   return (
     <HaccpLayout>
+      {/* Banner de alertas (item 3): coral, no topo, para todos os roles. */}
+      <HaccpAlertsBanner alerts={alerts} />
+
       {/* Banner da fila offline */}
       {sync.pendingCount > 0 && (
         <div className="mb-4 rounded-md border border-ambar-600/30 bg-ambar-100 px-3 py-2 text-sm font-medium text-ambar-600">
@@ -89,10 +107,16 @@ export default function Haccp() {
         <div>
           <h1 className="font-display text-2xl font-semibold text-atlantico-900">HACCP</h1>
           <p className="text-sm text-muted-foreground">
-            {viewDate ? formatDayLabel(viewDate, timezone) : "—"}
+            {viewDate ? formatDayLabel(viewDate, timezone) : ""}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <Link
+            to="/haccp/dossie"
+            className={buttonVariants({ variant: "outline", size: "sm" }) + " gap-1"}
+          >
+            <FileText className="h-4 w-4" /> Dossiê
+          </Link>
           {(["ontem", "hoje"] as const).map((opt) => {
             const active = selected === opt;
             return (
@@ -140,6 +164,8 @@ export default function Haccp() {
         </Card>
       )}
 
+      {showStartCard && <StartCard />}
+
       {!loading && !noControlPoints && groups.length === 0 && (
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
@@ -159,7 +185,92 @@ export default function Haccp() {
           />
         ))}
       </div>
+
+      {canSeeBurst && !noControlPoints && (
+        <BurstNote groups={burstQuery.data ?? []} timezone={timezone} restaurantId={restaurantId} />
+      )}
     </HaccpLayout>
+  );
+}
+
+// Cartão de arranque (item 5): três passos, sem promessas de conformidade (NG7).
+function StartCard() {
+  const steps = [
+    "Registar no turno: toque em HACCP no turno em curso e registe as temperaturas.",
+    "Corrigir desvios: quando um valor sai dos limites, registe a acção correctiva.",
+    "Gerar dossiê: no fim do período, gere o dossiê para a inspecção.",
+  ];
+  return (
+    <Card className="mb-4 border-atlantico-500/30">
+      <CardContent className="space-y-2 py-4">
+        <p className="text-sm font-medium">Primeiros passos</p>
+        <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+          {steps.map((s) => (
+            <li key={s}>{s}</li>
+          ))}
+        </ol>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Anti-métrica (item 4): registos em bloco nos últimos 7 dias. Linha discreta;
+// ao tocar expande a lista (quem, quando, quantos) e a copy de ajuda.
+function BurstNote({
+  groups,
+  timezone,
+  restaurantId,
+}: {
+  groups: BurstGroup[];
+  timezone: string | undefined;
+  restaurantId: string | undefined;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const teamQuery = useTeam(restaurantId);
+  const nameByUser = React.useMemo(() => {
+    const m = new Map<string, string>();
+    for (const t of teamQuery.data ?? []) m.set(t.userId, t.name ?? ROLE_LABEL[t.role]);
+    return m;
+  }, [teamQuery.data]);
+  const n = groups.length;
+
+  return (
+    <div className="mt-6 border-t border-border pt-3">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={"text-left text-xs " + (n > 0 ? "text-muted-foreground underline" : "text-alga-600")}
+      >
+        {n > 0
+          ? `Nos últimos 7 dias: ${n} grupo${n > 1 ? "s" : ""} de registos feitos em bloco (3 ou mais em 2 minutos)`
+          : "Sem registos em bloco nos últimos 7 dias"}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2">
+          {n > 0 && (
+            <ul className="space-y-1 text-xs text-muted-foreground">
+              {groups.map((g, i) => (
+                <li key={`${g.recorded_by}-${g.window_start}-${i}`}>
+                  {nameByUser.get(g.recorded_by) ?? "membro da equipa"} ·{" "}
+                  {new Intl.DateTimeFormat("pt-PT", {
+                    day: "numeric",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    timeZone: timezone,
+                  }).format(new Date(g.window_start))}{" "}
+                  · {g.readings} registos em {g.control_points} ponto{g.control_points > 1 ? "s" : ""}
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Registos em bloco são o que a ASAE identifica como preenchimento retroactivo. Registe no
+            momento da verificação.
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
 
