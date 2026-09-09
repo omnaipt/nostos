@@ -36,6 +36,10 @@ interface SaftLine {
   // 0024: a HORA do documento. InvoiceDate no SAF-T é só a data; a hora vive no
   // SystemEntryDate. Sem ela não há corte almoço/jantar nas estatísticas.
   invoiceAt: string | null;
+  // 0030: LineNumber do SAF-T. Com invoiceNo forma a chave natural do
+  // documento, que é o que impede abater a mesma venda duas vezes quando se
+  // importa o ficheiro cumulativo do mês em dias seguidos.
+  lineNumber: number;
   posCode: string;
   posDescription: string | null;
   qty: number;
@@ -134,15 +138,22 @@ function parseSaft(xml: string): {
       grossTotalCents += Math.round(gross * 100);
       grossSeen = true;
     }
+    // 0030: fallback posicional para o LineNumber. A norma exige-o, mas há
+    // exportadores que o omitem ou repetem; o índice dentro do documento é
+    // estável para o mesmo ficheiro e mantém a chave única utilizável.
+    let posicao = 0;
     for (const l of asArray(inv?.Line)) {
+      posicao += 1;
       const posCode = String(l?.ProductCode ?? "").trim();
       const qty = Number(l?.Quantity);
       if (!posCode || !Number.isFinite(qty) || qty <= 0) continue;
       const unitPrice = Number(l?.UnitPrice);
+      const declarado = Number(l?.LineNumber);
       lines.push({
         invoiceNo,
         invoiceDate,
         invoiceAt,
+        lineNumber: Number.isInteger(declarado) && declarado > 0 ? declarado : posicao,
         posCode,
         posDescription: String(l?.ProductDescription ?? "").trim() || null,
         qty: Math.round(qty * 1000) / 1000,
@@ -179,6 +190,16 @@ async function applyImport(
     .eq("note", tag);
   if (cleanErr) return { ok: false, error: `limpeza falhou: ${cleanErr.message}` };
 
+  // 0030: apagar os movimentos sem desmarcar as linhas deixaria o lote num
+  // estado em que o stock foi reposto mas as linhas continuavam "abatidas", e
+  // um reprocessamento não repunha nada. As duas coisas andam juntas.
+  const { error: unmarkErr } = await admin
+    .from("saft_import_lines")
+    .update({ stock_applied_at: null })
+    .eq("import_id", importId)
+    .not("stock_applied_at", "is", null);
+  if (unmarkErr) return { ok: false, error: `limpeza das marcas falhou: ${unmarkErr.message}` };
+
   // 0024 — lote histórico (apply_stock=false): entra para estatística e NÃO
   // abate. Um SAF-T de 12 meses trazido no onboarding não pode consumir a
   // despensa de hoje; o peixe de Março já foi cozinhado. A limpeza acima corre
@@ -195,11 +216,15 @@ async function applyImport(
     };
   }
 
+  // 0030: SÓ as linhas que ainda não abateram. Segunda linha de defesa, a par
+  // da chave única: mesmo que a mesma venda reentrasse por outra via, o stock
+  // não sai duas vezes. `id` vem no select para marcar a seguir.
   const { data: matched, error: linesErr } = await admin
     .from("saft_import_lines")
-    .select("invoice_no, qty, menu_item_id")
+    .select("id, invoice_no, qty, menu_item_id")
     .eq("import_id", importId)
-    .eq("status", "matched");
+    .eq("status", "matched")
+    .is("stock_applied_at", null);
   if (linesErr) return { ok: false, error: `leitura de linhas falhou: ${linesErr.message}` };
 
   const itemIds = [...new Set((matched ?? []).map((l) => l.menu_item_id as string))];
@@ -292,6 +317,18 @@ async function applyImport(
   if (movements.length) {
     const { error: movErr } = await admin.from("stock_movements").insert(movements);
     if (movErr) return { ok: false, error: `abate falhou: ${movErr.message}` };
+  }
+
+  // 0030: marcar as linhas como abatidas SÓ depois de os movimentos entrarem.
+  // Se a marcação falhar, o lote falha e repete-se; a alternativa (marcar
+  // antes) perdia vendas em silêncio, que é o erro pior dos dois.
+  const abatidas = (matched ?? []).map((l) => l.id as string);
+  if (abatidas.length) {
+    const { error: markErr } = await admin
+      .from("saft_import_lines")
+      .update({ stock_applied_at: new Date().toISOString() })
+      .in("id", abatidas);
+    if (markErr) return { ok: false, error: `marcação do abate falhou: ${markErr.message}` };
   }
 
   const { error: updErr } = await admin
@@ -457,6 +494,7 @@ Deno.serve(async (req: Request) => {
       invoice_no: l.invoiceNo,
       invoice_date: l.invoiceDate,
       invoice_at: l.invoiceAt,
+      line_number: l.lineNumber,
       pos_code: l.posCode,
       pos_description: l.posDescription,
       qty: l.qty,
@@ -465,7 +503,17 @@ Deno.serve(async (req: Request) => {
       status: itemId ? "matched" : "unmatched",
     };
   });
-  const { error: stageErr } = await admin.from("saft_import_lines").insert(rows);
+  // 0030: upsert com ignoreDuplicates em vez de insert. O POS de muitos
+  // restaurantes só exporta o SAF-T do MÊS, portanto importar todos os dias dá
+  // um ficheiro cumulativo. A chave única (restaurant_id, invoice_no,
+  // line_number) faz com que só entrem os documentos novos, em vez de rebentar
+  // ou de duplicar as vendas já conhecidas.
+  const { error: stageErr } = await admin
+    .from("saft_import_lines")
+    .upsert(rows, {
+      onConflict: "restaurant_id,invoice_no,line_number",
+      ignoreDuplicates: true,
+    });
   if (stageErr) {
     await admin.from("saft_imports").update({ status: "failed", error: stageErr.message }).eq("id", imp.id);
     return json({ imported: false, reason: `staging falhou: ${stageErr.message}` }, 500);
