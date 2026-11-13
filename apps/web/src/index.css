@@ -3,46 +3,48 @@
 @tailwind utilities;
 
 @layer base {
+  /* Identidade Nostos Rest (13-11-2026): creme afinado, verde pinho na estrutura, vinho #7A2E3A só na ação.
+     Os comentários abaixo com nomes antigos (areia, atlântico, terracota) descrevem o papel, não a cor. */
   /* ── Direcção "Costeiro quente" (David 29-07; mockup Cowork como referência,
      tokens do prompt como fonte de verdade). Fundo areia, estrutura atlântico,
      terracota SÓ na acção, semânticos alga/âmbar/coral. HSL derivado dos hex:
      areia-100 #FAF5EC · atlantico-900 #16303F · terracota-600 #B4502A ·
      ink #2A2723 · line #E4DACA. */
   :root {
-    --background: 39 58% 95%;          /* areia-100 */
-    --foreground: 34 9% 15%;           /* ink */
+    --background: 40 48% 94%;          /* areia-100 */
+    --foreground: 168 22% 14%;           /* ink */
     --card: 0 0% 100%;
-    --card-foreground: 34 9% 15%;
-    --primary: 17 62% 44%;             /* terracota-600 (acção) */
-    --primary-foreground: 43 64% 98%;  /* areia-50 */
-    --muted: 39 47% 90%;               /* areia-200 */
-    --muted-foreground: 30 9% 40%;     /* ink-muted */
-    --destructive: 7 56% 42%;          /* coral-600 */
-    --destructive-foreground: 43 64% 98%;
-    --border: 37 32% 84%;              /* line */
-    --input: 37 32% 84%;
-    --ring: 200 27% 60%;               /* atlantico-300 (focus) */
-    --accent: 39 47% 90%;
-    --accent-foreground: 34 9% 15%;
-    --radius: 0.875rem;                /* card 14px; inputs afinam a 9px */
+    --card-foreground: 168 22% 14%;
+    --primary: 351 45% 33%;             /* terracota-600 (acção) */
+    --primary-foreground: 0 0% 100%;  /* areia-50 */
+    --muted: 40 40% 90%;               /* areia-200 */
+    --muted-foreground: 150 5% 37%;     /* ink-muted */
+    --destructive: 4 64% 46%;          /* coral-600 */
+    --destructive-foreground: 0 0% 100%;
+    --border: 39 30% 81%;              /* line */
+    --input: 41 12% 49%;
+    --ring: 170 20% 53%;               /* atlantico-300 (focus) */
+    --accent: 40 40% 90%;
+    --accent-foreground: 168 22% 14%;
+    --radius: 0.625rem;                /* card 14px; inputs afinam a 9px */
 
     /* Estados de reserva — remapeados aos semânticos costeiros (AA verificado:
        fg -600 sobre bg -100). */
-    --status-confirmed-bg: 143 29% 91%;  /* alga-100 */
-    --status-confirmed-fg: 148 30% 30%;  /* alga-600 (escurecida p/ AA) */
-    --status-seated-bg: 200 30% 92%;     /* atlantico claro */
-    --status-seated-fg: 202 49% 25%;     /* atlantico-700 */
-    --status-pending-bg: 41 66% 91%;     /* ambar-100 */
-    --status-pending-fg: 37 69% 32%;     /* ambar-600 (escurecida p/ AA) */
-    --status-cancelled-bg: 39 47% 90%;   /* areia-200 */
-    --status-cancelled-fg: 30 9% 38%;    /* ink-muted */
-    --status-noshow-bg: 10 56% 91%;      /* coral-100 */
-    --status-noshow-fg: 7 56% 38%;       /* coral-600 */
+    --status-confirmed-bg: 140 27% 91%;  /* alga-100 */
+    --status-confirmed-fg: 145 44% 29%;  /* alga-600 (escurecida p/ AA) */
+    --status-seated-bg: 169 22% 90%;     /* atlantico claro */
+    --status-seated-fg: 174 47% 20%;     /* atlantico-700 */
+    --status-pending-bg: 43 64% 90%;     /* ambar-100 */
+    --status-pending-fg: 42 100% 24%;     /* ambar-600 (escurecida p/ AA) */
+    --status-cancelled-bg: 40 40% 90%;   /* areia-200 */
+    --status-cancelled-fg: 150 5% 37%;    /* ink-muted */
+    --status-noshow-bg: 7 61% 92%;      /* coral-100 */
+    --status-noshow-fg: 4 65% 40%;       /* coral-600 */
   }
   * { @apply border-border; }
-  body { @apply bg-background font-sans text-foreground; }
+  body { @apply bg-background font-sans text-foreground; font-variant-numeric: tabular-nums lining-nums; }
   .font-display {
-    font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600;
     letter-spacing: -0.01em;
   }
 }
@@ -52,17 +54,17 @@
    backoffice. Cores extraídas dos SVGs oficiais em /public/brand:
    creme #FBF7F0 · verde pinho #16403C · terracota #B0461F. */
 .landing {
-  --brand-cream: 38 58% 96%;
-  --brand-cream-deep: 38 45% 92%;
+  --brand-cream: 40 48% 94%;
+  --brand-cream-deep: 40 40% 90%;
   --brand-pine: 174 49% 17%;
-  --brand-pine-soft: 174 30% 30%;
-  --brand-terracotta: 16 70% 41%;
-  --brand-terracotta-deep: 16 72% 33%;
-  --brand-paper: 40 60% 99%;
+  --brand-pine-soft: 173 39% 27%;
+  --brand-terracotta: 351 45% 33%;
+  --brand-terracotta-deep: 347 46% 25%;
+  --brand-paper: 40 53% 97%;
   font-feature-settings: "ss01";
 }
 .landing .font-display {
-  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600;
   letter-spacing: -0.015em;
 }
 /* Ornamento de secção: o SÍMBOLO da marca (meandro único, o mesmo do
