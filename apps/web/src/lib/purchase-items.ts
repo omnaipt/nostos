@@ -47,12 +47,13 @@ export function parsePackFromText(
 ): { packQty: number; packUnit: "g" | "kg" | "ml" | "l" } | null {
   const m = text
     .toLowerCase()
-    .match(/(\d+(?:[.,]\d+)?)\s*(kg|g|ml|lt|l)\b/);
+    .match(/(\d+(?:[.,]\d+)?)\s*(kg|gr|g|ml|lt|l)\b/);
   if (!m) return null;
   const qty = Number(m[1].replace(",", "."));
   if (!Number.isFinite(qty) || qty <= 0) return null;
   const raw = m[2];
-  const packUnit = raw === "lt" ? "l" : (raw as "g" | "kg" | "ml" | "l");
+  // "lt" e "gr" são variantes comuns em faturas de "l" e "g" (item 3, 06b).
+  const packUnit = raw === "lt" ? "l" : raw === "gr" ? "g" : (raw as "g" | "kg" | "ml" | "l");
   return { packQty: qty, packUnit };
 }
 
@@ -138,9 +139,20 @@ const PACKAGING: Record<string, string> = {
   garrafoes: "Garrafão",
 };
 
+// Termos de qualidade e de descrição comuns em faturas que NÃO são marca (item
+// 3, 06b, achado 13): a heurística de marca ignora-os, tal como as abreviaturas
+// com ponto ("v.extra", "v.") e as palavras de embalagem. Minúsculas sem acentos.
+const QUALITY_TERMS = new Set([
+  "virgem", "extra", "ve", "gourmet", "premium", "bio", "biologico", "light",
+  "natural", "posta", "postas", "lombo", "lombos", "grosso", "fino", "branco",
+  "carolino", "agulha", "integral", "meio", "gordo", "magro", "selecao",
+  // Descrições/meios comuns (ex.: "atum em azeite") que não são marca.
+  "azeite", "agua", "oleo", "molho", "salmoura", "picante", "tomate", "sabor",
+]);
+
 // Regex do conteúdo (número + unidade) no texto da linha, preservando a posição
 // para separar o que vem antes (marca/embalagem) do formato.
-const CONTENT_RE = /(\d+(?:[.,]\d+)?)\s*(kg|g|ml|lt|l)\b/i;
+const CONTENT_RE = /(\d+(?:[.,]\d+)?)\s*(kg|gr|g|ml|lt|l)\b/i;
 
 // ── Item 1: transição entrada directa -> artigo (achado 11) ─────────────────
 // A entrada directa guarda a quantidade na unidade do ingrediente. Ao escolher
@@ -364,11 +376,13 @@ export function proposeArticleForIngredient(
   const m = raw.match(CONTENT_RE);
   const before = m ? raw.slice(0, m.index).trim() : raw;
   const beforeTokens = before.length ? before.split(/\s+/) : [];
+  // A palavra de embalagem final (ex.: "GARRAFAO") vira o label e sai da lista
+  // de candidatos a marca.
+  const brandTokens = [...beforeTokens];
   let pkgDisplay: string | null = null;
-  let brandTok: string | undefined = beforeTokens[beforeTokens.length - 1];
-  if (brandTok && PACKAGING[lowerNoAccents(brandTok)]) {
-    pkgDisplay = PACKAGING[lowerNoAccents(brandTok)];
-    brandTok = beforeTokens[beforeTokens.length - 2];
+  if (brandTokens.length && PACKAGING[lowerNoAccents(brandTokens[brandTokens.length - 1])]) {
+    pkgDisplay = PACKAGING[lowerNoAccents(brandTokens[brandTokens.length - 1])];
+    brandTokens.pop();
   }
 
   const contentStr = pack ? `${fmtNum(pack.packQty)} ${unitLabel(pack.packUnit)}` : "";
@@ -376,12 +390,18 @@ export function proposeArticleForIngredient(
   if (pkgDisplay) label = contentStr ? `${pkgDisplay} ${contentStr}` : pkgDisplay;
   else if (contentStr) label = `Embalagem ${contentStr}`;
 
-  // Marca: a palavra antes do conteúdo/embalagem, quando não faz parte do nome
-  // do ingrediente. Caso contrário fica vazia (nunca o nome inteiro da linha).
+  // Marca: a primeira palavra antes do conteúdo que não faça parte do nome do
+  // ingrediente, não seja um termo de qualidade/descrição, uma abreviatura com
+  // ponto nem uma palavra de embalagem (item 3, 06b). Vazia se não sobrar nenhuma
+  // (nunca o nome inteiro da linha).
+  const ingWords = new Set(lowerNoAccents(ingredient.name).split(/\s+/).filter(Boolean));
   let brand = "";
-  if (brandTok) {
-    const ingWords = new Set(lowerNoAccents(ingredient.name).split(/\s+/));
-    if (!ingWords.has(lowerNoAccents(brandTok))) brand = titleCaseWord(brandTok);
+  for (const tok of brandTokens) {
+    if (tok.includes(".")) continue; // abreviatura com ponto ("v.extra", "v.")
+    const low = lowerNoAccents(tok);
+    if (ingWords.has(low) || QUALITY_TERMS.has(low) || PACKAGING[low]) continue;
+    brand = titleCaseWord(tok);
+    break;
   }
 
   return { brand, label, packQty, packUnit };

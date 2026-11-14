@@ -451,3 +451,23 @@ describe("proposeArticleForIngredient (item 5)", () => {
     expect(unconvertibleFormatMessage("l")).toContain("peso médio");
   });
 });
+
+describe("marca proposta (06b item 3, achado 13)", () => {
+  const brandOf = (raw: string, ing: { name: string; unit: string }) =>
+    proposeArticleForIngredient(raw, { ...ing, unit_weight_g: null }).brand;
+  const azeite = { name: "Azeite virgem extra", unit: "l" };
+
+  it("ignora termos de qualidade e abreviaturas com ponto", () => {
+    expect(brandOf("AZEITE GALLO V.EXTRA 5 LT", azeite)).toBe("Gallo");
+    expect(brandOf("AZEITE V.EXTRA GALLO GARRAFAO 5L", azeite)).toBe("Gallo");
+    expect(brandOf("ATUM RAMIREZ POSTA AZEITE 120 GR", { name: "Atum", unit: "kg" })).toBe("Ramirez");
+    expect(brandOf("MASSA ESPARGUETE MILANEZA 500G", { name: "Massa esparguete", unit: "kg" })).toBe("Milaneza");
+    expect(brandOf("ARROZ CAROLINO CIGALA 1KG", { name: "Arroz carolino", unit: "kg" })).toBe("Cigala");
+    expect(brandOf("SAL MARINHO GROSSO 1KG", { name: "Sal marinho grosso", unit: "kg" })).toBe("");
+  });
+
+  it("'5 LT' é lido como 5 l e 'GR' como g", () => {
+    expect(parsePackFromText("AZEITE GALLO V.EXTRA 5 LT")).toEqual({ packQty: 5, packUnit: "l" });
+    expect(parsePackFromText("ATUM RAMIREZ POSTA AZEITE 120 GR")).toEqual({ packQty: 120, packUnit: "g" });
+  });
+});
