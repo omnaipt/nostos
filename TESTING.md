@@ -372,3 +372,70 @@ As duas faturas de teste são do mesmo fornecedor novo.
    Definições). Em **telemóvel**, a barra mantém o scroll horizontal.
 
 Capturas de ecrã: pendentes (validação visual pelo orquestrador/David).
+
+# Sprint 06b — Afinações da entrada de faturas (14-11-2026)
+
+## Testado automaticamente (com resultados)
+
+Gate `pnpm turbo run typecheck test build --force` (Windows, pnpm 10.6 + Turborepo):
+
+| Gate | Comando | Resultado |
+|---|---|---|
+| Typecheck | `pnpm typecheck` | ✅ `@stoa/web`, `tsc --noEmit` sem erros |
+| Testes unitários | `pnpm test` | ✅ 20 ficheiros, **244 testes** verdes (eram 235; +9) |
+| Build | `pnpm build` | ✅ `vite build` OK (aviso pré-existente de chunk >500 kB) |
+| Lint | — | ⚠️ `@stoa/web` continua sem script `lint` (0 tarefas) |
+
+Testes novos (funções puras em `lib/purchase-items.test.ts`, 42 → 51):
+- **Item 1 — `existingArticleTransition`**: caso real "AZEITE GALLO V.EXTRA 5 LT",
+  2 UN a 19,90 com artigo existente de 5 l → **2 embalagens** e **19,90 €/embalagem**
+  (via `packCostCentsFromInvoice`), e `packEntryQty`/`packEntryBaseCostCents` confirmam
+  **10 l a 3,98 €/l (398 cents/l)**; não apaga um preço já escrito (`hasUserCost`);
+  fora de `un` dá embalagens pela conversão e sem preço por embalagem.
+- **Item 2 — `articlesMatchingContent`**: um artigo de 5 l é o único compatível com
+  "5 LT"; conteúdos iguais em unidades diferentes batem certo (120 g contra 0,12 kg);
+  devolve todos quando há mais do que um; vazio sem conteúdo legível ou sem compatível.
+- **Item 3 — marca proposta**: "AZEITE GALLO V.EXTRA 5 LT"→Gallo,
+  "AZEITE V.EXTRA GALLO GARRAFAO 5L"→Gallo, "ATUM RAMIREZ POSTA AZEITE 120 GR"→Ramirez,
+  "MASSA ESPARGUETE MILANEZA 500G"→Milaneza, "ARROZ CAROLINO CIGALA 1KG"→Cigala,
+  "SAL MARINHO GROSSO 1KG"→vazio; `parsePackFromText` lê "5 LT" como 5 l e "120 GR"
+  como 120 g. Os testes do sprint 06 continuam verdes.
+
+A lógica das três afinações está coberta ao nível das funções puras e ligada na UI
+(verificada por typecheck + build). A composição na UI (`Entradas.tsx`: pré-escolha no
+parse, nota discreta, ordenação do seletor, preenchimento do preço ao escolher) não tem
+teste de componente automatizado — fica para teste manual abaixo.
+
+## Testes manuais pendentes — repete o teste do David (passos numerados)
+
+Pré-requisito: login como `owner`/`gestor`/`cozinha`. O ingrediente "Azeite virgem
+extra" (l) já tem o artigo "gallo · Garrafão 5L" (5 l) na despensa. A fatura **FA
+2026/0412** é de um **fornecedor novo** (Distribuidora Atlântico Oeste) e inclui a linha
+"AZEITE GALLO V.EXTRA 5 LT", **2 UN a 19,90**.
+
+### A. Azeite resolvido pelo artigo existente (itens 1, 2 e 3)
+1. Abrir **Entradas de compra** e carregar a fatura 0412. O formulário pré-preenche-se.
+2. Na linha do azeite, confirmar que **NÃO** abriu o formulário "Criar artigo" e que o
+   artigo **"gallo · Garrafão 5L"** aparece já **escolhido** no seletor, com a nota
+   discreta **"Artigo existente sugerido; confirme"**.
+3. Confirmar **2 embalagens** e **preço por embalagem = 19,90**; a pré-visualização
+   mostra **= 10 l** a **3,98 €/l**.
+4. Se existisse mais do que um artigo de 5 l para este ingrediente, confirmar (num tenant
+   com esse caso) que o seletor abre com **esses artigos primeiro** e a criação não abre.
+5. Apagar o preço e voltar a escolher o artigo no seletor: o preço **19,90** volta a
+   preencher-se; escrever um preço à mão e trocar de artigo: o preço escrito **não é
+   apagado**.
+6. **Registar entrada**. O saldo do azeite sobe **+10 l** (3,98 €/l) e o custo médio
+   actualiza-se.
+
+### B. Aprendizagem do fornecedor novo (item 2, último ponto)
+1. Carregar outra fatura do **mesmo fornecedor** com a mesma linha de azeite.
+2. Confirmar que a linha vem já com o **mesmo artigo** resolvido (o alias ligou-se ao
+   artigo escolhido em A), sem reescrever nada.
+
+### C. Marca proposta (item 3) — quando se cria artigo
+1. Numa linha cujo ingrediente **não** tenha artigo compatível (ex.: outro azeite),
+   confirmar que a marca proposta no formulário "Criar artigo" é **Gallo** e não
+   "V.extra".
+
+Capturas de ecrã: pendentes (validação visual pelo orquestrador/David).
