@@ -15,7 +15,14 @@ import {
   Wine,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { VOLTAR, useInicioDaPagina, usePageMeta } from "@/components/site/SiteChrome";
+import {
+  CabecalhoVertical,
+  VOLTAR,
+  botaoPrincipal,
+  botaoSecundario,
+  useInicioDaPagina,
+  usePageMeta,
+} from "@/components/site/SiteChrome";
 
 // Landing pública de nostos.pt — identidade Pinho & Tinta (Zé, 07-Jul).
 // Tokens de marca scoped em .landing (index.css): creme, verde pinho,
@@ -89,19 +96,6 @@ function CtaPrimary({
   );
 }
 
-function CtaGhost({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="inline-flex items-center justify-center gap-2 rounded-[7px] border-2 border-[hsl(var(--brand-pine)/0.25)] px-7 py-3 text-base font-medium text-[hsl(var(--brand-pine))] transition-colors hover:border-[hsl(var(--brand-pine))] hover:bg-[hsl(var(--brand-pine)/0.05)]"
-    >
-      {children}
-    </a>
-  );
-}
-
 export default function Landing() {
   useInicioDaPagina();
   usePageMeta(
@@ -109,31 +103,28 @@ export default function Landing() {
     "Da despensa à reserva, num só sítio. Reservas sem comissões, menu digital com QR e a ficha técnica de cada prato escrita por IA, com food cost e margem. Feito em Portugal.",
   );
   return (
-    <div className="landing min-h-screen bg-[hsl(var(--brand-cream))] text-[hsl(var(--brand-pine))] antialiased">
-      {/* Header */}
-      <header className="container flex items-center justify-between py-6">
-        <img src="/brand/nostos-restaurantes.svg" alt="nostos restaurantes" className="h-14 sm:h-[4.5rem]" />
-        <Link
-          to="/login"
-          className="rounded-[7px] px-4 py-2 text-sm font-medium text-[hsl(var(--brand-pine-soft))] transition-colors hover:bg-[hsl(var(--brand-pine)/0.06)] hover:text-[hsl(var(--brand-pine))]"
-        >
-          Entrar
-        </Link>
-      </header>
+    <div
+      className="landing nostos-site min-h-screen bg-[hsl(var(--brand-cream))] text-[hsl(var(--brand-pine))] antialiased"
+      style={{ "--acento": "var(--acento-rest)" } as React.CSSProperties}
+    >
+      {/* Cabeçalho e topo no mesmo molde das outras verticais (14-11-2026). */}
+      <CabecalhoVertical vertical="rest" entrar={{ href: "/login", interno: true }} />
 
-      {/* Hero */}
-      <section className="container pb-16 pt-12 text-center sm:pb-24 sm:pt-16">
-        <h1 className={"font-display mx-auto mt-4 max-w-3xl text-5xl font-semibold leading-[1.05] sm:text-6xl " + pine}>
+      <section className="container max-w-3xl pb-16 pt-8 sm:pb-24 sm:pt-14">
+        <h1 className="text-4xl font-semibold leading-[1.1] tracking-[-0.015em] text-[var(--titulo)] sm:text-5xl">
           O sistema operativo do teu <em className="italic">restaurante</em>.
         </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[hsl(var(--brand-pine-soft))]">
-          <span className="block sm:inline">Da despensa à reserva, num só sítio.</span>{" "}
-          <span className="block sm:inline">Sem comissões por reserva.</span>{" "}
-          <span className="block sm:inline">Feito para quem gere a casa, não para engenheiros.</span>
+        <p className="mt-6 text-lg leading-relaxed text-[var(--texto)]">
+          Da despensa à reserva, num só sítio. Sem comissões por reserva. Feito para quem gere a
+          casa, não para engenheiros.
         </p>
-        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-          <CtaPrimary href="#fundador">Quero ser restaurante fundador</CtaPrimary>
-          <CtaGhost href="/m/restaurante-saloio-demo">Vê um menu de exemplo</CtaGhost>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <a href="#fundador" className={botaoPrincipal}>
+            Quero ser restaurante fundador
+          </a>
+          <a href="/m/restaurante-saloio-demo" target="_blank" rel="noreferrer" className={botaoSecundario}>
+            Vê um menu de exemplo
+          </a>
         </div>
         <p className="mt-6 text-sm text-[hsl(var(--brand-pine-soft))]">
           Sem comissões · Alergénios UE no menu · Clientes que voltam

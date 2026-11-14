@@ -4,7 +4,6 @@ import {
   Lista,
   PaginaVertical,
   botaoPrincipal,
-  botaoSecundario,
   usePageMeta,
 } from "@/components/site/SiteChrome";
 
@@ -21,7 +20,7 @@ export default function Urbs() {
   );
 
   return (
-    <PaginaVertical vertical="urbs">
+    <PaginaVertical vertical="urbs" entrar={{ href: APP + "/entrar" }}>
       <h1 className="text-4xl font-semibold leading-[1.1] tracking-[-0.015em] text-[var(--titulo)] sm:text-5xl">
         Os processos de licenciamento do seu atelier, num só sítio.
       </h1>
@@ -33,9 +32,6 @@ export default function Urbs() {
       <div className="mt-8 flex flex-wrap gap-3">
         <a href={APP + "/registo"} className={botaoPrincipal}>
           Registar o meu gabinete
-        </a>
-        <a href={APP + "/entrar"} className={botaoSecundario}>
-          Já tenho conta
         </a>
       </div>
 

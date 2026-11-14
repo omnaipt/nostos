@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Link } from "react-router-dom";
+import { DESCRITOR, MEANDRO, PALAVRA } from "./logotipos";
 
 // Peças comuns do site público da marca nostos (página da marca e páginas
 // curtas das verticais). Tokens em .nostos-site (index.css); cada página só
@@ -67,20 +68,65 @@ export function Meandro({ className }: { className?: string }) {
   );
 }
 
-// Lockup em texto: "nostos" sempre na cor da palavra; meandro e descritor no
-// acento da vertical.
-export function Lockup({ vertical, className }: { vertical: Vertical; className?: string }) {
+// Logótipo desenhado de cada vertical, igual em todas: meandro e descritor no
+// acento da vertical, palavra "nostos" sempre na mesma cor (14-11-2026).
+export function Logotipo({ vertical, className }: { vertical: Vertical; className?: string }) {
+  const acento = `var(--acento-${vertical})`;
   return (
-    <span
-      className={"inline-flex items-center gap-2 font-semibold " + (className ?? "text-2xl")}
-      style={{ "--acento": `var(--acento-${vertical})` } as React.CSSProperties}
+    <svg
+      viewBox="0 0 300 120"
+      role="img"
+      aria-label={"nostos " + vertical}
+      className={className ?? "h-14 w-auto"}
     >
-      <Meandro className="h-[1.1em] w-[1.1em] text-[var(--acento)]" />
-      <span>
-        <span className="text-[var(--palavra)]">nostos</span>{" "}
-        <span className="text-[var(--acento)]">{vertical}</span>
-      </span>
-    </span>
+      <path d={MEANDRO} fill="none" stroke={acento} strokeWidth="9.18" />
+      {PALAVRA.map((d) => (
+        <path key={d.slice(0, 24)} d={d} fill="var(--palavra)" />
+      ))}
+      {/* Versão para tamanhos reduzidos: o descritor do lockup oficial (12,5 em
+          120 de altura) fica ilegível num cabeçalho, por isso cresce 1,6 vezes
+          a partir da margem esquerda, sem mexer no meandro nem na palavra. */}
+      <g transform="translate(101.6 104) scale(1.6) translate(-101.6 -101.5)">
+        {DESCRITOR[vertical].map((d, i) => (
+          <path key={i} d={d} fill={acento} />
+        ))}
+      </g>
+    </svg>
+  );
+}
+
+// Cabeçalho igual em todas as páginas de vertical: logótipo à esquerda;
+// "Todos os setores" e, quando o produto tem aplicação, "Entrar" à direita.
+export type Entrar = { href: string; interno?: boolean };
+
+export function CabecalhoVertical({ vertical, entrar }: { vertical: Vertical; entrar?: Entrar }) {
+  const classeEntrar =
+    "inline-flex items-center justify-center whitespace-nowrap rounded-[7px] border border-[var(--borda-controlo)] bg-[var(--botao)] px-4 py-2 text-sm font-semibold text-[var(--titulo)] transition-colors hover:border-[var(--titulo)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--titulo)] focus-visible:ring-offset-2";
+  return (
+    <header className="container flex items-center justify-between gap-3 py-6">
+      <Link to="/" state={VOLTAR} aria-label="nostos, página da marca" className="shrink-0">
+        <Logotipo vertical={vertical} className="-ml-3 h-14 w-auto" />
+      </Link>
+      <div className="flex items-center gap-3 sm:gap-5">
+        <Link
+          to="/"
+          state={VOLTAR}
+          className="whitespace-nowrap text-sm font-medium text-[var(--texto-2)] underline-offset-4 hover:underline"
+        >
+          Todos os setores
+        </Link>
+        {entrar &&
+          (entrar.interno ? (
+            <Link to={entrar.href} className={classeEntrar}>
+              Entrar
+            </Link>
+          ) : (
+            <a href={entrar.href} className={classeEntrar}>
+              Entrar
+            </a>
+          ))}
+      </div>
+    </header>
   );
 }
 
@@ -106,25 +152,22 @@ export function Rodape({ produto }: { produto?: Vertical }) {
 }
 
 // Moldura de uma página curta de vertical: cabeçalho com o lockup, conteúdo e rodapé.
-export function PaginaVertical({ vertical, children }: { vertical: Vertical; children: React.ReactNode }) {
+export function PaginaVertical({
+  vertical,
+  entrar,
+  children,
+}: {
+  vertical: Vertical;
+  entrar?: Entrar;
+  children: React.ReactNode;
+}) {
   useInicioDaPagina();
   return (
     <div
       className="nostos-site min-h-screen bg-[var(--fundo)] text-[var(--texto)] antialiased"
       style={{ "--acento": `var(--acento-${vertical})` } as React.CSSProperties}
     >
-      <header className="container flex items-center justify-between py-6">
-        <Link to="/" state={VOLTAR} aria-label="nostos, página da marca">
-          <Lockup vertical={vertical} />
-        </Link>
-        <Link
-          to="/"
-          state={VOLTAR}
-          className="text-sm font-medium text-[var(--texto-2)] underline-offset-4 hover:underline"
-        >
-          Todos os setores
-        </Link>
-      </header>
+      <CabecalhoVertical vertical={vertical} entrar={entrar} />
       <main className="container max-w-3xl pb-20 pt-8 sm:pt-14">
         {children}
         <p className="mt-14">

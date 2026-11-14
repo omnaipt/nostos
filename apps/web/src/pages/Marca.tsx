@@ -2,7 +2,7 @@ import * as React from "react";
 import { Link, useLocation, useNavigationType } from "react-router-dom";
 import {
   Estado,
-  Lockup,
+  Logotipo,
   Rodape,
   botaoPrincipal,
   guardarPosicaoDaMarca,
@@ -108,7 +108,7 @@ export default function Marca() {
                 className="group flex flex-col rounded-[10px] bg-[var(--cartao)] p-7 shadow-[0_1px_3px_rgba(22,64,60,.06),0_4px_14px_rgba(22,64,60,.08)] transition-shadow hover:shadow-[0_2px_6px_rgba(22,64,60,.07),0_12px_32px_rgba(22,64,60,.10)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--titulo)]"
                 style={{ "--acento": `var(--acento-${e.vertical})` } as React.CSSProperties}
               >
-                <Lockup vertical={e.vertical} />
+                <Logotipo vertical={e.vertical} className="-ml-3 h-16 w-auto self-start" />
                 <p className="mt-4 text-sm font-medium text-[var(--texto-2)]">{e.paraQuem}</p>
                 <p className="mt-1 text-lg leading-snug text-[var(--titulo)]">{e.linha}</p>
                 <p className="mt-5">

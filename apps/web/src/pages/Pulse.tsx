@@ -24,9 +24,11 @@ export default function Pulse() {
         O nostos pulse parte de uma base comum e ganha os módulos que o seu negócio pede. Começamos
         por um setor de cada vez.
       </p>
-      <a href={CONTACTO} className={botaoPrincipal + " mt-8"}>
-        Fale connosco
-      </a>
+      <div className="mt-8 flex flex-wrap gap-3">
+        <a href={CONTACTO} className={botaoPrincipal}>
+          Fale connosco
+        </a>
+      </div>
 
       <Bloco titulo="Primeiro setor, agentes de telecomunicações">
         <p>

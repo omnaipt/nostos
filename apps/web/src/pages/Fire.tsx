@@ -27,9 +27,11 @@ export default function Fire() {
         O nostos fire junta ponto, escalas e equipas num só sistema, do quiosque do quartel ao
         escritório.
       </p>
-      <a href={CONTACTO} className={botaoPrincipal + " mt-8"}>
-        Fale connosco
-      </a>
+      <div className="mt-8 flex flex-wrap gap-3">
+        <a href={CONTACTO} className={botaoPrincipal}>
+          Fale connosco
+        </a>
+      </div>
 
       <Bloco titulo="Em produção">
         <Lista
