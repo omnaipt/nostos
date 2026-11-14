@@ -41,6 +41,14 @@ export const queryKeys = {
     ["fichas", restaurantId, "sheets"] as const,
   techSheetLines: (restaurantId: string | undefined) =>
     ["fichas", restaurantId, "lines"] as const,
+  // Artigos de compra e famílias (Stock S1, 0031). Vivem sob fichasRoot para
+  // partilharem invalidação com a despensa (um artigo pertence a um ingrediente).
+  purchaseItems: (restaurantId: string | undefined) =>
+    ["fichas", restaurantId, "purchase-items"] as const,
+  ingredientFamilies: (restaurantId: string | undefined) =>
+    ["fichas", restaurantId, "families"] as const,
+  supplierAliases: (restaurantId: string | undefined) =>
+    ["fichas", restaurantId, "supplier-aliases"] as const,
   // Stock (0011). stockRoot invalida movimentos de qualquer ingrediente.
   stockRoot: ["stock"] as const,
   stockMovements: (restaurantId: string | undefined, ingredientId: string | undefined) =>

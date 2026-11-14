@@ -16,7 +16,9 @@ import {
   useStockMovements,
 } from "@/hooks/use-stock";
 import { useLastAppliedImport } from "@/hooks/use-saft";
+import { useIngredientFamilies } from "@/hooks/use-purchase-items";
 import { formatCostCents } from "@/components/menu/PantryManager";
+import { ArticlesPanel } from "@/components/pantry/ArticlesPanel";
 import {
   computePantrySummary,
   formatQty,
@@ -51,6 +53,11 @@ export default function Pantry() {
   const ingredientsQuery = useIngredients(restaurantId);
   const lastPurchasesQuery = useLastPurchases(restaurantId);
   const lastAppliedQuery = useLastAppliedImport(restaurantId);
+  const familiesQuery = useIngredientFamilies(restaurantId);
+  const familyName = React.useMemo(
+    () => new Map((familiesQuery.data ?? []).map((f) => [f.id, f.name])),
+    [familiesQuery.data],
+  );
 
   const [search, setSearch] = React.useState("");
   const [selected, setSelected] = React.useState<Ingredient | null>(null);
@@ -66,8 +73,18 @@ export default function Pantry() {
     const filtered = term
       ? ingredientsQuery.data.filter((i) => i.name.toLocaleLowerCase("pt").includes(term))
       : ingredientsQuery.data;
-    return sortPantry(filtered);
-  }, [ingredientsQuery.data, search]);
+    // Agrupa por família (mesma família aparece junta); sem família fica no fim.
+    // Ordenação estável: dentro de cada grupo mantém a ordem de sortPantry.
+    const base = sortPantry(filtered);
+    return [...base].sort((a, b) => {
+      const fa = a.family_id ? (familyName.get(a.family_id) ?? "") : null;
+      const fb = b.family_id ? (familyName.get(b.family_id) ?? "") : null;
+      if (fa === fb) return 0;
+      if (fa == null) return 1;
+      if (fb == null) return -1;
+      return fa.localeCompare(fb, "pt");
+    });
+  }, [ingredientsQuery.data, search, familyName]);
 
   // Mantém o dialog em sincronia com o saldo refrescado após um movimento.
   const selectedLive =
@@ -174,6 +191,7 @@ export default function Pantry() {
                     key={i.id}
                     restaurantId={restaurantId as string}
                     ingredient={i}
+                    familyLabel={i.family_id ? (familyName.get(i.family_id) ?? null) : null}
                     lastPurchase={lastPurchasesQuery.data?.get(i.id) ?? null}
                     onOpen={() => setSelected(i)}
                   />
@@ -219,11 +237,13 @@ function StatBox({ label, value, bad }: { label: string; value: string; bad?: bo
 function PantryRow({
   restaurantId,
   ingredient,
+  familyLabel,
   lastPurchase,
   onOpen,
 }: {
   restaurantId: string;
   ingredient: Ingredient;
+  familyLabel: string | null;
   lastPurchase: string | null;
   onOpen: () => void;
 }) {
@@ -248,6 +268,9 @@ function PantryRow({
         aria-label={`Ver movimentos de ${ingredient.name}`}
       >
         <span className="block truncate font-medium">{ingredient.name}</span>
+        {familyLabel && (
+          <span className="block truncate text-xs text-muted-foreground">{familyLabel}</span>
+        )}
       </button>
       <span className={"text-right tabular-nums " + (below ? "font-semibold text-destructive" : "")}>
         {formatQty(ingredient.stock_qty)} {ingredient.unit}
@@ -380,6 +403,8 @@ function MovementsDialog({
           Mínimo de reposição
           <MinThresholdField restaurantId={restaurantId} ingredient={ingredient} />
         </div>
+        {/* Stock S1: artigos de compra, família e peso médio por unidade. */}
+        <ArticlesPanel restaurantId={restaurantId} ingredient={ingredient} />
       </div>
 
       {movementsQuery.isLoading && (

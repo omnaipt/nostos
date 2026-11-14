@@ -770,7 +770,7 @@ export function MenuManager({
     const ings = new Map(
       (ingredientsQuery.data ?? []).map((i) => [
         i.id,
-        { unit: i.unit, cost_per_unit_cents: i.cost_per_unit_cents },
+        { unit: i.unit, cost_per_unit_cents: i.cost_per_unit_cents, unit_weight_g: i.unit_weight_g },
       ]),
     );
     const linesBySheet = new Map<string, typeof lines>();

@@ -157,6 +157,14 @@ export type TechSheetUpdate = TablesUpdate<"tech_sheets">;
 export type TechSheetIngredient = Tables<"tech_sheet_ingredients">;
 export type TechSheetIngredientInsert = TablesInsert<"tech_sheet_ingredients">;
 
+// ── Famílias e artigos de compra (Stock S1, migration 0031) ──────────────────
+export type IngredientFamily = Tables<"ingredient_families">;
+export type IngredientFamilyInsert = TablesInsert<"ingredient_families">;
+
+export type PurchaseItem = Tables<"purchase_items">;
+export type PurchaseItemInsert = TablesInsert<"purchase_items">;
+export type PurchaseItemUpdate = TablesUpdate<"purchase_items">;
+
 // ── Stock + Imports SAF-T (migrations 0011/0012) ─────────────────────────────
 export type StockMovement = Tables<"stock_movements">;
 export type StockMovementInsert = TablesInsert<"stock_movements">;

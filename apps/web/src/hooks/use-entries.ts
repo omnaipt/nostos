@@ -18,6 +18,11 @@ export interface PurchaseEntryLine {
   // Validade ESTIMADA (0017): data da fatura + shelf life resolvido (override
   // > categoria > fallback), editável no acto do registo. null = sem estimativa.
   expiresAt: string | null;
+  // Stock S1 (0031): entrada por embalagens. Quando preenchidos, qty/unit/custo
+  // já vêm na unidade do ingrediente (calculados no cliente) e a guarda confere
+  // packs × pack_qty. null = entrada directa em quantidade.
+  purchaseItemId?: string | null;
+  packs?: number | null;
 }
 
 export interface PurchaseEntryInput {
@@ -31,7 +36,7 @@ export interface PurchaseEntryInput {
   // a supplier_norm devolvida pela edge (estável entre faturas do fornecedor).
   aliasLearning?: {
     supplierNorm: string;
-    items: { rawNameNorm: string; ingredientId: string }[];
+    items: { rawNameNorm: string; ingredientId: string; purchaseItemId?: string | null }[];
   } | null;
 }
 
@@ -53,6 +58,8 @@ export function useCreatePurchaseEntry(restaurantId: string | undefined) {
         note,
         created_at: createdAt,
         expires_at: l.expiresAt,
+        purchase_item_id: l.purchaseItemId ?? null,
+        packs: l.packs ?? null,
       }));
       const { error } = await supabase.from("stock_movements").insert(rows);
       if (error) throw error;
@@ -68,6 +75,7 @@ export function useCreatePurchaseEntry(restaurantId: string | undefined) {
               supplier_norm: learning.supplierNorm,
               raw_name_norm: a.rawNameNorm,
               ingredient_id: a.ingredientId,
+              purchase_item_id: a.purchaseItemId ?? null,
             })),
             { onConflict: "restaurant_id,supplier_norm,raw_name_norm" },
           );

@@ -18,10 +18,21 @@ import {
 } from "@/hooks/use-entries";
 import { useShelfLifeDefaults } from "@/hooks/use-inventory";
 import { useParseInvoice, type ParseInvoiceResult } from "@/hooks/use-parse-invoice";
+import {
+  usePurchaseItems,
+  useSupplierAliases,
+  useCreatePurchaseItem,
+} from "@/hooks/use-purchase-items";
 import { formatCostCents } from "@/components/menu/PantryManager";
+import { formatQty } from "@/lib/stock";
 import { todayServiceDate } from "@/lib/service-date";
 import { estimateExpiryDate, resolveShelfLifeDays } from "@/lib/expiry";
-import { parsePriceToCents, type Ingredient } from "@/lib/types";
+import { parsePriceToCents, UNIT_OPTIONS, type Ingredient, type PurchaseItem } from "@/lib/types";
+import {
+  packEntryBaseCostCents,
+  packEntryQty,
+  proposeArticleFromRawName,
+} from "@/lib/purchase-items";
 // Módulo puro partilhado com a edge parse-invoice (norma da aprendizagem).
 import { norm } from "../../../../supabase/functions/parse-invoice/match";
 
@@ -39,8 +50,11 @@ import { norm } from "../../../../supabase/functions/parse-invoice/match";
 interface LineDraft {
   ingredientId: string;
   qty: string;
-  cost: string; // €/unidade s/IVA, texto livre ("9,80")
+  cost: string; // €/unidade s/IVA (entrada directa) ou €/embalagem (por artigo)
   expires: string; // validade estimada (YYYY-MM-DD), editável; "" = sem estimativa
+  // Stock S1: entrada por artigo de compra + embalagens. "" = entrada directa.
+  purchaseItemId: string;
+  packs: string; // nº de embalagens (texto), só quando há artigo
   // Metadados do parse (ausentes em linhas manuais):
   fromParse?: boolean;
   rawName?: string; // descrição exacta na fatura (visível; chave da aprendizagem)
@@ -48,7 +62,14 @@ interface LineDraft {
   parseNote?: string | null; // note da IA + aviso de unidade, quando existirem
 }
 
-const EMPTY_LINE: LineDraft = { ingredientId: "", qty: "", cost: "", expires: "" };
+const EMPTY_LINE: LineDraft = {
+  ingredientId: "",
+  qty: "",
+  cost: "",
+  expires: "",
+  purchaseItemId: "",
+  packs: "",
+};
 
 export default function Entradas() {
   const { data: restaurant, isLoading: loadingRest } = useActiveRestaurant();
@@ -70,9 +91,38 @@ export default function Entradas() {
   const [dragOver, setDragOver] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  const articlesQuery = usePurchaseItems(restaurantId);
+  const aliasesQuery = useSupplierAliases(restaurantId);
+  const createArticle = useCreatePurchaseItem(restaurantId);
+
   const ingredients = (ingredientsQuery.data ?? []).filter((i) => i.active !== false);
   const ingredientById = new Map(ingredients.map((i) => [i.id, i]));
   const parse = useParseInvoice(restaurantId, ingredients);
+
+  // Artigos activos por ingrediente (para o selector de formato de cada linha).
+  const articlesByIngredient = React.useMemo(() => {
+    const m = new Map<string, PurchaseItem[]>();
+    for (const a of articlesQuery.data ?? []) {
+      if (!a.active) continue;
+      const arr = m.get(a.ingredient_id) ?? [];
+      arr.push(a);
+      m.set(a.ingredient_id, arr);
+    }
+    return m;
+  }, [articlesQuery.data]);
+  const articleById = React.useMemo(
+    () => new Map((articlesQuery.data ?? []).map((a) => [a.id, a])),
+    [articlesQuery.data],
+  );
+  // Aliases com artigo, por supplier_norm|raw_name_norm (segunda fatura propõe
+  // o mesmo artigo sem intervenção).
+  const aliasArticleByKey = React.useMemo(() => {
+    const m = new Map<string, string>();
+    for (const al of aliasesQuery.data ?? []) {
+      if (al.purchase_item_id) m.set(`${al.supplier_norm}|${al.raw_name_norm}`, al.purchase_item_id);
+    }
+    return m;
+  }, [aliasesQuery.data]);
 
   function setLine(idx: number, patch: Partial<LineDraft>) {
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
@@ -96,9 +146,15 @@ export default function Entradas() {
       result.invoice_date && /^\d{4}-\d{2}-\d{2}$/.test(result.invoice_date)
         ? result.invoice_date
         : invoiceDate;
+    const supplierNorm = result.supplier_norm ?? null;
     const drafts: LineDraft[] = parsedLines.map((l) => {
       const ing = l.ingredient_id ? ingredientById.get(l.ingredient_id) : undefined;
       const noteParts = [l.note, l.unit_warning].filter(Boolean) as string[];
+      // Segunda fatura do mesmo fornecedor com o mesmo nome de linha: se o alias
+      // já aprendeu um artigo, propõe o mesmo artigo e as embalagens (= qty).
+      const aliasKey = supplierNorm && l.raw_name ? `${supplierNorm}|${norm(l.raw_name)}` : null;
+      const proposedArticleId = aliasKey ? aliasArticleByKey.get(aliasKey) : undefined;
+      const hasArticle = !!(proposedArticleId && articleById.has(proposedArticleId));
       return {
         ingredientId: ing?.id ?? "",
         qty: l.fill_qty != null ? String(l.fill_qty) : l.qty != null ? String(l.qty) : "",
@@ -107,6 +163,8 @@ export default function Entradas() {
             ? (l.fill_cost_cents / 100).toFixed(2).replace(".", ",")
             : "",
         expires: ing ? estimateForDate(ing, date) : "",
+        purchaseItemId: hasArticle ? (proposedArticleId as string) : "",
+        packs: hasArticle && l.qty != null ? String(l.qty) : "",
         fromParse: true,
         rawName: l.raw_name,
         grade: l.confidence === "baixa" && l.match_grade === "verde" ? "ambar" : l.match_grade,
@@ -165,20 +223,55 @@ export default function Entradas() {
     }
     const parsed: PurchaseEntryLine[] = [];
     for (const l of lines) {
-      if (!l.ingredientId && !l.qty.trim() && !l.cost.trim()) continue; // linha vazia
+      if (!l.ingredientId && !l.qty.trim() && !l.cost.trim() && !l.purchaseItemId) continue; // linha vazia
       const ing = ingredientById.get(l.ingredientId);
-      const qty = Number(l.qty.replace(",", "."));
-      if (!ing || !Number.isFinite(qty) || qty <= 0) {
-        setFormError("Cada linha precisa de ingrediente e quantidade > 0.");
+      if (!ing) {
+        setFormError("Cada linha precisa de ingrediente.");
         return;
       }
-      parsed.push({
-        ingredientId: ing.id,
-        unit: ing.unit,
-        qty,
-        costPerUnitCents: parsePriceToCents(l.cost),
-        expiresAt: l.expires.trim() || null,
-      });
+      if (l.purchaseItemId) {
+        // Entrada por embalagens: qty e custo vêm já na unidade do ingrediente.
+        const art = articleById.get(l.purchaseItemId);
+        const packsNum = Number(l.packs.replace(",", "."));
+        if (!art || !Number.isFinite(packsNum) || packsNum <= 0) {
+          setFormError("Indique o nº de embalagens (> 0).");
+          return;
+        }
+        const qty = packEntryQty(packsNum, art.pack_qty, art.pack_unit, ing.unit, ing.unit_weight_g);
+        if (qty == null) {
+          setFormError("Formato do artigo incompatível com a unidade do ingrediente.");
+          return;
+        }
+        const baseCost = packEntryBaseCostCents(
+          parsePriceToCents(l.cost),
+          art.pack_qty,
+          art.pack_unit,
+          ing.unit,
+          ing.unit_weight_g,
+        );
+        parsed.push({
+          ingredientId: ing.id,
+          unit: ing.unit,
+          qty,
+          costPerUnitCents: baseCost,
+          expiresAt: l.expires.trim() || null,
+          purchaseItemId: art.id,
+          packs: packsNum,
+        });
+      } else {
+        const qty = Number(l.qty.replace(",", "."));
+        if (!Number.isFinite(qty) || qty <= 0) {
+          setFormError("Cada linha precisa de ingrediente e quantidade > 0.");
+          return;
+        }
+        parsed.push({
+          ingredientId: ing.id,
+          unit: ing.unit,
+          qty,
+          costPerUnitCents: parsePriceToCents(l.cost),
+          expiresAt: l.expires.trim() || null,
+        });
+      }
     }
     if (parsed.length === 0) {
       setFormError("A fatura precisa de pelo menos uma linha.");
@@ -188,7 +281,11 @@ export default function Entradas() {
     // alias do fornecedor — a próxima fatura igual casa a verde sozinha.
     const aliasItems = lines
       .filter((l) => l.fromParse && l.rawName && l.ingredientId)
-      .map((l) => ({ rawNameNorm: norm(l.rawName as string), ingredientId: l.ingredientId }))
+      .map((l) => ({
+        rawNameNorm: norm(l.rawName as string),
+        ingredientId: l.ingredientId,
+        purchaseItemId: l.purchaseItemId || null,
+      }))
       .filter((a) => a.rawNameNorm.length > 0);
     const aliasLearning =
       parsedSupplierNorm && aliasItems.length > 0
@@ -366,7 +463,7 @@ export default function Entradas() {
                             )}
                           </p>
                         )}
-                        <div className="grid gap-2 sm:grid-cols-[1fr_110px_150px_36px]">
+                        <div className="grid gap-2 sm:grid-cols-[1fr_36px]">
                           <Select
                             aria-label="Ingrediente"
                             value={line.ingredientId}
@@ -375,6 +472,9 @@ export default function Entradas() {
                               setLine(idx, {
                                 ingredientId: e.target.value,
                                 expires: next ? estimateFor(next) : "",
+                                // Mudar de ingrediente limpa o artigo (é de outro).
+                                purchaseItemId: "",
+                                packs: "",
                               });
                             }}
                           >
@@ -385,20 +485,6 @@ export default function Entradas() {
                               </option>
                             ))}
                           </Select>
-                          <Input
-                            aria-label="Quantidade"
-                            inputMode="decimal"
-                            placeholder={ing ? `Qtd (${ing.unit})` : "Qtd"}
-                            value={line.qty}
-                            onChange={(e) => setLine(idx, { qty: e.target.value })}
-                          />
-                          <Input
-                            aria-label="Custo unitário sem IVA"
-                            inputMode="decimal"
-                            placeholder={ing ? `€/${ing.unit} s/IVA` : "€/un s/IVA"}
-                            value={line.cost}
-                            onChange={(e) => setLine(idx, { cost: e.target.value })}
-                          />
                           <Button
                             type="button"
                             size="icon"
@@ -410,6 +496,15 @@ export default function Entradas() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
+                        {ing && (
+                          <LineArticleControls
+                            line={line}
+                            ing={ing}
+                            articles={articlesByIngredient.get(ing.id) ?? []}
+                            onChange={(patch) => setLine(idx, patch)}
+                            createArticle={createArticle}
+                          />
+                        )}
                         {line.fromParse && line.parseNote && (
                           <p className="mt-1 text-xs font-medium text-[hsl(var(--status-pending-fg))]">
                             {line.parseNote}
@@ -500,6 +595,195 @@ export default function Entradas() {
             ))}
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+// Controlo por linha: escolher artigo de compra + nº de embalagens (com a
+// quantidade na unidade do ingrediente e o custo por unidade base calculados
+// antes de gravar), ou entrada directa em quantidade. Também propõe criar um
+// artigo a partir do nome lido na fatura.
+function LineArticleControls({
+  line,
+  ing,
+  articles,
+  onChange,
+  createArticle,
+}: {
+  line: LineDraft;
+  ing: Ingredient;
+  articles: PurchaseItem[];
+  onChange: (patch: Partial<LineDraft>) => void;
+  createArticle: ReturnType<typeof useCreatePurchaseItem>;
+}) {
+  const [showCreate, setShowCreate] = React.useState(false);
+  const proposal = proposeArticleFromRawName(line.rawName ?? "");
+  const [brand, setBrand] = React.useState(proposal.brand);
+  const [label, setLabel] = React.useState(proposal.label);
+  const [packQty, setPackQty] = React.useState(
+    proposal.packQty != null ? String(proposal.packQty).replace(".", ",") : "",
+  );
+  const [packUnit, setPackUnit] = React.useState<string>(proposal.packUnit ?? ing.unit);
+
+  const art = articles.find((a) => a.id === line.purchaseItemId);
+  const packsNum = Number(line.packs.replace(",", "."));
+  const previewQty =
+    art && Number.isFinite(packsNum) && packsNum > 0
+      ? packEntryQty(packsNum, art.pack_qty, art.pack_unit, ing.unit, ing.unit_weight_g)
+      : null;
+  const previewCost = art
+    ? packEntryBaseCostCents(parsePriceToCents(line.cost), art.pack_qty, art.pack_unit, ing.unit, ing.unit_weight_g)
+    : null;
+
+  function submitCreate() {
+    const qtyNum = Number(packQty.replace(",", "."));
+    if (!Number.isFinite(qtyNum) || qtyNum <= 0) {
+      toast.error("Indique o conteúdo da embalagem (> 0).");
+      return;
+    }
+    if (packEntryQty(1, qtyNum, packUnit, ing.unit, ing.unit_weight_g) == null) {
+      toast.error("O formato não é convertível para a unidade do ingrediente.");
+      return;
+    }
+    createArticle.mutate(
+      {
+        ingredient_id: ing.id,
+        brand: brand.trim() || null,
+        label: label.trim() || null,
+        pack_qty: qtyNum,
+        pack_unit: packUnit,
+      },
+      {
+        onSuccess: (a) => {
+          onChange({ purchaseItemId: a.id, packs: line.packs || "1" });
+          setShowCreate(false);
+          toast.success("Artigo criado.");
+        },
+        onError: (e) =>
+          toast.error(e instanceof Error ? e.message : "Não foi possível criar o artigo."),
+      },
+    );
+  }
+
+  return (
+    <div className="mt-2 space-y-2">
+      <div className="grid gap-2 sm:grid-cols-[1fr_130px]">
+        <Select
+          aria-label="Artigo de compra"
+          value={line.purchaseItemId}
+          onChange={(e) =>
+            onChange({ purchaseItemId: e.target.value, packs: e.target.value ? line.packs || "1" : "" })
+          }
+        >
+          <option value="">Entrada directa (quantidade)</option>
+          {articles.map((a) => (
+            <option key={a.id} value={a.id}>
+              {[a.brand, a.label].filter(Boolean).join(" · ") || "Artigo"} ({a.pack_qty} {a.pack_unit})
+            </option>
+          ))}
+        </Select>
+        {!showCreate && (
+          <Button type="button" size="sm" variant="outline" onClick={() => setShowCreate(true)}>
+            <Plus className="h-4 w-4" /> Novo artigo
+          </Button>
+        )}
+      </div>
+
+      {showCreate && (
+        <div className="space-y-2 rounded-md border border-input bg-muted/30 p-2">
+          <p className="text-xs text-muted-foreground">
+            Criar artigo a partir da linha da fatura. Rever marca, formato e conteúdo antes de confirmar.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Input aria-label="Marca" placeholder="Marca" value={brand} onChange={(e) => setBrand(e.target.value)} />
+            <Input
+              aria-label="Formato"
+              placeholder="Formato (ex.: Garrafão 5 L)"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              aria-label="Conteúdo"
+              inputMode="decimal"
+              className="w-24"
+              placeholder="Conteúdo"
+              value={packQty}
+              onChange={(e) => setPackQty(e.target.value)}
+            />
+            <Select
+              aria-label="Unidade do conteúdo"
+              className="w-20"
+              value={packUnit}
+              onChange={(e) => setPackUnit(e.target.value)}
+            >
+              {UNIT_OPTIONS.map((u) => (
+                <option key={u.code} value={u.code}>
+                  {u.label}
+                </option>
+              ))}
+            </Select>
+            <Button type="button" size="sm" disabled={createArticle.isPending} onClick={submitCreate}>
+              Guardar artigo
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setShowCreate(false)}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {line.purchaseItemId ? (
+        <div className="grid gap-2 sm:grid-cols-[110px_160px_1fr] sm:items-center">
+          <Input
+            aria-label="Nº de embalagens"
+            inputMode="decimal"
+            placeholder="Embalagens"
+            value={line.packs}
+            onChange={(e) => onChange({ packs: e.target.value })}
+          />
+          <Input
+            aria-label="Custo por embalagem sem IVA"
+            inputMode="decimal"
+            placeholder="€/embalagem s/IVA"
+            value={line.cost}
+            onChange={(e) => onChange({ cost: e.target.value })}
+          />
+          <p className="text-xs text-muted-foreground">
+            {previewQty != null ? (
+              <>
+                = {formatQty(previewQty)} {ing.unit}
+              </>
+            ) : (
+              "indique as embalagens"
+            )}
+            {previewCost != null && (
+              <>
+                {" "}
+                · {formatCostCents(previewCost)}/{ing.unit}
+              </>
+            )}
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-[110px_160px]">
+          <Input
+            aria-label="Quantidade"
+            inputMode="decimal"
+            placeholder={`Qtd (${ing.unit})`}
+            value={line.qty}
+            onChange={(e) => onChange({ qty: e.target.value })}
+          />
+          <Input
+            aria-label="Custo unitário sem IVA"
+            inputMode="decimal"
+            placeholder={`€/${ing.unit} s/IVA`}
+            value={line.cost}
+            onChange={(e) => onChange({ cost: e.target.value })}
+          />
+        </div>
       )}
     </div>
   );

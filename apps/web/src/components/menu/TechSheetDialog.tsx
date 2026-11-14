@@ -269,7 +269,10 @@ export function TechSheetDialog({
     return computeFoodCost(
       asLines,
       new Map(
-        ingredients.map((i) => [i.id, { unit: i.unit, cost_per_unit_cents: i.cost_per_unit_cents }]),
+        ingredients.map((i) => [
+          i.id,
+          { unit: i.unit, cost_per_unit_cents: i.cost_per_unit_cents, unit_weight_g: i.unit_weight_g },
+        ]),
       ),
     );
   }, [lines, ingredients]);
@@ -339,7 +342,13 @@ export function TechSheetDialog({
             const qtyNum = parseQty(line.qty);
             const lineCost =
               linked && qtyNum
-                ? computeLineCostCents(qtyNum, line.unit, linked.unit, linked.cost_per_unit_cents)
+                ? computeLineCostCents(
+                    qtyNum,
+                    line.unit,
+                    linked.unit,
+                    linked.cost_per_unit_cents,
+                    linked.unit_weight_g,
+                  )
                 : null;
             return (
               <div key={line.key} className="flex flex-wrap items-center gap-1.5">
