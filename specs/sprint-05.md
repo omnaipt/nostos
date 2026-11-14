@@ -60,12 +60,12 @@ Evidência exigida: testes unitários da lógica extraída, se a função o perm
 
 ### 4. Interface
 
-- [ ] Registar consumo interno: acção acessível a `owner`, `gestor` e `cozinha` (na Despensa ou nas Entradas, onde o padrão do repo o tornar mais natural), com dois modos: por prato (prato, doses, motivo, nota) e por ingrediente solto (ingrediente, quantidade, motivo, nota). Por prato, mostra antes de gravar o que vai sair e o que não vai ser abatido.
-- [ ] O mesmo formulário permite registar uma quebra de prato inteiro (`waste` por prato).
-- [ ] Lista de movimentos filtrável por tipo, com consumo interno e quebras distinguíveis. O total mensal do consumo interno em euros (ao custo médio) só aparece ao `owner`.
-- [ ] No ingrediente, campo "Modo de consumo" (pela ficha técnica, ou apurado na contagem), com uma frase de ajuda.
-- [ ] Fila "Fichas por validar": fichas em `rascunho`, ordenadas pelas unidades vendidas do prato nos últimos 90 dias (a partir de `saft_import_lines` com estado `matched`), com acesso directo à ficha. Visível a `owner` e `gestor`, no ecrã onde hoje se gerem fichas ou margens.
-- [ ] Movimentos estimados aparecem marcados como tal onde a lista de movimentos é mostrada.
+- [x] Registar consumo interno: acção acessível a `owner`, `gestor` e `cozinha` (na Despensa ou nas Entradas, onde o padrão do repo o tornar mais natural), com dois modos: por prato (prato, doses, motivo, nota) e por ingrediente solto (ingrediente, quantidade, motivo, nota). Por prato, mostra antes de gravar o que vai sair e o que não vai ser abatido.
+- [x] O mesmo formulário permite registar uma quebra de prato inteiro (`waste` por prato).
+- [x] Lista de movimentos filtrável por tipo, com consumo interno e quebras distinguíveis. O total mensal do consumo interno em euros (ao custo médio) só aparece ao `owner`.
+- [x] No ingrediente, campo "Modo de consumo" (pela ficha técnica, ou apurado na contagem), com uma frase de ajuda.
+- [x] Fila "Fichas por validar": fichas em `rascunho`, ordenadas pelas unidades vendidas do prato nos últimos 90 dias (a partir de `saft_import_lines` com estado `matched`), com acesso directo à ficha. Visível a `owner` e `gestor`, no ecrã onde hoje se gerem fichas ou margens.
+- [x] Movimentos estimados aparecem marcados como tal onde a lista de movimentos é mostrada.
 
 Evidência exigida: testes de componente ou de hook para a pré-visualização do consumo por prato e para a ordenação da fila; passos manuais em `TESTING.md`.
 
