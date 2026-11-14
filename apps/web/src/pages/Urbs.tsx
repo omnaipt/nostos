@@ -11,7 +11,8 @@ import {
 // nostos.pt/urbs: página curta, do tamanho do que já se pode afirmar.
 // Tratamento por você. Textos aprovados a 13-11-2026.
 
-const APP = "https://urbs.nostos.pt";
+// Endereço atual da aplicação (ainda sem domínio próprio).
+const APP = "https://nostos-urbs.vercel.app";
 
 export default function Urbs() {
   usePageMeta(
