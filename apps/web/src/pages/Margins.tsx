@@ -8,7 +8,11 @@ import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import { useIngredients } from "@/hooks/use-ingredients";
 import { useItemVariants, useMenuItems } from "@/hooks/use-menu";
 import { useTechSheetLines, useTechSheets } from "@/hooks/use-tech-sheets";
+import { useUnitsSoldByItem } from "@/hooks/use-consumo";
+import { useMemberRole } from "@/hooks/use-member-role";
 import { formatCostCents } from "@/components/menu/PantryManager";
+import { orderFichasPorValidar } from "@/lib/consumo";
+import { formatQty } from "@/lib/stock";
 import { computeMenuMargins, formatPriceCents, type DishMargin } from "@/lib/types";
 
 // Margens do menu (S3): ranking de pratos por margem, piores primeiro,
@@ -86,6 +90,8 @@ export default function Margins() {
         </div>
       )}
 
+      <FichasPorValidar restaurantId={restaurantId} />
+
       {!error && !loading && summary && (
         <>
           <div className="mb-6 grid grid-cols-3 gap-3">
@@ -123,6 +129,59 @@ export default function Margins() {
         </>
       )}
     </div>
+  );
+}
+
+// Fila "fichas por validar" (Stock S2): fichas em rascunho ordenadas pelas
+// unidades vendidas do prato nos últimos 90 dias — ataca-se primeiro o que mais
+// pesa no stock, porque esse abate está a ser estimado. Visível a owner/gestor.
+function FichasPorValidar({ restaurantId }: { restaurantId: string | undefined }) {
+  const { role } = useMemberRole();
+  const sheetsQuery = useTechSheets(restaurantId);
+  const itemsQuery = useMenuItems(restaurantId);
+  const unitsQuery = useUnitsSoldByItem(restaurantId);
+
+  const rows = React.useMemo(() => {
+    const drafts = (sheetsQuery.data ?? []).filter((s) => s.status === "rascunho");
+    const names = new Map((itemsQuery.data ?? []).map((i) => [i.id, i.name]));
+    return orderFichasPorValidar(drafts, names, unitsQuery.data ?? new Map());
+  }, [sheetsQuery.data, itemsQuery.data, unitsQuery.data]);
+
+  if (role !== "owner" && role !== "gestor") return null;
+  if (rows.length === 0) return null;
+
+  return (
+    <Card className="mb-6 border-amber-300 bg-amber-50/50">
+      <CardContent className="py-4">
+        <h2 className="mb-1 font-display text-lg font-semibold text-atlantico-900">
+          Fichas por validar
+        </h2>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Enquanto a ficha está por validar, o abate por vendas é estimado. Pelas mais vendidas
+          (últimos 90 dias) primeiro.
+        </p>
+        <ul className="divide-y divide-amber-200">
+          {rows.map((f) => (
+            <li key={f.sheetId} className="flex items-center gap-3 py-2 text-sm">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{f.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {f.unitsSold > 0
+                    ? `${formatQty(f.unitsSold)} unidades vendidas (90 dias)`
+                    : "Sem vendas registadas nos últimos 90 dias"}
+                </p>
+              </div>
+              <Link
+                to={`/ementa?ficha=${f.menuItemId}`}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                Abrir ficha
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }
 

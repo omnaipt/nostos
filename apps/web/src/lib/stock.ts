@@ -60,6 +60,7 @@ export const MOVEMENT_KIND_LABEL: Record<string, string> = {
   sale_depletion: "Abate de venda",
   waste: "Quebra",
   adjustment: "Ajuste",
+  internal_use: "Consumo interno",
 };
 
 // A edge marca os movimentos do lote com note='saft_import:<id>' para a

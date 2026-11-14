@@ -22,6 +22,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { XMLParser } from "npm:fast-xml-parser@4";
+// Lógica pura do abate (conversão de unidades, agregação, estimado e modo de
+// consumo) num módulo partilhado e testável. Ver deplete.ts.
+import { computeDepletions, type Sheet } from "./deplete.ts";
 
 interface Payload {
   restaurantId?: string;
@@ -60,39 +63,6 @@ function json(body: unknown, status = 200): Response {
     status,
     headers: { "Content-Type": "application/json", ...cors },
   });
-}
-
-// Conversão de unidades (Stock S1). Tabela de casos ÚNICA, partilhada com
-// apps/web/src/lib/types.ts (unitFactor) e public.unit_factor da 0032:
-//   from=to                   -> qty
-//   g↔kg, ml↔l                -> ×0.001 / ×1000
-//   un→g/kg (com peso médio w)-> w / (w/1000)
-//   g/kg→un (com peso médio w)-> 1/w / (1000/w)
-//   massa↔volume, un sem peso -> null (sem conversão possível)
-function unitFactor(from: string, to: string, unitWeightG?: number | null): number | null {
-  if (from === to) return 1;
-  if (from === "g" && to === "kg") return 0.001;
-  if (from === "kg" && to === "g") return 1000;
-  if (from === "ml" && to === "l") return 0.001;
-  if (from === "l" && to === "ml") return 1000;
-  if (unitWeightG == null || unitWeightG <= 0) return null;
-  if (from === "un" && to === "g") return unitWeightG;
-  if (from === "un" && to === "kg") return unitWeightG * 0.001;
-  if (from === "g" && to === "un") return 1 / unitWeightG;
-  if (from === "kg" && to === "un") return 1000 / unitWeightG;
-  return null;
-}
-
-// Converte a qty da linha da ficha para a unidade do ingrediente (exigida pelos
-// movimentos, 0011). null quando a conversão não é possível.
-function toIngredientUnit(
-  qty: number,
-  from: string,
-  to: string,
-  unitWeightG?: number | null,
-): number | null {
-  const factor = unitFactor(from, to, unitWeightG);
-  return factor == null ? null : qty * factor;
 }
 
 function asArray<T>(x: T | T[] | undefined | null): T[] {
@@ -254,7 +224,7 @@ async function applyImport(
   const { data: sheets, error: sheetsErr } = itemIds.length
     ? await admin
         .from("tech_sheets")
-        .select("menu_item_id, servings, tech_sheet_ingredients(ingredient_id, qty, unit)")
+        .select("menu_item_id, servings, status, tech_sheet_ingredients(ingredient_id, qty, unit)")
         .eq("restaurant_id", restaurantId)
         .in("menu_item_id", itemIds)
     : { data: [], error: null };
@@ -275,7 +245,7 @@ async function applyImport(
   const { data: ingredients, error: ingErr } = ingredientIds.length
     ? await admin
         .from("ingredients")
-        .select("id, name, unit, unit_weight_g")
+        .select("id, name, unit, unit_weight_g, depletion_mode")
         .eq("restaurant_id", restaurantId)
         .in("id", ingredientIds)
     : { data: [], error: null };
@@ -293,52 +263,31 @@ async function applyImport(
     noSheetNames = (items ?? []).map((i) => i.name as string);
   }
 
-  // Agregar abates por (fatura, ingrediente): source_ref = invoice_no (contrato
-  // 0012) sem gerar uma linha por cada ingrediente de cada linha de venda.
-  const depletion = new Map<string, { ingredientId: string; invoiceNo: string; qty: number }>();
-  const unitMismatch = new Set<string>();
-  for (const line of matched ?? []) {
-    const sheet = sheetByItem.get(line.menu_item_id as string);
-    if (!sheet) continue;
-    const servings = Math.max(Number(sheet.servings) || 1, 1);
+  // Agregar abates por (fatura, ingrediente) com a lógica pura partilhada:
+  // conversão de unidades, marca de estimado (ficha em rascunho) e exclusão dos
+  // ingredientes em modo contagem (voltam em consumoPorContagem).
+  const { depletions, unitMismatch, consumoPorContagem } = computeDepletions(
+    (matched ?? []).map((l) => ({
+      invoice_no: l.invoice_no as string,
+      qty: Number(l.qty),
+      menu_item_id: l.menu_item_id as string,
+    })),
+    sheetByItem as unknown as Map<string, Sheet>,
     // deno-lint-ignore no-explicit-any
-    for (const si of asArray((sheet as any).tech_sheet_ingredients)) {
-      if (!si.ingredient_id) continue; // linha livre, sem despensa
-      const ing = ingById.get(si.ingredient_id as string);
-      if (!ing) continue;
-      const converted = toIngredientUnit(
-        Number(si.qty),
-        String(si.unit),
-        String(ing.unit),
-        // deno-lint-ignore no-explicit-any
-        (ing as any).unit_weight_g != null ? Number((ing as any).unit_weight_g) : null,
-      );
-      if (converted == null) {
-        unitMismatch.add(ing.name as string);
-        continue;
-      }
-      const used = (Number(line.qty) * converted) / servings;
-      const key = `${line.invoice_no}|${si.ingredient_id}`;
-      const cur = depletion.get(key);
-      if (cur) cur.qty += used;
-      else depletion.set(key, {
-        ingredientId: si.ingredient_id as string,
-        invoiceNo: line.invoice_no as string,
-        qty: used,
-      });
-    }
-  }
+    ingById as unknown as Map<string, any>,
+  );
 
-  const movements = [...depletion.values()]
+  const movements = depletions
     .map((d) => ({
       restaurant_id: restaurantId,
       ingredient_id: d.ingredientId,
       kind: "sale_depletion",
       qty: -(Math.round(d.qty * 1000) / 1000),
-      unit: (ingById.get(d.ingredientId)?.unit ?? "un") as string,
+      unit: d.unit,
       source: "saft_import",
       source_ref: d.invoiceNo,
       note: tag,
+      estimated: d.estimated,
     }))
     .filter((m) => m.qty < 0); // arredondado a 0.000 não gera movimento
 
@@ -371,7 +320,8 @@ async function applyImport(
       movements: movements.length,
       ingredientsTouched: new Set(movements.map((m) => m.ingredient_id)).size,
       dishesWithoutSheet: noSheetNames,
-      unitMismatch: [...unitMismatch],
+      unitMismatch,
+      consumoPorContagem,
     },
   };
 }
