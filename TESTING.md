@@ -225,3 +225,80 @@ Verificações-chave: (a) impressão não esconde EM FALTA e imprime-o a negrito
 conjunto de ficheiros do item 7 — **vazio/PASS** (ressalva: 1 ocorrência em comentário
 do seed SQL, fora da lista); (e) `git diff --name-only HEAD~1` todo dentro do scope
 HACCP — **PASS**.
+
+---
+
+# Sprint 04 — Stock S1 (unidades, artigos de compra e formatos)
+
+Verificado nesta máquina (Windows, pnpm 10.6 + Turborepo) a 2026-11-14.
+
+## Automático (com resultados)
+
+| Gate | Comando | Resultado |
+|---|---|---|
+| Typecheck | `pnpm typecheck` | ✅ `@stoa/web`, `tsc --noEmit` sem erros |
+| Testes unitários | `pnpm test` | ✅ 20 ficheiros, **208 testes** verdes (vitest) |
+| Build | `pnpm build` | ✅ `vite build` OK (aviso pré-existente de chunk >500 kB) |
+| Lint | `pnpm lint` | ⚠️ 0 tarefas (sem script `lint` em `@stoa/web`, como nos sprints anteriores) |
+
+Testes novos deste sprint:
+- `src/lib/tech-sheet-cost.test.ts` — casos de `unitFactor` e de `computeLineCostCents`
+  com peso médio por unidade (item 1/3): 2 kg→2000 g, 10 l→10000 ml, 2 un a 150 g/un→300 g,
+  un sem peso→null, kg↔ml→null.
+- `src/lib/purchase-items.test.ts` — **cálculo de embalagens** (`packEntryQty`,
+  `packEntryBaseCostCents`) e **proposta de artigo a partir do alias**
+  (`proposeEntryFromAlias`), incluindo o caso-âncora "Azeite Gallo VE 5L, 2 un,
+  39,80 €" → 10 l a 398 cents/l, e a proposta de artigo a partir do nome da fatura
+  (`proposeArticleFromRawName`/`parsePackFromText`).
+
+### pgTAP (base de dados)
+
+`supabase/tests/0015_stock_formatos.sql` (`plan(28)`).
+
+- **Não corrido nesta máquina**: não há Postgres local e a instrução é não o instalar.
+- Escrito e revisto pelo executor; execução pelo **orquestrador** com `supabase test db`
+  (requer 0001..0018 + 0031), dentro de transacção com rollback.
+- Cobre: conversão kg→g, l→ml, un→g com peso médio, un sem peso (rejeitado),
+  kg→ml (rejeitado); entrada por 2 embalagens de 5 l em ingrediente em l (10 l) e em
+  ml (10000 ml); custo por litro preservado; duas marcas somam no mesmo `stock_qty`;
+  qty que não bate com packs (rejeitado); guarda de convertibilidade do artigo;
+  famílias (ligação e rejeição de família de outro restaurante); aliases ligados a
+  artigo; isolamento multi-tenant das tabelas e campos novos.
+
+## Manual (passo a passo) — item 4
+
+Pré-requisito: despensa com pelo menos um ingrediente (ex.: "Azeite" em `l`,
+"Cebola" em `g`). Login como `owner` ou `gestor`.
+
+### 4.1 Entrada por embalagens (ecrã Entradas de compra)
+1. Abrir **Entradas de compra**. Numa linha, escolher o ingrediente "Azeite".
+2. No selector de artigo da linha, se ainda não houver artigo, clicar **Novo artigo**:
+   a proposta vem preenchida (formato = nome da linha; conteúdo = 5 L se o nome o
+   trouxer). Confirmar marca/formato/conteúdo e **Guardar artigo**.
+3. Com o artigo escolhido, indicar **2** embalagens e o custo por embalagem (ex.: 19,90).
+   A linha mostra, antes de gravar, **= 10 l** e **398 €.../l** (custo por unidade base).
+4. **Registar entrada**. Na Despensa, o saldo do Azeite sobe 10 l e o custo médio reflecte
+   os 398 cents/l. A entrada por **quantidade directa** (sem artigo) continua disponível.
+
+### 4.2 Proposta de artigo a partir do alias (segunda fatura)
+1. Carregar uma fatura (PDF/foto) de um fornecedor. Numa linha sem artigo conhecido,
+   o ecrã propõe criar o artigo a partir do nome do produto; confirmar.
+2. Registar a entrada: fica gravado o alias do fornecedor **com** `purchase_item_id`.
+3. Carregar nova fatura do **mesmo fornecedor** com o **mesmo nome de linha**: a linha
+   aparece já com o **mesmo artigo** e as **mesmas embalagens** (= qty da fatura), sem
+   intervenção. Rever e registar.
+
+### 4.3 Despensa — artigos, família e peso médio
+1. Na **Despensa**, abrir um ingrediente (clicar na linha).
+2. No painel "Artigos de compra e família": criar/editar/desactivar artigos (marca,
+   formato, conteúdo), atribuir ou criar **família**, e preencher o **peso médio por
+   unidade (g)**.
+3. Ingredientes da **mesma família** aparecem juntos na lista da despensa (a família
+   aparece por baixo do nome).
+
+### 4.4 Peso médio e ficha técnica
+1. Num ingrediente comprado ao peso (ex.: "Cebola" em `g`), preencher peso médio 150 g.
+2. Numa ficha técnica com uma linha "1 un" ligada a esse ingrediente, a linha **deixa**
+   de aparecer como sem custo: o custo passa a ser calculado (1 un = 150 g).
+
+Capturas de ecrã: pendentes (a recolher pelo orquestrador/David na validação visual).
