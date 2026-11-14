@@ -5,7 +5,6 @@ import {
   Lockup,
   Rodape,
   botaoPrincipal,
-  botaoSecundario,
   usePageMeta,
   type Vertical,
 } from "@/components/site/SiteChrome";
@@ -52,11 +51,10 @@ export default function Marca() {
 
   return (
     <div className="nostos-site min-h-screen bg-[var(--fundo)] text-[var(--texto)] antialiased">
-      <header className="container flex items-center justify-between py-6">
+      {/* Sem "Entrar" aqui (David, 14-11-2026): a entrada faz-se dentro de cada
+          produto, para levar à aplicação certa. */}
+      <header className="container flex items-center py-6">
         <img src="/brand/nostos-base.svg" alt="nostos" className="h-14 sm:h-[4.5rem]" />
-        <Link to="/login" className={botaoSecundario + " px-4 py-2 text-sm"}>
-          Entrar
-        </Link>
       </header>
 
       <main>
