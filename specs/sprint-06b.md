@@ -39,6 +39,20 @@ Caso real: "AZEITE GALLO V.EXTRA 5 LT" propôs a marca "V.extra".
 - [x] Testes com: "AZEITE GALLO V.EXTRA 5 LT" dá Gallo; "AZEITE V.EXTRA GALLO GARRAFAO 5L" dá Gallo; "ATUM RAMIREZ POSTA AZEITE 120 GR" dá Ramirez; "MASSA ESPARGUETE MILANEZA 500G" dá Milaneza; "ARROZ CAROLINO CIGALA 1KG" dá Cigala; "SAL MARINHO GROSSO 1KG" dá marca vazia. Os testes do sprint 06 continuam verdes. — `marca proposta (06b item 3)` em purchase-items.test.ts (244 testes verdes).
 - [x] O formato "5 LT" é reconhecido como 5 l (e "GR" como g), se ainda não for. — "gr" adicionado a `parsePackFromText` e `CONTENT_RE` ("lt" já existia).
 
+### 3b. Fatura já registada bloqueia o registo (iteração 2, achado 15)
+
+Decisão do David, 14-11-2026: bloquear sempre. Em Portugal o número de fatura é
+único por fornecedor e série; uma correção faz-se com nota de crédito, que tem
+outro número.
+
+Hoje cada linha de uma entrada grava um movimento em `stock_movements` com
+source `invoice`, source_ref igual ao número da fatura e note
+`Fatura {fornecedor} {nº}`. A lista de entradas recentes já agrupa por essa note.
+
+- [x] Ao submeter, se já existir uma entrada registada com o mesmo fornecedor e número de fatura (comparação normalizada: minúsculas, sem acentos, espaços colapsados), o registo é bloqueado com uma mensagem clara que explica a unicidade e aponta a nota de crédito. Não se grava nenhum movimento. — `invoiceAlreadyRegistered` (lib/purchase-items.ts) sobre as notes de `entriesQuery.data`; guarda em `onSubmit` (Entradas.tsx) a seguir à validação do nº.
+- [x] A chave do bloqueio é a mesma note escrita no registo, por uma função partilhada, para não divergirem. — `purchaseEntryNote` em lib/purchase-items.ts, usada por `useCreatePurchaseEntry` (use-entries.ts) e pela verificação.
+- [x] O mesmo número de outro fornecedor, ou outro número do mesmo fornecedor, não é bloqueado. — testes `invoiceAlreadyRegistered (06b item 3b)` em purchase-items.test.ts.
+
 ### 4. Fecho
 
 - [x] `pnpm turbo run typecheck test build --force` verde, resumo em Evidência.
@@ -48,6 +62,7 @@ Caso real: "AZEITE GALLO V.EXTRA 5 LT" propôs a marca "V.extra".
 ## Decisões
 
 - 14-11-2026 (David): sprint 06 validado em produção com a fatura 0412; estas três afinações seguem já.
+- 14-11-2026 (David, iteração 2): fatura já registada bloqueia sempre o registo (item 3b). O número de fatura é único por fornecedor e série; uma correção faz-se com nota de crédito, que tem outro número.
 
 ## Blockers
 
@@ -55,6 +70,11 @@ Nenhum. Nota (fora de scope, para futuro): a composição na UI (pré-escolha no
 nota, ordenação do seletor, preenchimento do preço ao escolher) está ligada e verificada
 por typecheck + build, mas não há testes de componente; a verificação ponta-a-ponta fica
 nos testes manuais de `TESTING.md`.
+
+Nota (item 3b): a verificação de duplicado corre no cliente sobre as entradas recentes
+carregadas (`useRecentPurchaseEntries`, limite de 300 movimentos). Para o volume v0 chega;
+uma fatura antiga para lá desse limite não seria apanhada. Uma guarda definitiva seria um
+índice único em `stock_movements` (fora de scope: mexe em schema de produção).
 
 ## Evidência
 
@@ -86,3 +106,17 @@ Commits (branch `feat/rest-entradas-afinacoes`, sem push):
 - `b45bb3d entradas: 06b itens 1 e 2 (preço e artigo existente ao escolher)`
 - `182b531 entradas: 06b item 3 (marca proposta ignora termos de qualidade)`
 - fecho (esta spec + `TESTING.md`).
+
+### Iteração 2 (item 3b)
+
+Gate `pnpm turbo run typecheck test build --force` verde (14-11-2026, Windows, pnpm 10.6 +
+Turborepo): typecheck sem erros, **249 testes** verdes (eram 244; +5), `vite build` OK
+(mantém o aviso pré-existente de chunk >500 kB). Sem script `lint` no repo.
+
+- `lib/purchase-items.ts`: `purchaseEntryNote` (note partilhada) + `invoiceAlreadyRegistered`
+  (comparação normalizada de fornecedor + número sobre as notes já registadas).
+- `hooks/use-entries.ts`: `useCreatePurchaseEntry` passa a construir a note via
+  `purchaseEntryNote`, para a chave do bloqueio não divergir do que se grava.
+- `pages/Entradas.tsx`: guarda em `onSubmit` (a seguir à validação do nº) que bloqueia o
+  registo de uma fatura já registada, com mensagem que explica a unicidade e a nota de crédito.
+- Testes novos em `lib/purchase-items.test.ts` (51 → 56): `invoiceAlreadyRegistered (06b item 3b)`.

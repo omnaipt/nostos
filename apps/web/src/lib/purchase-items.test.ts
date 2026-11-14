@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   articlesMatchingContent,
   existingArticleTransition,
+  invoiceAlreadyRegistered,
   lineBlockReason,
+  purchaseEntryNote,
   packCostCentsFromInvoice,
   packEntryBaseCostCents,
   packEntryQty,
@@ -469,5 +471,33 @@ describe("marca proposta (06b item 3, achado 13)", () => {
   it("'5 LT' é lido como 5 l e 'GR' como g", () => {
     expect(parsePackFromText("AZEITE GALLO V.EXTRA 5 LT")).toEqual({ packQty: 5, packUnit: "l" });
     expect(parsePackFromText("ATUM RAMIREZ POSTA AZEITE 120 GR")).toEqual({ packQty: 120, packUnit: "g" });
+  });
+});
+
+describe("invoiceAlreadyRegistered (06b item 3b, achado 15)", () => {
+  const notes = [
+    purchaseEntryNote("Distribuidora Atlântico Oeste", "FA 2026/0412"),
+    purchaseEntryNote("Frutas do Vale", "2026/88"),
+  ];
+
+  it("bloqueia o mesmo fornecedor + número já registado", () => {
+    expect(invoiceAlreadyRegistered("Distribuidora Atlântico Oeste", "FA 2026/0412", notes)).toBe(true);
+  });
+
+  it("ignora maiúsculas, acentos e espaços a mais", () => {
+    expect(invoiceAlreadyRegistered("distribuidora atlantico oeste", "fa  2026/0412", notes)).toBe(true);
+  });
+
+  it("não bloqueia número diferente do mesmo fornecedor", () => {
+    expect(invoiceAlreadyRegistered("Distribuidora Atlântico Oeste", "FA 2026/0413", notes)).toBe(false);
+  });
+
+  it("não bloqueia o mesmo número de outro fornecedor (único por fornecedor e série)", () => {
+    expect(invoiceAlreadyRegistered("Outro Fornecedor", "FA 2026/0412", notes)).toBe(false);
+  });
+
+  it("sem entradas registadas, nunca bloqueia", () => {
+    expect(invoiceAlreadyRegistered("Distribuidora Atlântico Oeste", "FA 2026/0412", [])).toBe(false);
+    expect(invoiceAlreadyRegistered("Fornecedor", "1", [null, undefined])).toBe(false);
   });
 });

@@ -382,7 +382,7 @@ Gate `pnpm turbo run typecheck test build --force` (Windows, pnpm 10.6 + Turbore
 | Gate | Comando | Resultado |
 |---|---|---|
 | Typecheck | `pnpm typecheck` | ✅ `@stoa/web`, `tsc --noEmit` sem erros |
-| Testes unitários | `pnpm test` | ✅ 20 ficheiros, **244 testes** verdes (eram 235; +9) |
+| Testes unitários | `pnpm test` | ✅ 20 ficheiros, **249 testes** verdes (eram 235; +14, dos quais +5 na iteração 2 do item 3b) |
 | Build | `pnpm build` | ✅ `vite build` OK (aviso pré-existente de chunk >500 kB) |
 | Lint | — | ⚠️ `@stoa/web` continua sem script `lint` (0 tarefas) |
 
@@ -400,6 +400,10 @@ Testes novos (funções puras em `lib/purchase-items.test.ts`, 42 → 51):
   "MASSA ESPARGUETE MILANEZA 500G"→Milaneza, "ARROZ CAROLINO CIGALA 1KG"→Cigala,
   "SAL MARINHO GROSSO 1KG"→vazio; `parsePackFromText` lê "5 LT" como 5 l e "120 GR"
   como 120 g. Os testes do sprint 06 continuam verdes.
+- **Item 3b (iteração 2) — `invoiceAlreadyRegistered`** (51 → 56 testes): mesmo fornecedor +
+  número já registado bloqueia (incl. maiúsculas/acentos/espaços a mais); número diferente
+  do mesmo fornecedor e mesmo número de outro fornecedor **não** bloqueiam; sem entradas
+  nunca bloqueia. A note do bloqueio vem de `purchaseEntryNote`, a mesma que o registo grava.
 
 A lógica das três afinações está coberta ao nível das funções puras e ligada na UI
 (verificada por typecheck + build). A composição na UI (`Entradas.tsx`: pré-escolha no
@@ -437,5 +441,15 @@ extra" (l) já tem o artigo "gallo · Garrafão 5L" (5 l) na despensa. A fatura 
 1. Numa linha cujo ingrediente **não** tenha artigo compatível (ex.: outro azeite),
    confirmar que a marca proposta no formulário "Criar artigo" é **Gallo** e não
    "V.extra".
+
+### D. Fatura já registada bloqueia o registo (item 3b)
+1. Com a fatura 0412 já registada em A, voltar a **Entradas de compra** e tentar registar
+   outra entrada com o **mesmo fornecedor** (Distribuidora Atlântico Oeste) e o **mesmo
+   número** (FA 2026/0412).
+2. Confirmar que ao **Registar entrada** aparece o erro **"Esta fatura já está registada…"**
+   (explica a unicidade e aponta a nota de crédito) e que **nenhum** movimento é gravado
+   (a lista de entradas recentes não ganha nova entrada).
+3. Mudar só o número (ex.: FA 2026/0413) ou só o fornecedor: o registo deixa de estar
+   bloqueado.
 
 Capturas de ecrã: pendentes (validação visual pelo orquestrador/David).

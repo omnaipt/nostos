@@ -455,3 +455,27 @@ export function proposeEntryFromAlias(args: {
   );
   return { purchaseItemId: args.purchaseItem.id, packs, qty, baseCostCents };
 }
+
+// ── Item 3b (06b): fatura já registada bloqueia o registo (achado 15) ───────
+// Em Portugal o número de fatura é único por fornecedor e série; uma correção
+// faz-se com nota de crédito, que tem outro número. Logo bloqueia-se SEMPRE o
+// registo de uma fatura cujo fornecedor + número já exista nas entradas. A note
+// de cada entrada ("Fatura {fornecedor} {nº}") é a chave: constrói-se a mesma e
+// compara-se normalizada (minúsculas sem acentos, espaços colapsados), para
+// "FA 2026/0412" bater com "fa  2026/0412".
+export function purchaseEntryNote(supplier: string, invoiceNo: string): string {
+  return `Fatura ${supplier} ${invoiceNo}`.trim();
+}
+
+function normNote(note: string): string {
+  return lowerNoAccents(note).replace(/\s+/g, " ").trim();
+}
+
+export function invoiceAlreadyRegistered(
+  supplier: string,
+  invoiceNo: string,
+  existingNotes: (string | null | undefined)[],
+): boolean {
+  const key = normNote(purchaseEntryNote(supplier, invoiceNo));
+  return existingNotes.some((n) => n != null && normNote(n) === key);
+}

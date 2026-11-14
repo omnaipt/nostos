@@ -33,6 +33,7 @@ import { parsePriceToCents, UNIT_OPTIONS, type Ingredient, type PurchaseItem } f
 import {
   articlesMatchingContent,
   existingArticleTransition,
+  invoiceAlreadyRegistered,
   lineBlockReason,
   packCostCentsFromInvoice,
   packEntryBaseCostCents,
@@ -316,6 +317,20 @@ export default function Entradas() {
     }
     if (!invoiceNo.trim()) {
       setFormError("Indique o nº da fatura.");
+      return;
+    }
+    // Item 3b (06b): o número de fatura é único por fornecedor e série — uma
+    // fatura já registada bloqueia sempre o registo (correção = nota de crédito).
+    if (
+      invoiceAlreadyRegistered(
+        supplier.trim(),
+        invoiceNo.trim(),
+        (entriesQuery.data ?? []).map((g) => g.note),
+      )
+    ) {
+      setFormError(
+        "Esta fatura já está registada. O número é único por fornecedor; para corrigir, emita uma nota de crédito (com outro número).",
+      );
       return;
     }
     const parsed: PurchaseEntryLine[] = [];
