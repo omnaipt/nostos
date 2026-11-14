@@ -672,12 +672,52 @@ export type Database = {
           },
         ]
       }
+      ingredient_families: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          restaurant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          restaurant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          restaurant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_families_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_families_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingredients: {
         Row: {
           active: boolean
           category: string | null
           cost_per_unit_cents: number | null
           created_at: string
+          family_id: string | null
           id: string
           low_stock_threshold: number | null
           name: string
@@ -686,6 +726,7 @@ export type Database = {
           stock_qty: number
           storage_mode: string
           unit: string
+          unit_weight_g: number | null
           updated_at: string
         }
         Insert: {
@@ -693,6 +734,7 @@ export type Database = {
           category?: string | null
           cost_per_unit_cents?: number | null
           created_at?: string
+          family_id?: string | null
           id?: string
           low_stock_threshold?: number | null
           name: string
@@ -701,6 +743,7 @@ export type Database = {
           stock_qty?: number
           storage_mode?: string
           unit?: string
+          unit_weight_g?: number | null
           updated_at?: string
         }
         Update: {
@@ -708,6 +751,7 @@ export type Database = {
           category?: string | null
           cost_per_unit_cents?: number | null
           created_at?: string
+          family_id?: string | null
           id?: string
           low_stock_threshold?: number | null
           name?: string
@@ -716,6 +760,7 @@ export type Database = {
           stock_qty?: number
           storage_mode?: string
           unit?: string
+          unit_weight_g?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -1271,6 +1316,82 @@ export type Database = {
           },
           {
             foreignKeyName: "orders_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_items: {
+        Row: {
+          active: boolean
+          brand: string | null
+          catalog_item_id: string | null
+          created_at: string
+          ean: string | null
+          id: string
+          ingredient_id: string
+          label: string | null
+          pack_qty: number
+          pack_unit: string
+          restaurant_id: string
+          supplier_code: string | null
+          supplier_norm: string | null
+          tare_g: number | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          brand?: string | null
+          catalog_item_id?: string | null
+          created_at?: string
+          ean?: string | null
+          id?: string
+          ingredient_id: string
+          label?: string | null
+          pack_qty: number
+          pack_unit: string
+          restaurant_id: string
+          supplier_code?: string | null
+          supplier_norm?: string | null
+          tare_g?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          brand?: string | null
+          catalog_item_id?: string | null
+          created_at?: string
+          ean?: string | null
+          id?: string
+          ingredient_id?: string
+          label?: string | null
+          pack_qty?: number
+          pack_unit?: string
+          restaurant_id?: string
+          supplier_code?: string | null
+          supplier_norm?: string | null
+          tare_g?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
@@ -1859,6 +1980,8 @@ export type Database = {
           ingredient_id: string
           kind: string
           note: string | null
+          packs: number | null
+          purchase_item_id: string | null
           qty: number
           restaurant_id: string
           source: string
@@ -1873,6 +1996,8 @@ export type Database = {
           ingredient_id: string
           kind: string
           note?: string | null
+          packs?: number | null
+          purchase_item_id?: string | null
           qty: number
           restaurant_id: string
           source?: string
@@ -1887,6 +2012,8 @@ export type Database = {
           ingredient_id?: string
           kind?: string
           note?: string | null
+          packs?: number | null
+          purchase_item_id?: string | null
           qty?: number
           restaurant_id?: string
           source?: string
@@ -1922,6 +2049,7 @@ export type Database = {
           created_at: string
           id: string
           ingredient_id: string
+          purchase_item_id: string | null
           raw_name_norm: string
           restaurant_id: string
           supplier_norm: string
@@ -1931,6 +2059,7 @@ export type Database = {
           created_at?: string
           id?: string
           ingredient_id: string
+          purchase_item_id?: string | null
           raw_name_norm: string
           restaurant_id: string
           supplier_norm: string
@@ -1940,6 +2069,7 @@ export type Database = {
           created_at?: string
           id?: string
           ingredient_id?: string
+          purchase_item_id?: string | null
           raw_name_norm?: string
           restaurant_id?: string
           supplier_norm?: string
@@ -2582,6 +2712,10 @@ export type Database = {
         Returns: string
       }
       unaccent: { Args: { "": string }; Returns: string }
+      unit_factor: {
+        Args: { p_from: string; p_to: string; p_unit_weight_g?: number }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
