@@ -75,11 +75,11 @@ Evidência exigida: testes de componente ou de hook para a pré-visualização d
 
 ### 6. Fecho
 
-- [ ] `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build` verdes, com o output resumido na secção Evidência.
-- [ ] `supabase/tests/0016_stock_consumo_interno.sql` escrito, com `plan(N)` coerente.
-- [ ] Contrato `docs/specs/stock-s2-contract.md`.
-- [ ] Secção deste sprint em `TESTING.md`, com testes manuais numerados.
-- [ ] Commits pequenos por item, mensagens em português começadas por `stock s2:`.
+- [x] `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build` verdes, com o output resumido na secção Evidência.
+- [x] `supabase/tests/0016_stock_consumo_interno.sql` escrito, com `plan(N)` coerente.
+- [x] Contrato `docs/specs/stock-s2-contract.md`.
+- [x] Secção deste sprint em `TESTING.md`, com testes manuais numerados.
+- [x] Commits pequenos por item, mensagens em português começadas por `stock s2:`.
 
 ## Decisões
 
@@ -90,8 +90,38 @@ Evidência exigida: testes de componente ou de hook para a pré-visualização d
 
 ## Blockers
 
-<Preenchido pelo executor. Formato: item, motivo, o que precisa do David.>
+Nenhum.
 
 ## Evidência
 
-<Preenchido pelo executor no item 6.>
+Gates (Windows, pnpm 10.6 + Turborepo, 2026-11-14):
+
+| Gate | Comando | Resultado |
+|---|---|---|
+| Typecheck | `pnpm typecheck` | ✅ `@stoa/web`, `tsc --noEmit` sem erros |
+| Testes | `pnpm test` | ✅ 22 ficheiros, **221 testes** verdes (vitest) |
+| Build | `pnpm build` | ✅ `vite build` OK (aviso pré-existente de chunk >500 kB) |
+| Lint | `pnpm lint` | ⚠️ 0 tarefas (sem script `lint` em `@stoa/web`, como nos sprints anteriores) |
+
+Testes novos deste sprint (vitest, verdes):
+- `src/lib/saft-deplete.test.ts` — 7 testes da lógica pura do abate do SAF-T
+  (estimado, modo de consumo/`consumoPorContagem`, `unitMismatch`, agregação).
+- `src/lib/consumo.test.ts` — 6 testes de `previewDishConsumption` (pré-visualização
+  do consumo por prato), `orderFichasPorValidar` (ordenação da fila) e
+  `internalUseTotalCents`.
+
+pgTAP (não corrido nesta máquina — sem Postgres local; execução pelo orquestrador):
+- `supabase/tests/0016_stock_consumo_interno.sql`, `plan(39)`. Grupo A (item 1:
+  tipo/sinal/motivo/estimado/contagem/perfil, um caso por perfil), Grupo B (item 2:
+  RPC com os cinco casos exigidos) e Grupo C (item 5: custo por unidade base).
+
+Tipos: colunas e RPC acrescentadas à mão em `database.types.ts`
+(`ingredients.depletion_mode`, `stock_movements.reason`/`estimated`,
+`register_dish_consumption`); o orquestrador regenera depois de aplicar a 0033.
+
+Commits por item (branch `feat/stock-s2`): migração 0033 (item 1), RPC (item 2),
+import-saft (item 3), reserva S4 (item 5), interface (item 4) e fecho (item 6),
+todos com mensagem começada por `stock s2:`.
+
+Migração aplicada em produção, `supabase`/`vercel`/`git push` e a bateria manual
+grande: fora de scope (do orquestrador depois do gate).

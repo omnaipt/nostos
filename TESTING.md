@@ -302,3 +302,97 @@ Pré-requisito: despensa com pelo menos um ingrediente (ex.: "Azeite" em `l`,
    de aparecer como sem custo: o custo passa a ser calculado (1 un = 150 g).
 
 Capturas de ecrã: pendentes (a recolher pelo orquestrador/David na validação visual).
+
+---
+
+# Sprint 05 — Stock S2 (consumo interno, modo de consumo, abate estimado)
+
+Verificado nesta máquina (Windows, pnpm 10.6 + Turborepo) a 2026-11-14.
+
+## Automático (com resultados)
+
+| Gate | Comando | Resultado |
+|---|---|---|
+| Typecheck | `pnpm typecheck` | ✅ `@stoa/web`, `tsc --noEmit` sem erros |
+| Testes unitários | `pnpm test` | ✅ 22 ficheiros, **221 testes** verdes (vitest) |
+| Build | `pnpm build` | ✅ `vite build` OK (aviso pré-existente de chunk >500 kB) |
+| Lint | `pnpm lint` | ⚠️ 0 tarefas (sem script `lint` em `@stoa/web`, como nos sprints anteriores) |
+
+Testes novos deste sprint:
+- `src/lib/saft-deplete.test.ts` (item 3) — lógica pura partilhada com a edge
+  (`supabase/functions/import-saft/deplete.ts`): abate na unidade do ingrediente,
+  marca de **estimado** quando a ficha está em rascunho (e OR entre fichas que
+  contribuem para o mesmo (fatura, ingrediente)), exclusão dos ingredientes em
+  modo **contagem** para `consumoPorContagem`, `unitMismatch`, agregação por
+  fatura/ingrediente e linhas livres ignoradas.
+- `src/lib/consumo.test.ts` (item 4) — `previewDishConsumption` (espelha a RPC:
+  expansão da ficha por doses/serventias, estimado em rascunho, linha livre +
+  contagem + conversão impossível em `naoAbatidas`, quantidade residual
+  descartada), `orderFichasPorValidar` (ordem por unidades vendidas desc, empate
+  alfabético) e `internalUseTotalCents`.
+
+### pgTAP (base de dados)
+
+`supabase/tests/0016_stock_consumo_interno.sql` (`plan(39)`).
+
+- **Não corrido nesta máquina**: não há Postgres local e a instrução é não o instalar.
+- Escrito e revisto pelo executor; execução pelo **orquestrador** com `supabase test db`
+  (requer 0001..0032 + 0033), dentro de transacção com rollback.
+- Grupo A (item 1): tipo `internal_use` negativo com motivo; sinal positivo rejeitado;
+  motivo obrigatório em `internal_use` e fora do domínio rejeitado; `waste` com e sem
+  motivo; `purchase` com motivo rejeitado; `estimated` por defeito e gravado; guarda de
+  **contagem** para `sale_depletion` e `internal_use`; guarda de **perfil** com um caso
+  por perfil (gestor/cozinha aceites, balcão/consultor rejeitados) e o service role
+  (sem `auth.uid()`) não travado.
+- Grupo B (item 2): `register_dish_consumption` com ficha de 3 ingredientes e 6 doses
+  (quantidades exactas), ficha em rascunho (movimentos estimados), ficha mista (linha
+  livre + ingrediente em contagem em `nao_abatidas`, só o normal abate), prato sem ficha
+  (`prato_sem_ficha`, nada gravado), doses/kind inválidos, perfil `balcao` rejeitado e
+  grants (authenticated sim, anon não).
+- Grupo C (item 5): entrada por 2 embalagens de 5 l num ingrediente em ml → 10000 ml,
+  `cost_per_unit_cents` e `ingredient_avg_cost` a 0,398 cents/ml (unidade base).
+
+## Manual (passo a passo) — item 4
+
+Pré-requisito: despensa com ingredientes e pelo menos um prato com ficha técnica.
+Login como indicado em cada passo.
+
+### 5.1 Registar consumo interno por prato (owner/gestor/cozinha)
+1. Na **Despensa**, clicar **Registar consumo interno** (o botão só aparece a
+   owner/gestor/cozinha).
+2. Modo **Por prato**: escolher um prato com ficha, indicar as doses, o motivo do
+   movimento = **Consumo interno** e o motivo do consumo (ex.: Refeição do pessoal).
+3. Antes de gravar, a pré-visualização mostra **o que vai sair** (por ingrediente, na
+   unidade do ingrediente) e **o que não vai ser abatido** (linhas livres, ingredientes
+   em contagem, conversões impossíveis). Se a ficha estiver por validar, aparece a
+   etiqueta **estimado**.
+4. **Registar**. Na lista de movimentos de cada ingrediente abatido aparece o
+   "Consumo interno" com o motivo.
+
+### 5.2 Quebra de prato inteiro
+1. No mesmo diálogo, escolher o motivo do movimento = **Quebra (prato estragado)**.
+2. Registar: gera movimentos `waste` pela ficha, distinguíveis na lista.
+
+### 5.3 Consumo interno por ingrediente solto
+1. No diálogo, separador **Por ingrediente**: escolher um ingrediente (os que estão em
+   modo contagem não aparecem), indicar a quantidade e o motivo. Registar.
+
+### 5.4 Modo de consumo do ingrediente
+1. Na Despensa, abrir um ingrediente. No campo **Modo de consumo**, mudar para
+   **Apurado na contagem**. A frase de ajuda explica que deixa de sair por vendas e
+   consumo interno.
+2. Confirmar no **Fecho do dia** (import SAF-T) que esse ingrediente deixa de ser
+   abatido e aparece na lista de "consumo por contagem" do resumo.
+
+### 5.5 Total mensal e etiqueta de estimado (owner)
+1. Como **owner**, confirmar na Despensa o card **Consumo interno este mês** (em euros,
+   ao custo médio). Como gestor/cozinha, o card não aparece.
+2. Na lista de movimentos, filtrar por tipo (ex.: só Consumo interno) e confirmar que os
+   abates feitos com ficha por validar mostram a etiqueta **estimado**.
+
+### 5.6 Fila "Fichas por validar" (owner/gestor)
+1. Em **Margens**, confirmar o cartão **Fichas por validar** no topo, com as fichas em
+   rascunho ordenadas pelas unidades vendidas (90 dias), e o botão **Abrir ficha**.
+2. Como balcão/cozinha, a fila não aparece.
+
+Capturas de ecrã: pendentes (a recolher pelo orquestrador/David na validação visual).
