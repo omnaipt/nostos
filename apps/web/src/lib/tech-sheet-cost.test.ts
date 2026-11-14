@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { computeFoodCost, computeLineCostCents, computeMarginPct } from "@/lib/types";
+import {
+  computeFoodCost,
+  computeLineCostCents,
+  computeMarginPct,
+  unitFactor,
+} from "@/lib/types";
 
 // Helpers de food cost da Ficha Técnica (0006): conversão fixa g↔kg e ml↔l,
 // famílias incompatíveis sem custo, margem sobre PVP.
@@ -29,8 +34,17 @@ describe("computeLineCostCents", () => {
     expect(computeLineCostCents(100, "g", "l", 400)).toBeNull();
   });
 
-  it("un vs g => null", () => {
+  it("un vs g sem peso médio => null", () => {
     expect(computeLineCostCents(1, "un", "g", 1)).toBeNull();
+  });
+
+  // Stock S1: un contra peso quando o ingrediente tem peso médio por unidade.
+  it("2 un a 150 g/un num ingrediente em g (300 g) a 2 cents/g = 600 cents", () => {
+    expect(computeLineCostCents(2, "un", "g", 2, 150)).toBe(600);
+  });
+
+  it("2 un a 150 g/un num ingrediente em kg (0.3 kg) a 1000 cents/kg = 300 cents", () => {
+    expect(computeLineCostCents(2, "un", "kg", 1000, 150)).toBe(300);
   });
 
   it("sem custo do ingrediente => null", () => {
@@ -69,6 +83,38 @@ describe("computeFoodCost", () => {
     const r = computeFoodCost([], ings);
     expect(r.costCents).toBe(0);
     expect(r.total).toBe(0);
+  });
+});
+
+// Stock S1: tabela de casos de unitFactor (espelha public.unit_factor da 0032 e
+// toIngredientUnit da edge import-saft). Os mesmos casos da evidência do item 1.
+describe("unitFactor", () => {
+  it("2 kg -> g: factor 1000 (2 kg = 2000 g)", () => {
+    expect(unitFactor("kg", "g")).toBe(1000);
+    expect(2 * (unitFactor("kg", "g") as number)).toBe(2000);
+  });
+
+  it("10 l -> ml: factor 1000 (10 l = 10000 ml)", () => {
+    expect(unitFactor("l", "ml")).toBe(1000);
+    expect(10 * (unitFactor("l", "ml") as number)).toBe(10000);
+  });
+
+  it("un -> g com peso médio 150: factor 150 (2 un = 300 g)", () => {
+    expect(unitFactor("un", "g", 150)).toBe(150);
+    expect(2 * (unitFactor("un", "g", 150) as number)).toBe(300);
+  });
+
+  it("un -> g sem peso médio => null", () => {
+    expect(unitFactor("un", "g")).toBeNull();
+    expect(unitFactor("un", "g", 0)).toBeNull();
+  });
+
+  it("kg -> ml (massa contra volume) => null", () => {
+    expect(unitFactor("kg", "ml")).toBeNull();
+  });
+
+  it("mesma unidade => 1", () => {
+    expect(unitFactor("l", "l")).toBe(1);
   });
 });
 

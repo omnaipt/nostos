@@ -1,0 +1,22 @@
+pgTAP do sprint 04, executado pelo orquestrador a 14-11-2026 por volta das 11:00.
+
+Método: migração supabase/migrations/0031_stock_formatos.sql e teste
+supabase/tests/0015_stock_formatos.sql corridos numa única transação com
+rollback contra o projeto de produção stoa (emuwqkdummdmacnkltte), via
+`npx supabase@latest db query --linked --yes -f`. O begin/rollback próprios do
+teste foram retirados para correr dentro da transação exterior. Antes de
+finish(), consulta aos contadores do pgTAP.
+
+Resultado:
+  executados: 28
+  plano:      28
+  falhadas:   0
+
+Verificação posterior em produção (nada persistiu):
+  purchase_items e ingredient_families: inexistentes
+  ingredients.unit_weight_g e family_id: inexistentes
+  unit_factor: inexistente
+  stock_movement_guard md5: 1ce446a4d558c0a961160dc13d854c69 (igual ao exportado antes)
+  migrações registadas: 32 (iguais às de antes)
+
+Código testado: ramo feat/stock-s1 em 00fb076 (com o main integrado).
