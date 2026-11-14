@@ -15,10 +15,14 @@ import {
   useLastPurchases,
   useStockMovements,
 } from "@/hooks/use-stock";
+import { useInternalUseThisMonth } from "@/hooks/use-consumo";
+import { useMemberRole } from "@/hooks/use-member-role";
 import { useLastAppliedImport } from "@/hooks/use-saft";
 import { useIngredientFamilies } from "@/hooks/use-purchase-items";
 import { formatCostCents } from "@/components/menu/PantryManager";
 import { ArticlesPanel } from "@/components/pantry/ArticlesPanel";
+import { ConsumoInternoDialog } from "@/components/pantry/ConsumoInternoDialog";
+import { internalUseTotalCents, REASON_LABEL } from "@/lib/consumo";
 import {
   computePantrySummary,
   formatQty,
@@ -58,9 +62,20 @@ export default function Pantry() {
     () => new Map((familiesQuery.data ?? []).map((f) => [f.id, f.name])),
     [familiesQuery.data],
   );
+  const { role } = useMemberRole();
+  const canRegisterConsumo = role === "owner" || role === "gestor" || role === "cozinha";
+  const internalUseQuery = useInternalUseThisMonth(restaurantId);
 
   const [search, setSearch] = React.useState("");
   const [selected, setSelected] = React.useState<Ingredient | null>(null);
+  const [consumoOpen, setConsumoOpen] = React.useState(false);
+
+  // Total do consumo interno do mês, ao custo médio corrente (só o dono o vê).
+  const internalUseCents = React.useMemo(() => {
+    if (!internalUseQuery.data || !ingredientsQuery.data) return 0;
+    const cost = new Map(ingredientsQuery.data.map((i) => [i.id, i.cost_per_unit_cents]));
+    return internalUseTotalCents(internalUseQuery.data, cost);
+  }, [internalUseQuery.data, ingredientsQuery.data]);
 
   const loading = loadingRest || ingredientsQuery.isLoading;
   const summary = React.useMemo(
@@ -99,6 +114,11 @@ export default function Pantry() {
             Saldos, alertas de reposição e rasto de movimentos por ingrediente
           </p>
         </div>
+        {canRegisterConsumo && restaurantId && (
+          <Button variant="outline" size="sm" onClick={() => setConsumoOpen(true)}>
+            Registar consumo interno
+          </Button>
+        )}
       </header>
 
       {ingredientsQuery.isError && (
@@ -153,6 +173,15 @@ export default function Pantry() {
               )}
             </div>
           </div>
+
+          {role === "owner" && (
+            <div className="mb-4 rounded-lg border border-input bg-card p-3">
+              <p className="text-xs text-muted-foreground">Consumo interno este mês (ao custo médio)</p>
+              <p className="mt-1 font-display text-xl font-semibold text-atlantico-900">
+                {formatCostCents(internalUseCents)}
+              </p>
+            </div>
+          )}
 
           <div className="mb-4 flex items-center gap-3">
             <Input
@@ -215,6 +244,10 @@ export default function Pantry() {
           ingredient={selectedLive}
           onClose={() => setSelected(null)}
         />
+      )}
+
+      {consumoOpen && restaurantId && (
+        <ConsumoInternoDialog restaurantId={restaurantId} onClose={() => setConsumoOpen(false)} />
       )}
     </div>
   );
@@ -373,6 +406,12 @@ function MovementsDialog({
 }) {
   const movementsQuery = useStockMovements(restaurantId, ingredient.id);
   const [showForm, setShowForm] = React.useState(false);
+  const [kindFilter, setKindFilter] = React.useState<string>("all");
+
+  const movements = React.useMemo(() => {
+    const all = movementsQuery.data ?? [];
+    return kindFilter === "all" ? all : all.filter((m) => m.kind === kindFilter);
+  }, [movementsQuery.data, kindFilter]);
 
   return (
     <Dialog
@@ -403,8 +442,29 @@ function MovementsDialog({
           Mínimo de reposição
           <MinThresholdField restaurantId={restaurantId} ingredient={ingredient} />
         </div>
+        {/* Stock S2: modo de consumo do ingrediente. */}
+        <DepletionModeField restaurantId={restaurantId} ingredient={ingredient} />
         {/* Stock S1: artigos de compra, família e peso médio por unidade. */}
         <ArticlesPanel restaurantId={restaurantId} ingredient={ingredient} />
+      </div>
+
+      <div className="mb-2 flex items-center gap-2">
+        <Label htmlFor="mov-filter" className="text-xs text-muted-foreground">
+          Filtrar
+        </Label>
+        <Select
+          id="mov-filter"
+          value={kindFilter}
+          onChange={(e) => setKindFilter(e.target.value)}
+          className="h-8 w-48 text-xs"
+        >
+          <option value="all">Todos os tipos</option>
+          <option value="purchase">{MOVEMENT_KIND_LABEL.purchase}</option>
+          <option value="sale_depletion">{MOVEMENT_KIND_LABEL.sale_depletion}</option>
+          <option value="internal_use">{MOVEMENT_KIND_LABEL.internal_use}</option>
+          <option value="waste">{MOVEMENT_KIND_LABEL.waste}</option>
+          <option value="adjustment">{MOVEMENT_KIND_LABEL.adjustment}</option>
+        </Select>
       </div>
 
       {movementsQuery.isLoading && (
@@ -419,20 +479,32 @@ function MovementsDialog({
           Não foi possível carregar os movimentos.
         </p>
       )}
-      {movementsQuery.data && movementsQuery.data.length === 0 && (
+      {movementsQuery.data && movements.length === 0 && (
         <p className="py-6 text-center text-sm text-muted-foreground">
-          Ainda sem movimentos. As entradas de faturas e os abates do fecho SAF-T aparecem aqui.
+          {kindFilter === "all"
+            ? "Ainda sem movimentos. As entradas de faturas e os abates do fecho SAF-T aparecem aqui."
+            : "Sem movimentos deste tipo."}
         </p>
       )}
-      {movementsQuery.data && movementsQuery.data.length > 0 && (
+      {movements.length > 0 && (
         <ul className="divide-y divide-input rounded-md border border-input">
-          {movementsQuery.data.map((m) => (
+          {movements.map((m) => (
             <li key={m.id} className="flex items-center gap-3 px-3 py-2 text-sm">
               <div className="min-w-0 flex-1">
                 <p className="font-medium">
                   {MOVEMENT_KIND_LABEL[m.kind] ?? m.kind}
+                  {m.reason && (
+                    <span className="ml-2 font-normal text-muted-foreground">
+                      {REASON_LABEL[m.reason] ?? m.reason}
+                    </span>
+                  )}
                   {m.source_ref && (
                     <span className="ml-2 font-normal text-muted-foreground">{m.source_ref}</span>
+                  )}
+                  {m.estimated && (
+                    <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                      estimado
+                    </span>
                   )}
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -453,6 +525,58 @@ function MovementsDialog({
         </ul>
       )}
     </Dialog>
+  );
+}
+
+// Stock S2: modo de consumo do ingrediente (pela ficha técnica ou apurado na
+// contagem). Grava via RLS; a frase de ajuda explica a consequência.
+function DepletionModeField({
+  restaurantId,
+  ingredient,
+}: {
+  restaurantId: string;
+  ingredient: Ingredient;
+}) {
+  const update = useUpdateIngredient(restaurantId);
+  const mode = ingredient.depletion_mode === "contagem" ? "contagem" : "ficha";
+
+  function change(next: string) {
+    if (next === mode) return;
+    update.mutate(
+      { id: ingredient.id, patch: { depletion_mode: next } },
+      {
+        onSuccess: () =>
+          toast.success(
+            next === "contagem"
+              ? `${ingredient.name}: consumo apurado na contagem`
+              : `${ingredient.name}: consumo pela ficha técnica`,
+          ),
+        onError: (e) =>
+          toast.error(e instanceof Error ? e.message : "Não foi possível guardar o modo."),
+      },
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      <Label htmlFor="dep-mode" className="text-xs text-muted-foreground">
+        Modo de consumo
+      </Label>
+      <Select
+        id="dep-mode"
+        value={mode}
+        onChange={(e) => change(e.target.value)}
+        className="h-8 text-xs"
+      >
+        <option value="ficha">Pela ficha técnica</option>
+        <option value="contagem">Apurado na contagem</option>
+      </Select>
+      <p className="text-xs text-muted-foreground">
+        {mode === "contagem"
+          ? "Não sai do stock por cada venda nem por consumo interno; o gasto apura-se na contagem (azeite de mesa, sal, guardanapos)."
+          : "Sai do stock pela ficha técnica a cada venda e consumo interno."}
+      </p>
+    </div>
   );
 }
 

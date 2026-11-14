@@ -49,6 +49,12 @@ export const queryKeys = {
     ["fichas", restaurantId, "families"] as const,
   supplierAliases: (restaurantId: string | undefined) =>
     ["fichas", restaurantId, "supplier-aliases"] as const,
+  // Consumo interno (Stock S2, 0033). Unidades vendidas por prato (90d) para a
+  // fila de fichas por validar; total do consumo interno do mês para o dono.
+  unitsSoldByItem: (restaurantId: string | undefined) =>
+    ["stock", restaurantId, "units-sold-90d"] as const,
+  internalUseMonth: (restaurantId: string | undefined) =>
+    ["stock", restaurantId, "internal-use-month"] as const,
   // Stock (0011). stockRoot invalida movimentos de qualquer ingrediente.
   stockRoot: ["stock"] as const,
   stockMovements: (restaurantId: string | undefined, ingredientId: string | undefined) =>
