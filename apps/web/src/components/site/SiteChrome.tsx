@@ -23,6 +23,36 @@ export function usePageMeta(titulo: string, descricao: string) {
   }, [titulo, descricao]);
 }
 
+// Navegação entre a página da marca e as páginas das verticais (14-11-2026):
+// cada página de vertical abre no início; "Voltar" leva à página da marca no
+// sítio onde o visitante estava.
+export const VOLTAR = { voltar: true } as const;
+const CHAVE_POSICAO = "nostos-marca-posicao";
+
+export function guardarPosicaoDaMarca() {
+  try {
+    sessionStorage.setItem(CHAVE_POSICAO, String(window.scrollY));
+  } catch {
+    /* sem armazenamento: a página da marca abre no início */
+  }
+}
+
+export function lerPosicaoDaMarca(): number | null {
+  try {
+    const y = sessionStorage.getItem(CHAVE_POSICAO);
+    return y === null ? null : Number(y);
+  } catch {
+    return null;
+  }
+}
+
+// Abre a página no início, salvo quando o endereço traz uma âncora.
+export function useInicioDaPagina() {
+  React.useLayoutEffect(() => {
+    if (!window.location.hash) window.scrollTo(0, 0);
+  }, []);
+}
+
 // O meandro da marca, na cor corrente.
 export function Meandro({ className }: { className?: string }) {
   return (
@@ -77,20 +107,32 @@ export function Rodape({ produto }: { produto?: Vertical }) {
 
 // Moldura de uma página curta de vertical: cabeçalho com o lockup, conteúdo e rodapé.
 export function PaginaVertical({ vertical, children }: { vertical: Vertical; children: React.ReactNode }) {
+  useInicioDaPagina();
   return (
     <div
       className="nostos-site min-h-screen bg-[var(--fundo)] text-[var(--texto)] antialiased"
       style={{ "--acento": `var(--acento-${vertical})` } as React.CSSProperties}
     >
       <header className="container flex items-center justify-between py-6">
-        <Link to="/" aria-label="nostos, página da marca">
+        <Link to="/" state={VOLTAR} aria-label="nostos, página da marca">
           <Lockup vertical={vertical} />
         </Link>
-        <Link to="/" className="text-sm font-medium text-[var(--texto-2)] underline-offset-4 hover:underline">
+        <Link
+          to="/"
+          state={VOLTAR}
+          className="text-sm font-medium text-[var(--texto-2)] underline-offset-4 hover:underline"
+        >
           Todos os setores
         </Link>
       </header>
-      <main className="container max-w-3xl pb-20 pt-8 sm:pt-14">{children}</main>
+      <main className="container max-w-3xl pb-20 pt-8 sm:pt-14">
+        {children}
+        <p className="mt-14">
+          <Link to="/" state={VOLTAR} className={botaoSecundario}>
+            Voltar a nostos.pt
+          </Link>
+        </p>
+      </main>
       <Rodape produto={vertical} />
     </div>
   );

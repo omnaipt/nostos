@@ -1,10 +1,12 @@
 import * as React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigationType } from "react-router-dom";
 import {
   Estado,
   Lockup,
   Rodape,
   botaoPrincipal,
+  guardarPosicaoDaMarca,
+  lerPosicaoDaMarca,
   usePageMeta,
   type Vertical,
 } from "@/components/site/SiteChrome";
@@ -49,6 +51,19 @@ const ENTRADAS: Entrada[] = [
 export default function Marca() {
   usePageMeta("nostos · software feito para o seu setor", __NOSTOS_DESCRICAO_MARCA__);
 
+  // Quem volta de uma vertical (botão "Voltar" ou retrocesso do browser)
+  // regressa ao sítio onde estava; quem chega de novo começa no início.
+  const location = useLocation();
+  const tipoDeNavegacao = useNavigationType();
+  const aVoltar =
+    tipoDeNavegacao === "POP" || (location.state as { voltar?: boolean } | null)?.voltar === true;
+  React.useLayoutEffect(() => {
+    const y = aVoltar ? lerPosicaoDaMarca() : null;
+    window.scrollTo(0, y ?? 0);
+    // Só na montagem: a posição é a do momento em que a página abre.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="nostos-site min-h-screen bg-[var(--fundo)] text-[var(--texto)] antialiased">
       {/* Sem "Entrar" aqui (David, 14-11-2026): a entrada faz-se dentro de cada
@@ -89,6 +104,7 @@ export default function Marca() {
               <Link
                 key={e.vertical}
                 to={"/" + e.vertical}
+                onClick={guardarPosicaoDaMarca}
                 className="group flex flex-col rounded-[10px] bg-[var(--cartao)] p-7 shadow-[0_1px_3px_rgba(22,64,60,.06),0_4px_14px_rgba(22,64,60,.08)] transition-shadow hover:shadow-[0_2px_6px_rgba(22,64,60,.07),0_12px_32px_rgba(22,64,60,.10)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--titulo)]"
                 style={{ "--acento": `var(--acento-${e.vertical})` } as React.CSSProperties}
               >

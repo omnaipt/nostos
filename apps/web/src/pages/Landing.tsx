@@ -15,7 +15,7 @@ import {
   Wine,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { usePageMeta } from "@/components/site/SiteChrome";
+import { VOLTAR, useInicioDaPagina, usePageMeta } from "@/components/site/SiteChrome";
 
 // Landing pública de nostos.pt — identidade Pinho & Tinta (Zé, 07-Jul).
 // Tokens de marca scoped em .landing (index.css): creme, verde pinho,
@@ -103,6 +103,7 @@ function CtaGhost({ href, children }: { href: string; children: React.ReactNode 
 }
 
 export default function Landing() {
+  useInicioDaPagina();
   usePageMeta(
     "nostos rest · o sistema operativo do teu restaurante",
     "Da despensa à reserva, num só sítio. Reservas sem comissões, menu digital com QR e a ficha técnica de cada prato escrita por IA, com food cost e margem. Feito em Portugal.",
@@ -400,6 +401,13 @@ export default function Landing() {
 
       <footer className="border-t border-[hsl(var(--brand-pine)/0.12)] py-10">
         <div className="container flex flex-col items-center gap-3 text-center">
+          <Link
+            to="/"
+            state={VOLTAR}
+            className="mb-4 inline-flex items-center justify-center rounded-[7px] border-2 border-[hsl(var(--brand-pine)/0.25)] px-6 py-2.5 text-sm font-medium text-[hsl(var(--brand-pine))] transition-colors hover:border-[hsl(var(--brand-pine))]"
+          >
+            Voltar a nostos.pt
+          </Link>
           <Mark className="h-8 w-8 text-[hsl(var(--brand-terracotta))]" aria-hidden="true" />
           <p className="text-sm text-[hsl(var(--brand-pine-soft))]">
             nostos rest · um produto nostos · reservas@nostos.pt
