@@ -52,9 +52,9 @@ Evidência exigida: pgTAP com ficha de 3 ingredientes e 6 doses (quantidades exa
 
 ### 3. Edge `import-saft`: abate estimado e modo de consumo
 
-- [ ] Os movimentos `sale_depletion` levam `estimated = true` quando a ficha do prato está em `rascunho`.
-- [ ] Ingredientes em modo `contagem` não são abatidos; aparecem no resumo da importação numa lista própria (`consumoPorContagem`), ao lado do `unitMismatch` existente.
-- [ ] A idempotência por documento (`lineNumber`, migração 0030) e a conversão de unidades (sprint 04) ficam intactas.
+- [x] Os movimentos `sale_depletion` levam `estimated = true` quando a ficha do prato está em `rascunho`.
+- [x] Ingredientes em modo `contagem` não são abatidos; aparecem no resumo da importação numa lista própria (`consumoPorContagem`), ao lado do `unitMismatch` existente.
+- [x] A idempotência por documento (`lineNumber`, migração 0030) e a conversão de unidades (sprint 04) ficam intactas.
 
 Evidência exigida: testes unitários da lógica extraída, se a função o permitir; senão, diff restrito e descrito em `TESTING.md`.
 
