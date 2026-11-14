@@ -31,11 +31,12 @@ import { todayServiceDate } from "@/lib/service-date";
 import { estimateExpiryDate, resolveShelfLifeDays } from "@/lib/expiry";
 import { parsePriceToCents, UNIT_OPTIONS, type Ingredient, type PurchaseItem } from "@/lib/types";
 import {
+  articlesMatchingContent,
+  existingArticleTransition,
   lineBlockReason,
   packCostCentsFromInvoice,
   packEntryBaseCostCents,
   packEntryQty,
-  packsOnArticleChange,
   parsePackFromText,
   proposeArticleForIngredient,
   proposeIngredientFromRawName,
@@ -77,6 +78,7 @@ interface LineDraft {
   invoiceQty?: number | null;
   invoiceUnitCostCents?: number | null;
   autoCreateArticle?: boolean; // abrir já o formulário de novo artigo (item 2)
+  articleSuggested?: boolean; // artigo existente pré-escolhido, a confirmar (06b item 2)
 }
 
 const EMPTY_LINE: LineDraft = {
@@ -203,23 +205,58 @@ export default function Entradas() {
           : l.fill_cost_cents != null
             ? (l.fill_cost_cents / 100).toFixed(2).replace(".", ",")
             : "";
+      // Item 2 (06b, achado 12): sem artigo por aprendizagem mas com o
+      // ingrediente resolvido, procura artigos activos com o mesmo conteúdo da
+      // linha. Com exactamente um, pré-escolhe-se (embalagens e preço já
+      // preenchidos) e NÃO se abre o formulário de criação. Com mais de um, não
+      // se abre a criação (o seletor mostra-os primeiro). Sem nenhum, segue o
+      // comportamento do sprint 06.
+      const compatible =
+        ing && !hasArticle
+          ? articlesMatchingContent(l.raw_name, articlesByIngredient.get(ing.id) ?? [], ing)
+          : [];
+      const suggested = compatible.length === 1 ? compatible[0] : undefined;
+      const suggestedTransition =
+        suggested && ing
+          ? existingArticleTransition({
+              invoiceUnit,
+              invoiceQty: l.qty,
+              invoiceUnitCostCents,
+              directQty: l.fill_qty ?? l.qty ?? null,
+              pack: { packQty: suggested.pack_qty, packUnit: suggested.pack_unit },
+              ingredientUnit: ing.unit,
+              ingredientUnitWeightG: ing.unit_weight_g,
+              hasUserCost: false,
+            })
+          : null;
       // Linha sem artigo mas com embalagem detetável ou fatura em un para um
-      // ingrediente em massa/volume: abre já no formulário de novo artigo.
+      // ingrediente em massa/volume: abre já no formulário de novo artigo. Não
+      // abre quando há artigos compatíveis (pré-escolhido ou a escolher).
       const autoCreateArticle =
         !!ing &&
+        compatible.length === 0 &&
         shouldOpenNewArticle({
           rawName: l.raw_name,
           invoiceUnit,
           ingredientUnit: ing.unit,
           hasArticle,
         });
+      const suggestedCost =
+        suggestedTransition?.packCostCents != null
+          ? (suggestedTransition.packCostCents / 100).toFixed(2).replace(".", ",")
+          : null;
       return {
         ingredientId: ing?.id ?? "",
         qty: l.fill_qty != null ? String(l.fill_qty) : l.qty != null ? String(l.qty) : "",
-        cost,
+        cost: suggestedCost ?? cost,
         expires: ing ? estimateForDate(ing, date) : "",
-        purchaseItemId: hasArticle ? (proposedArticleId as string) : "",
-        packs: hasArticle && l.qty != null ? String(l.qty) : "",
+        purchaseItemId: hasArticle
+          ? (proposedArticleId as string)
+          : suggested
+            ? suggested.id
+            : "",
+        packs: hasArticle && l.qty != null ? String(l.qty) : (suggestedTransition?.packs ?? ""),
+        packsFlagged: suggestedTransition?.flagged ?? false,
         fromParse: true,
         rawName: l.raw_name,
         grade: l.confidence === "baixa" && l.match_grade === "verde" ? "ambar" : l.match_grade,
@@ -228,6 +265,7 @@ export default function Entradas() {
         invoiceQty: l.qty,
         invoiceUnitCostCents,
         autoCreateArticle,
+        articleSuggested: !!suggested,
       };
     });
     if (drafts.length === 0) {
@@ -739,6 +777,19 @@ function LineArticleControls({
 }) {
   const [showCreate, setShowCreate] = React.useState(!!line.autoCreateArticle);
   const proposal = proposeArticleForIngredient(line.rawName ?? "", ing);
+  // Item 2 (06b): artigos com o mesmo conteúdo da linha aparecem primeiro no
+  // seletor, para a escolha ficar à mão quando há mais do que um compatível.
+  const compatibleIds = React.useMemo(
+    () => new Set(articlesMatchingContent(line.rawName, articles, ing).map((a) => a.id)),
+    [line.rawName, articles, ing],
+  );
+  const orderedArticles = React.useMemo(
+    () =>
+      [...articles].sort(
+        (a, b) => Number(compatibleIds.has(b.id)) - Number(compatibleIds.has(a.id)),
+      ),
+    [articles, compatibleIds],
+  );
   const [brand, setBrand] = React.useState(proposal.brand);
   const [label, setLabel] = React.useState(proposal.label);
   const [packQty, setPackQty] = React.useState(
@@ -766,25 +817,24 @@ function LineArticleControls({
 
   // Passagem para um artigo (escolhido ou criado): embalagens a partir da
   // quantidade da fatura/directa e preço por embalagem da fatura (itens 1 e 3).
+  // Não apaga um preço que o utilizador já tenha escrito na linha (item 1, 06b).
   function applyArticle(a: { id: string; pack_qty: number; pack_unit: string }) {
-    const t = packsOnArticleChange({
+    const t = existingArticleTransition({
       invoiceUnit: line.invoiceUnit,
       invoiceQty: line.invoiceQty,
+      invoiceUnitCostCents: line.invoiceUnitCostCents,
       directQty: line.qty ? Number(line.qty.replace(",", ".")) : null,
       pack: { packQty: a.pack_qty, packUnit: a.pack_unit },
       ingredientUnit: ing.unit,
       ingredientUnitWeightG: ing.unit_weight_g,
-    });
-    const packCost = packCostCentsFromInvoice({
-      invoiceUnit: line.invoiceUnit,
-      invoiceUnitCostCents: line.invoiceUnitCostCents,
+      hasUserCost: line.cost.trim() !== "",
     });
     const patch: Partial<LineDraft> = {
       purchaseItemId: a.id,
       packs: t.packs,
       packsFlagged: t.flagged,
     };
-    if (packCost != null) patch.cost = (packCost / 100).toFixed(2).replace(".", ",");
+    if (t.packCostCents != null) patch.cost = (t.packCostCents / 100).toFixed(2).replace(".", ",");
     onChange(patch);
   }
 
@@ -841,6 +891,7 @@ function LineArticleControls({
           value={line.purchaseItemId}
           onChange={(e) => {
             const id = e.target.value;
+            onChange({ articleSuggested: false });
             if (!id) {
               backToDirect();
               return;
@@ -850,7 +901,7 @@ function LineArticleControls({
           }}
         >
           <option value="">Entrada direta (quantidade)</option>
-          {articles.map((a) => (
+          {orderedArticles.map((a) => (
             <option key={a.id} value={a.id}>
               {[a.brand, a.label].filter(Boolean).join(" · ") || "Artigo"} ({a.pack_qty} {a.pack_unit})
             </option>
@@ -862,6 +913,10 @@ function LineArticleControls({
           </Button>
         )}
       </div>
+
+      {line.articleSuggested && line.purchaseItemId && (
+        <p className="text-xs text-muted-foreground">Artigo existente sugerido; confirme.</p>
+      )}
 
       {showCreate && (
         <div className="space-y-2 rounded-md border border-input bg-muted/30 p-2">

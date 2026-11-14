@@ -196,6 +196,66 @@ export function packsOnArticleChange(args: {
   );
 }
 
+// ── Item 1 (06b, achado 14): transição ao escolher um artigo existente ──────
+// Ao escolher/propor um artigo existente, as embalagens vêm de
+// packsOnArticleChange e o preço por embalagem de packCostCentsFromInvoice (a
+// mesma função da aprendizagem e da criação). O preço não se preenche quando o
+// utilizador já escreveu um (hasUserCost), para não o apagar; packCostCents fica
+// null nesse caso ou quando a fatura não vem em `un`.
+export interface ExistingArticleTransition {
+  packs: string;
+  flagged: boolean;
+  packCostCents: number | null;
+}
+
+export function existingArticleTransition(args: {
+  invoiceUnit: string | null | undefined;
+  invoiceQty: number | null | undefined;
+  invoiceUnitCostCents: number | null | undefined;
+  directQty: number | null;
+  pack: { packQty: number; packUnit: string };
+  ingredientUnit: string;
+  ingredientUnitWeightG?: number | null;
+  hasUserCost: boolean;
+}): ExistingArticleTransition {
+  const t = packsOnArticleChange({
+    invoiceUnit: args.invoiceUnit,
+    invoiceQty: args.invoiceQty,
+    directQty: args.directQty,
+    pack: args.pack,
+    ingredientUnit: args.ingredientUnit,
+    ingredientUnitWeightG: args.ingredientUnitWeightG,
+  });
+  const packCostCents = args.hasUserCost
+    ? null
+    : packCostCentsFromInvoice({
+        invoiceUnit: args.invoiceUnit,
+        invoiceUnitCostCents: args.invoiceUnitCostCents,
+      });
+  return { packs: t.packs, flagged: t.flagged, packCostCents };
+}
+
+// ── Item 2 (06b, achado 12): sugerir o artigo existente em vez de criar ─────
+// Artigos activos do ingrediente cujo conteúdo (pack_qty × pack_unit) é igual ao
+// conteúdo lido na linha da fatura, depois de convertido para a unidade base do
+// ingrediente — por exemplo 5 l da fatura contra um artigo de 5 l, ou 120 g
+// contra 0,12 kg. Vazio quando a linha não tem conteúdo legível ou nenhum artigo
+// bate certo; nesse caso mantém-se o comportamento do sprint 06.
+export function articlesMatchingContent<T extends { pack_qty: number; pack_unit: string }>(
+  rawName: string | null | undefined,
+  articles: T[],
+  ingredient: { unit: string; unit_weight_g?: number | null },
+): T[] {
+  const pack = parsePackFromText(rawName ?? "");
+  if (!pack) return [];
+  const lineQty = packEntryQty(1, pack.packQty, pack.packUnit, ingredient.unit, ingredient.unit_weight_g);
+  if (lineQty == null) return [];
+  return articles.filter((a) => {
+    const artQty = packEntryQty(1, a.pack_qty, a.pack_unit, ingredient.unit, ingredient.unit_weight_g);
+    return artQty != null && Math.abs(artQty - lineQty) < 1e-9;
+  });
+}
+
 // ── Item 2: modo inicial da linha e bloqueio de registo (achado 5) ──────────
 // Abre já no formulário de novo artigo quando há conteúdo de embalagem no nome,
 // ou quando a fatura vem em `un` para um ingrediente em massa/volume e não há
