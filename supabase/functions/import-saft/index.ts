@@ -58,15 +58,37 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-// Família de unidades: converte a qty da linha da ficha para a unidade do
-// ingrediente (exigida pelos movimentos, 0011). null = famílias diferentes.
-function toIngredientUnit(qty: number, from: string, to: string): number | null {
-  if (from === to) return qty;
-  if (from === "g" && to === "kg") return qty / 1000;
-  if (from === "kg" && to === "g") return qty * 1000;
-  if (from === "ml" && to === "l") return qty / 1000;
-  if (from === "l" && to === "ml") return qty * 1000;
+// Conversão de unidades (Stock S1). Tabela de casos ÚNICA, partilhada com
+// apps/web/src/lib/types.ts (unitFactor) e public.unit_factor da 0031:
+//   from=to                   -> qty
+//   g↔kg, ml↔l                -> ×0.001 / ×1000
+//   un→g/kg (com peso médio w)-> w / (w/1000)
+//   g/kg→un (com peso médio w)-> 1/w / (1000/w)
+//   massa↔volume, un sem peso -> null (sem conversão possível)
+function unitFactor(from: string, to: string, unitWeightG?: number | null): number | null {
+  if (from === to) return 1;
+  if (from === "g" && to === "kg") return 0.001;
+  if (from === "kg" && to === "g") return 1000;
+  if (from === "ml" && to === "l") return 0.001;
+  if (from === "l" && to === "ml") return 1000;
+  if (unitWeightG == null || unitWeightG <= 0) return null;
+  if (from === "un" && to === "g") return unitWeightG;
+  if (from === "un" && to === "kg") return unitWeightG * 0.001;
+  if (from === "g" && to === "un") return 1 / unitWeightG;
+  if (from === "kg" && to === "un") return 1000 / unitWeightG;
   return null;
+}
+
+// Converte a qty da linha da ficha para a unidade do ingrediente (exigida pelos
+// movimentos, 0011). null quando a conversão não é possível.
+function toIngredientUnit(
+  qty: number,
+  from: string,
+  to: string,
+  unitWeightG?: number | null,
+): number | null {
+  const factor = unitFactor(from, to, unitWeightG);
+  return factor == null ? null : qty * factor;
 }
 
 function asArray<T>(x: T | T[] | undefined | null): T[] {
@@ -228,7 +250,7 @@ async function applyImport(
   const { data: ingredients, error: ingErr } = ingredientIds.length
     ? await admin
         .from("ingredients")
-        .select("id, name, unit")
+        .select("id, name, unit, unit_weight_g")
         .eq("restaurant_id", restaurantId)
         .in("id", ingredientIds)
     : { data: [], error: null };
@@ -259,7 +281,13 @@ async function applyImport(
       if (!si.ingredient_id) continue; // linha livre, sem despensa
       const ing = ingById.get(si.ingredient_id as string);
       if (!ing) continue;
-      const converted = toIngredientUnit(Number(si.qty), String(si.unit), String(ing.unit));
+      const converted = toIngredientUnit(
+        Number(si.qty),
+        String(si.unit),
+        String(ing.unit),
+        // deno-lint-ignore no-explicit-any
+        (ing as any).unit_weight_g != null ? Number((ing as any).unit_weight_g) : null,
+      );
       if (converted == null) {
         unitMismatch.add(ing.name as string);
         continue;

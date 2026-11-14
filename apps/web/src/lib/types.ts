@@ -173,34 +173,49 @@ export const UNIT_OPTIONS = [
 ] as const;
 export type Unit = (typeof UNIT_OPTIONS)[number]["code"];
 
-// Famílias de unidade para a conversão FIXA da v0: g↔kg e ml↔l (factor 1000).
-// Sem tabela de conversões; unidades de famílias diferentes não têm custo.
-function unitFamily(u: string): "mass" | "vol" | "count" | null {
-  if (u === "g" || u === "kg") return "mass";
-  if (u === "ml" || u === "l") return "vol";
-  if (u === "un") return "count";
+// Conversão de unidades (Stock S1, espelha public.unit_factor da 0031 e
+// toIngredientUnit da edge import-saft). Tabela de casos ÚNICA, partilhada pelas
+// três implementações:
+//   from=to                      -> 1
+//   g↔kg, ml↔l                   -> ×0.001 / ×1000
+//   un→g  (com peso médio w)     -> w        | un→kg -> w/1000
+//   g→un  (com peso médio w)     -> 1/w      | kg→un -> 1000/w
+//   massa↔volume, un sem peso    -> null (sem conversão possível)
+// unitWeightG é o peso médio por unidade do ingrediente (gramas).
+export function unitFactor(
+  from: string,
+  to: string,
+  unitWeightG?: number | null,
+): number | null {
+  if (from === to) return 1;
+  if (from === "g" && to === "kg") return 0.001;
+  if (from === "kg" && to === "g") return 1000;
+  if (from === "ml" && to === "l") return 0.001;
+  if (from === "l" && to === "ml") return 1000;
+  // un contra peso: só com peso médio por unidade válido.
+  if (unitWeightG == null || unitWeightG <= 0) return null;
+  if (from === "un" && to === "g") return unitWeightG;
+  if (from === "un" && to === "kg") return unitWeightG * 0.001;
+  if (from === "g" && to === "un") return 1 / unitWeightG;
+  if (from === "kg" && to === "un") return 1000 / unitWeightG;
   return null;
 }
 
-function toBase(qty: number, unit: string): number {
-  return unit === "kg" || unit === "l" ? qty * 1000 : qty;
-}
-
-// Custo de uma linha da ficha em cêntimos, convertendo entre g/kg e ml/l.
-// null quando não há custo do ingrediente ou as famílias não coincidem.
+// Custo de uma linha da ficha em cêntimos, convertendo entre g/kg, ml/l e (com
+// peso médio por unidade) un contra g/kg. null quando não há custo do
+// ingrediente ou a conversão não é possível.
 export function computeLineCostCents(
   qty: number,
   lineUnit: string,
   ingredientUnit: string,
   costPerUnitCents: number | null | undefined,
+  ingredientUnitWeightG?: number | null,
 ): number | null {
   if (costPerUnitCents == null || costPerUnitCents < 0 || qty <= 0) return null;
-  const lf = unitFamily(lineUnit);
-  const inf = unitFamily(ingredientUnit);
-  if (!lf || !inf || lf !== inf) return null;
-  const qtyBase = toBase(qty, lineUnit);
-  const costPerBase = costPerUnitCents / (ingredientUnit === "kg" || ingredientUnit === "l" ? 1000 : 1);
-  return qtyBase * costPerBase;
+  const factor = unitFactor(lineUnit, ingredientUnit, ingredientUnitWeightG);
+  if (factor == null) return null;
+  // qty na unidade do ingrediente × custo por unidade do ingrediente.
+  return qty * factor * costPerUnitCents;
 }
 
 export interface FoodCostSummary {
@@ -213,7 +228,10 @@ export interface FoodCostSummary {
 // Linhas livres (sem ingredient_id) ou sem custo contam em total mas não em costed.
 export function computeFoodCost(
   lines: { qty: number; unit: string; ingredient_id: string | null }[],
-  ingredientsById: Map<string, { unit: string; cost_per_unit_cents: number | null }>,
+  ingredientsById: Map<
+    string,
+    { unit: string; cost_per_unit_cents: number | null; unit_weight_g?: number | null }
+  >,
 ): FoodCostSummary {
   let costCents = 0;
   let costed = 0;
@@ -221,7 +239,13 @@ export function computeFoodCost(
     if (!line.ingredient_id) continue;
     const ing = ingredientsById.get(line.ingredient_id);
     if (!ing) continue;
-    const c = computeLineCostCents(line.qty, line.unit, ing.unit, ing.cost_per_unit_cents);
+    const c = computeLineCostCents(
+      line.qty,
+      line.unit,
+      ing.unit,
+      ing.cost_per_unit_cents,
+      ing.unit_weight_g,
+    );
     if (c != null) {
       costCents += c;
       costed += 1;
@@ -281,7 +305,10 @@ export function computeMenuMargins(
   items: { id: string; name: string; price_cents: number | null; active: boolean }[],
   sheets: { id: string; menu_item_id: string }[],
   lines: { tech_sheet_id: string; qty: number; unit: string; ingredient_id: string | null }[],
-  ingredientsById: Map<string, { unit: string; cost_per_unit_cents: number | null }>,
+  ingredientsById: Map<
+    string,
+    { unit: string; cost_per_unit_cents: number | null; unit_weight_g?: number | null }
+  >,
   targetPct: number,
   variantsByItem?: Map<string, { price_cents: number | null; is_default: boolean }[]>,
 ): MenuMarginsSummary {
