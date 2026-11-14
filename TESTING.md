@@ -302,3 +302,73 @@ Pré-requisito: despensa com pelo menos um ingrediente (ex.: "Azeite" em `l`,
    de aparecer como sem custo: o custo passa a ser calculado (1 un = 150 g).
 
 Capturas de ecrã: pendentes (a recolher pelo orquestrador/David na validação visual).
+
+---
+
+# Sprint 06 — Correções da entrada de faturas (14-11-2026)
+
+## Testado automaticamente (com resultados)
+
+Corrido nesta máquina (Windows, pnpm 10.6 + Turborepo), `turbo run ... --force`:
+
+| Gate | Comando | Resultado |
+|---|---|---|
+| Typecheck | `pnpm typecheck` | ✅ `@stoa/web`, `tsc --noEmit` sem erros |
+| Testes unitários | `pnpm test` | ✅ 20 ficheiros, **235 testes** verdes (eram 208; +27) |
+| Build | `pnpm build` | ✅ `vite build` OK (aviso pré-existente de chunk >500 kB) |
+| Lint | `pnpm lint` | ⚠️ 0 tarefas — `@stoa/web` continua sem script `lint` |
+
+Testes novos (todos em funções puras, a evidência dos itens 1–5):
+- `lib/purchase-items.test.ts` (17 → 42): `packsFromDirectQty` (24 un→24, 10 kg→10,
+  10 l→2, 7 kg→vazio+assinalado), `packsOnArticleChange` (azeite 2 un→2 embalagens),
+  `shouldOpenNewArticle` / `lineBlockReason`, `packCostCentsFromInvoice`
+  (azeite 19,90; arroz 1,29; atum 1,65), `proposeIngredientFromRawName`
+  (SAL MARINHO GROSSO 1KG → "Sal marinho grosso"/kg), `proposeArticleForIngredient`
+  (atum un→1 un + "120 g"; azeite → Gallo/"Garrafão 5 L"; arroz → Cigala/"Embalagem 1 kg";
+  sal → marca vazia), `unconvertibleFormatMessage`.
+- `lib/roles.test.ts` (13 → 15): `canManagePantry` (owner/gestor/cozinha sim; balcão/consultor não).
+
+## Testes manuais pendentes — repete o teste do David (passos numerados)
+
+Pré-requisito: login como `owner`/`gestor`/`cozinha`, tenant de demonstração (Lota do Cais).
+As duas faturas de teste são do mesmo fornecedor novo.
+
+### A. Fatura 1187 (fornecedor novo — cria ingrediente e artigos)
+1. Abrir **Entradas de compra** e carregar a fatura 1187 (PDF/foto). O formulário
+   pré-preenche-se; rever as linhas.
+2. Linha **ATUM POSTA ... RAMIREZ 120G**, ingrediente novo: clicar **Criar ingrediente**
+   — proposta "Atum posta ... ramirez"/`un` (editar nome para "Atum" e unidade `un`).
+   Criar. O ingrediente fica escolhido e aparece nas outras linhas sem recarregar.
+3. A linha segue para a proposta de artigo (há conteúdo): o artigo vem **1 un** com
+   formato "Embalagem 120 g" (não 120 g de conteúdo, porque o atum conta-se à unidade).
+   Preço por embalagem = **1,65** (vem da fatura, em `un`). Guardar artigo.
+4. Confirmar **24** embalagens (quantidade da fatura, não 1). Pré-visualização: **24 un**
+   a **1,65 €/un**.
+5. Linha **ARROZ CAROLINO CIGALA 1KG**: criar ingrediente "Arroz carolino"/`kg`; artigo
+   "Embalagem 1 kg", marca Cigala, preço **1,29**; **10** embalagens → **10 kg** a **1,29 €/kg**.
+6. Linha **AZEITE V.EXTRA GALLO GARRAFAO 5L**: criar ingrediente "Azeite"/`l`; artigo
+   "Garrafão 5 L", marca Gallo, preço **19,90**; **2** embalagens → **10 l** a **3,98 €/l**.
+7. Confirmar que **nenhum aviso de unidade** fica visível nas linhas já resolvidas e que
+   os campos têm etiqueta por cima ("Embalagens", "Preço por embalagem (s/IVA)").
+8. **Registar entrada**. Saldos esperados na Despensa: Atum **+24 un** (1,65 €/un),
+   Arroz **+10 kg** (1,29 €/kg), Azeite **+10 l** (3,98 €/l).
+
+### B. Fatura 1243 (aprendizagem — mesmo fornecedor)
+1. Carregar a fatura 1243 (mesmo fornecedor, mesmos nomes de linha).
+2. Cada linha aparece já com o **mesmo ingrediente e o mesmo artigo** aprendidos da 1187,
+   e com as **embalagens = quantidade da fatura** e o preço por embalagem da fatura, sem
+   reescrever nada.
+3. **Registar entrada**. Os saldos sobem pela quantidade da 1243 e o custo médio
+   actualiza-se.
+
+### C. Bloqueio de registo (item 2)
+1. Numa linha em que a fatura vem em `un` para um ingrediente em `l`/`kg` **sem artigo**,
+   confirmar que aparece a razão "Escolha ou crie o artigo, ou indique a quantidade em
+   litros." e que **Registar entrada** não grava essa linha até resolver.
+
+### D. Barra de navegação (item 9)
+1. Em ecrã de **1280–1920 px** (owner/gestor), confirmar que todos os itens são
+   alcançáveis: os que não cabem na barra ficam no menu **Mais** (incl. Clientes e
+   Definições). Em **telemóvel**, a barra mantém o scroll horizontal.
+
+Capturas de ecrã: pendentes (validação visual pelo orquestrador/David).
