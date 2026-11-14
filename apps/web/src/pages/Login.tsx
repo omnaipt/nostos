@@ -140,7 +140,7 @@ export default function Login() {
     if (countErr || !count) {
       await supabase.auth.signOut();
       falhar(
-        "Conta criada, mas não há nenhum convite para este email. Peça a quem o convidou para usar exactamente este endereço, e depois entre por aqui.",
+        "Conta criada, mas não há nenhum convite para este email. Peça a quem o convidou para usar exatamente este endereço, e depois entre por aqui.",
       );
       return;
     }
@@ -174,7 +174,7 @@ export default function Login() {
           {mode === "criar" && (
             <p className="mb-4 text-sm text-muted-foreground">
               Foi convidado para uma equipa? Crie a conta com o mesmo email do
-              convite e o acesso fica activo de imediato.
+              convite e o acesso fica ativo de imediato.
             </p>
           )}
           <form onSubmit={onSubmit} className="space-y-4">

@@ -61,7 +61,7 @@ export default function HaccpFornecedores() {
       {!suppliersQuery.isLoading && suppliers.length === 0 && (
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Ainda sem fornecedores. Adicione o primeiro ou crie um na recepção.
+            Ainda sem fornecedores. Adicione o primeiro ou crie um na receção.
           </CardContent>
         </Card>
       )}
@@ -81,11 +81,11 @@ export default function HaccpFornecedores() {
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">
                   {s.name}
-                  {!s.active && <span className="ml-2 text-xs text-muted-foreground">(inactivo)</span>}
+                  {!s.active && <span className="ml-2 text-xs text-muted-foreground">(inativo)</span>}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {s.nif ? `NIF ${s.nif} · ` : ""}
-                  {stat?.receptions_count ?? 0} recepções ·{" "}
+                  {stat?.receptions_count ?? 0} receções ·{" "}
                   <span className={rejections >= 2 ? "font-medium text-coral-600" : ""}>
                     {rejections} recusas
                   </span>
@@ -188,7 +188,7 @@ function SupplierDialog({
               checked={active}
               onChange={(e) => setActive(e.target.checked)}
             />
-            Activo
+            Ativo
           </label>
         )}
         {error && (

@@ -122,7 +122,7 @@ export default function HaccpPontos() {
             <Link to={`/haccp/pontos/${cp.id}`} className="min-w-0 flex-1 hover:opacity-80">
               <p className="truncate text-sm font-medium">
                 {cp.name}
-                {!cp.active && <span className="ml-2 text-xs text-muted-foreground">(inactivo)</span>}
+                {!cp.active && <span className="ml-2 text-xs text-muted-foreground">(inativo)</span>}
               </p>
               <p className="text-xs text-muted-foreground">
                 {kinds.find((k) => k.kind === cp.kind)?.label ?? cp.kind} · {limitsLabel(cp)} ·{" "}
@@ -170,17 +170,17 @@ export default function HaccpPontos() {
               ? () => {
                   if (
                     !window.confirm(
-                      "Desactivar este ponto? Deixa de gerar verificações; o histórico mantém-se.",
+                      "Desativar este ponto? Deixa de gerar verificações; o histórico mantém-se.",
                     )
                   )
                     return;
                   deactivate.mutate((editing as ControlPointWithTurns).id, {
                     onSuccess: () => {
-                      toast.success("Ponto desactivado.");
+                      toast.success("Ponto desativado.");
                       setEditing(null);
                     },
                     onError: (e) =>
-                      toast.error(e instanceof Error ? e.message : "Não foi possível desactivar."),
+                      toast.error(e instanceof Error ? e.message : "Não foi possível desativar."),
                   });
                 }
               : undefined
@@ -332,7 +332,7 @@ function ControlPointDialog({
           {!allTurns && (
             <div className="space-y-1 rounded-md border border-input p-3">
               {turns.length === 0 && (
-                <p className="text-xs text-muted-foreground">Não há turnos activos.</p>
+                <p className="text-xs text-muted-foreground">Não há turnos ativos.</p>
               )}
               {turns.map((t) => (
                 <label key={t.id} className="flex items-center gap-2 text-sm">
@@ -365,7 +365,7 @@ function ControlPointDialog({
           </Button>
           {onDeactivate && (
             <Button type="button" variant="ghost" className="text-muted-foreground" onClick={onDeactivate}>
-              Desactivar
+              Desativar
             </Button>
           )}
         </div>

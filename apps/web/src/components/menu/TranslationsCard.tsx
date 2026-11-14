@@ -128,9 +128,9 @@ export function TranslationsCard({ restaurantId }: { restaurantId: string }) {
                     <span className="text-sm font-medium">{LANG_PT[lang]}</span>
                     <span className="block text-xs text-muted-foreground">
                       {total === 0
-                        ? "Ainda não há pratos activos na ementa."
+                        ? "Ainda não há pratos ativos na ementa."
                         : traduzidos === 0
-                          ? `Sem traduções. Os ${total} pratos activos aparecem em português.`
+                          ? `Sem traduções. Os ${total} pratos ativos aparecem em português.`
                           : `${traduzidos} de ${total} pratos traduzidos, ${validadas} validados.`}
                       {traduzidos > 0 &&
                         validadas === 0 &&
@@ -332,7 +332,7 @@ function ReviewDialog({
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-input bg-muted/20 px-3 py-2">
             <p className="text-xs text-muted-foreground">
               {items.length === 0
-                ? "Não há pratos activos na ementa."
+                ? "Não há pratos ativos na ementa."
                 : `${traduzidos} de ${items.length} pratos traduzidos, ${porValidar} por validar` +
                   (semTraducao > 0
                     ? `, ${semTraducao} sem tradução (ficam em português).`
@@ -392,7 +392,7 @@ function ReviewDialog({
             return (
               <section className="space-y-1.5">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Pratos em categorias desactivadas
+                  Pratos em categorias desativadas
                 </h3>
                 <ul className="divide-y divide-border rounded-md border border-input">
                   {orphans.map((item) => {
@@ -475,7 +475,7 @@ function ReviewDialog({
 
           {items.length === 0 && cats.length === 0 && (
             <p className="rounded-md border border-dashed border-input p-4 text-sm text-muted-foreground">
-              Ainda não há pratos activos para traduzir. Registe a ementa primeiro.
+              Ainda não há pratos ativos para traduzir. Registe a ementa primeiro.
             </p>
           )}
 

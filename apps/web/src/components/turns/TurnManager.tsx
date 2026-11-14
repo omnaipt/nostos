@@ -187,7 +187,7 @@ export function TurnManager({ turns, onChange, busy }: TurnManagerProps) {
                   {t.label}
                   <span className="text-muted-foreground">{t.startTime}</span>
                   {t.service && <Badge variant="neutral">{t.service}</Badge>}
-                  {!t.active && <Badge variant="cancelada">Inactivo</Badge>}
+                  {!t.active && <Badge variant="cancelada">Inativo</Badge>}
                 </p>
                 <p className="text-xs text-muted-foreground">{weekdaysSummary(t.weekdays) || "Sem dias"}</p>
               </div>
@@ -197,7 +197,7 @@ export function TurnManager({ turns, onChange, busy }: TurnManagerProps) {
                 disabled={busy}
                 className="h-11 rounded-md px-2 text-xs font-medium text-muted-foreground hover:bg-muted"
               >
-                {t.active ? "Desactivar" : "Activar"}
+                {t.active ? "Desativar" : "Ativar"}
               </button>
               <Button type="button" variant="ghost" size="icon" aria-label={`Editar ${t.label}`} onClick={() => startEdit(t)} disabled={busy}>
                 <Pencil className="h-4 w-4" />

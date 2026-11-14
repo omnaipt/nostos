@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { canAccess, homeForRole, navForRole, type MemberRole } from "./roles";
+import { canAccess, canManagePantry, homeForRole, navForRole, type MemberRole } from "./roles";
+
+describe("canManagePantry (item 4)", () => {
+  it("owner, gestor e cozinha gerem a despensa", () => {
+    expect(canManagePantry("owner")).toBe(true);
+    expect(canManagePantry("gestor")).toBe(true);
+    expect(canManagePantry("cozinha")).toBe(true);
+  });
+  it("balcão e consultor não", () => {
+    expect(canManagePantry("balcao")).toBe(false);
+    expect(canManagePantry("consultor")).toBe(false);
+  });
+});
 
 describe("canAccess", () => {
   it("owner e gestor acedem a tudo", () => {

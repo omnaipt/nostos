@@ -63,7 +63,7 @@ export function OrderQueue({ restaurant }: { restaurant: Restaurant }) {
             }
           }
         },
-        onError: (e) => toast.error(e instanceof Error ? e.message : "Não foi possível actualizar."),
+        onError: (e) => toast.error(e instanceof Error ? e.message : "Não foi possível atualizar."),
       },
     );
   }

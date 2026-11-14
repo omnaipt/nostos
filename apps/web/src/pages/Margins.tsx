@@ -110,7 +110,7 @@ export default function Margins() {
           {summary.rows.length === 0 && (
             <Card>
               <CardContent className="py-12 text-center text-sm text-muted-foreground">
-                Sem pratos activos no menu.
+                Sem pratos ativos no menu.
               </CardContent>
             </Card>
           )}

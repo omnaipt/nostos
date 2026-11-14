@@ -8,6 +8,7 @@ import { useMenuItems } from "@/hooks/use-menu";
 import { useTechSheetLines, useTechSheets } from "@/hooks/use-tech-sheets";
 import { CasaLogo } from "@/components/CasaLogo";
 import { ALLERGEN_LABEL } from "@/lib/types";
+import { formatQty } from "@/lib/stock";
 
 // Ficha de cozinha imprimível (S3): a ficha técnica num layout limpo para a
 // parede/pasta da cozinha. Sem preços nem margens de propósito — a cozinha vê
@@ -93,7 +94,7 @@ export default function KitchenSheet() {
                 <tr key={l.id} className="border-b border-border/60 last:border-0">
                   <td className="py-1.5 pr-2">{l.name}</td>
                   <td className="py-1.5 text-right tabular-nums">
-                    {String(l.qty).replace(".", ",")} {l.unit}
+                    {formatQty(l.qty)} {l.unit}
                   </td>
                   <td className="py-1.5 pl-3 text-xs text-muted-foreground">
                     {l.ingredient_id && ingredientsById.get(l.ingredient_id)
@@ -134,7 +135,7 @@ export default function KitchenSheet() {
         )}
 
         <footer className="mt-6 border-t border-border pt-2 text-xs text-muted-foreground print:mt-8">
-          ficha por nostos · actualizada a {new Date(sheet.updated_at).toLocaleDateString("pt-PT")}
+          ficha por nostos · atualizada a {new Date(sheet.updated_at).toLocaleDateString("pt-PT")}
         </footer>
       </article>
     </div>

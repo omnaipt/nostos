@@ -9,7 +9,9 @@ import { Field } from "@/components/ui/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
-import { useIngredients } from "@/hooks/use-ingredients";
+import { useIngredients, useCreateIngredient } from "@/hooks/use-ingredients";
+import { useRole } from "@/contexts/RoleContext";
+import { canManagePantry } from "@/lib/roles";
 import {
   useCreatePurchaseEntry,
   useLastPurchaseCosts,
@@ -29,12 +31,20 @@ import { todayServiceDate } from "@/lib/service-date";
 import { estimateExpiryDate, resolveShelfLifeDays } from "@/lib/expiry";
 import { parsePriceToCents, UNIT_OPTIONS, type Ingredient, type PurchaseItem } from "@/lib/types";
 import {
+  lineBlockReason,
+  packCostCentsFromInvoice,
   packEntryBaseCostCents,
   packEntryQty,
-  proposeArticleFromRawName,
+  packsOnArticleChange,
+  parsePackFromText,
+  proposeArticleForIngredient,
+  proposeIngredientFromRawName,
+  shouldOpenNewArticle,
+  unconvertibleFormatMessage,
 } from "@/lib/purchase-items";
-// Módulo puro partilhado com a edge parse-invoice (norma da aprendizagem).
-import { norm } from "../../../../supabase/functions/parse-invoice/match";
+// Módulo puro partilhado com a edge parse-invoice (norma da aprendizagem +
+// normalização de unidades da fatura).
+import { norm, normalizeUnit } from "../../../../supabase/functions/parse-invoice/match";
 
 // Entradas de compra (Gap A): fornecedor + nº fatura + data + linhas
 // (ingrediente do catálogo, qtd, custo unitário s/IVA) → stock_movements
@@ -55,11 +65,18 @@ interface LineDraft {
   // Stock S1: entrada por artigo de compra + embalagens. "" = entrada directa.
   purchaseItemId: string;
   packs: string; // nº de embalagens (texto), só quando há artigo
+  packsFlagged?: boolean; // conversão não deu nº inteiro de embalagens (item 1)
   // Metadados do parse (ausentes em linhas manuais):
   fromParse?: boolean;
   rawName?: string; // descrição exacta na fatura (visível; chave da aprendizagem)
   grade?: "verde" | "ambar" | null;
   parseNote?: string | null; // note da IA + aviso de unidade, quando existirem
+  // Contexto da linha da fatura (itens 1/2/3): unidade normalizada, quantidade e
+  // preço unitário originais, para converter embalagens e preço sem reescrever.
+  invoiceUnit?: string | null;
+  invoiceQty?: number | null;
+  invoiceUnitCostCents?: number | null;
+  autoCreateArticle?: boolean; // abrir já o formulário de novo artigo (item 2)
 }
 
 const EMPTY_LINE: LineDraft = {
@@ -94,6 +111,9 @@ export default function Entradas() {
   const articlesQuery = usePurchaseItems(restaurantId);
   const aliasesQuery = useSupplierAliases(restaurantId);
   const createArticle = useCreatePurchaseItem(restaurantId);
+  const createIngredient = useCreateIngredient(restaurantId);
+  const { role } = useRole();
+  const mayManagePantry = canManagePantry(role);
 
   const ingredients = (ingredientsQuery.data ?? []).filter((i) => i.active !== false);
   const ingredientById = new Map(ingredients.map((i) => [i.id, i]));
@@ -128,6 +148,20 @@ export default function Entradas() {
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
   }
 
+  // Linha com um valor concreto e coerente (item 6): por embalagens com formato
+  // convertível, ou entrada directa com quantidade > 0.
+  function lineResolved(line: LineDraft, ing: Ingredient | undefined): boolean {
+    if (!ing) return false;
+    if (line.purchaseItemId) {
+      const art = articleById.get(line.purchaseItemId);
+      const packsNum = Number(line.packs.replace(",", "."));
+      if (!art || !Number.isFinite(packsNum) || packsNum <= 0) return false;
+      return packEntryQty(packsNum, art.pack_qty, art.pack_unit, ing.unit, ing.unit_weight_g) != null;
+    }
+    const qty = Number(line.qty.replace(",", "."));
+    return Number.isFinite(qty) && qty > 0;
+  }
+
   // Validade estimada (Gap G): data da fatura + shelf life resolvido (override
   // do ingrediente > categoria > fallback do storage_mode). Campos category/
   // storage_mode podem não existir em runtime antes da 0017 — defensivo.
@@ -154,14 +188,35 @@ export default function Entradas() {
       // já aprendeu um artigo, propõe o mesmo artigo e as embalagens (= qty).
       const aliasKey = supplierNorm && l.raw_name ? `${supplierNorm}|${norm(l.raw_name)}` : null;
       const proposedArticleId = aliasKey ? aliasArticleByKey.get(aliasKey) : undefined;
-      const hasArticle = !!(proposedArticleId && articleById.has(proposedArticleId));
+      const article = proposedArticleId ? articleById.get(proposedArticleId) : undefined;
+      const hasArticle = !!article;
+      const invoiceUnit = normalizeUnit(l.unit);
+      const invoiceUnitCostCents = l.unit_cost_cents_ex_vat;
+      // Preço por embalagem: quando a fatura vem em `un`, é o preço unitário da
+      // fatura; caso contrário mantém-se o custo convertido pelo servidor.
+      const packCost = hasArticle
+        ? packCostCentsFromInvoice({ invoiceUnit, invoiceUnitCostCents })
+        : null;
+      const cost =
+        hasArticle && packCost != null
+          ? (packCost / 100).toFixed(2).replace(".", ",")
+          : l.fill_cost_cents != null
+            ? (l.fill_cost_cents / 100).toFixed(2).replace(".", ",")
+            : "";
+      // Linha sem artigo mas com embalagem detetável ou fatura em un para um
+      // ingrediente em massa/volume: abre já no formulário de novo artigo.
+      const autoCreateArticle =
+        !!ing &&
+        shouldOpenNewArticle({
+          rawName: l.raw_name,
+          invoiceUnit,
+          ingredientUnit: ing.unit,
+          hasArticle,
+        });
       return {
         ingredientId: ing?.id ?? "",
         qty: l.fill_qty != null ? String(l.fill_qty) : l.qty != null ? String(l.qty) : "",
-        cost:
-          l.fill_cost_cents != null
-            ? (l.fill_cost_cents / 100).toFixed(2).replace(".", ",")
-            : "",
+        cost,
         expires: ing ? estimateForDate(ing, date) : "",
         purchaseItemId: hasArticle ? (proposedArticleId as string) : "",
         packs: hasArticle && l.qty != null ? String(l.qty) : "",
@@ -169,6 +224,10 @@ export default function Entradas() {
         rawName: l.raw_name,
         grade: l.confidence === "baixa" && l.match_grade === "verde" ? "ambar" : l.match_grade,
         parseNote: noteParts.length > 0 ? noteParts.join(" · ") : null,
+        invoiceUnit,
+        invoiceQty: l.qty,
+        invoiceUnitCostCents,
+        autoCreateArticle,
       };
     });
     if (drafts.length === 0) {
@@ -227,6 +286,17 @@ export default function Entradas() {
       const ing = ingredientById.get(l.ingredientId);
       if (!ing) {
         setFormError("Cada linha precisa de ingrediente.");
+        return;
+      }
+      // Item 2: unidade da fatura não convertível e sem artigo => não se regista.
+      const blocked = lineBlockReason({
+        invoiceUnit: l.invoiceUnit,
+        ingredientUnit: ing.unit,
+        ingredientUnitWeightG: ing.unit_weight_g,
+        hasArticle: !!l.purchaseItemId,
+      });
+      if (blocked) {
+        setFormError(blocked);
         return;
       }
       if (l.purchaseItemId) {
@@ -324,7 +394,7 @@ export default function Entradas() {
           <h1 className="font-display text-2xl font-semibold text-atlantico-900">Entradas de compra</h1>
           <p className="text-sm text-muted-foreground">
             Registo das faturas de fornecedor. O saldo e o custo médio da despensa
-            actualizam-se automaticamente.
+            atualizam-se automaticamente.
           </p>
         </div>
         <Link to="/" className={buttonVariants({ variant: "outline", size: "sm" })}>
@@ -438,10 +508,23 @@ export default function Entradas() {
                   {lines.map((line, idx) => {
                     const ing = ingredientById.get(line.ingredientId);
                     const lastCost = ing ? lastCostsQuery.data?.get(ing.id) : undefined;
-                    // Âmbar: pede olhos do dono (confiança baixa, note, contenção,
-                    // sugestão do modelo, unidade divergente ou sem match).
+                    const blockReason = ing
+                      ? lineBlockReason({
+                          invoiceUnit: line.invoiceUnit,
+                          ingredientUnit: ing.unit,
+                          ingredientUnitWeightG: ing.unit_weight_g,
+                          hasArticle: !!line.purchaseItemId,
+                        })
+                      : null;
+                    // Resolvida (item 6): artigo com embalagens convertíveis, ou
+                    // entrada directa com quantidade coerente e sem bloqueio.
+                    const resolved = lineResolved(line, ing) && !blockReason;
+                    // Âmbar: pede olhos do dono. Desaparece quando a linha fica
+                    // resolvida (os avisos de unidade/formato saem com ela).
                     const amber =
-                      line.fromParse && (line.grade === "ambar" || !line.ingredientId || !!line.parseNote);
+                      line.fromParse &&
+                      !resolved &&
+                      (line.grade === "ambar" || !line.ingredientId || !!line.parseNote || !!blockReason);
                     return (
                       <div
                         key={idx}
@@ -496,6 +579,23 @@ export default function Entradas() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
+                        {/* Item 4: criar o ingrediente na própria linha quando
+                            não há correspondência (só quem gere a despensa). */}
+                        {line.fromParse && !ing && mayManagePantry && (
+                          <CreateIngredientInline
+                            rawName={line.rawName ?? ""}
+                            createIngredient={createIngredient}
+                            onCreated={(created) =>
+                              setLine(idx, {
+                                ingredientId: created.id,
+                                expires: estimateFor(created),
+                                purchaseItemId: "",
+                                packs: "",
+                                autoCreateArticle: !!parsePackFromText(line.rawName ?? ""),
+                              })
+                            }
+                          />
+                        )}
                         {ing && (
                           <LineArticleControls
                             line={line}
@@ -505,7 +605,10 @@ export default function Entradas() {
                             createArticle={createArticle}
                           />
                         )}
-                        {line.fromParse && line.parseNote && (
+                        {blockReason && (
+                          <p className="mt-1 text-xs font-medium text-destructive">{blockReason}</p>
+                        )}
+                        {line.fromParse && line.parseNote && !resolved && (
                           <p className="mt-1 text-xs font-medium text-[hsl(var(--status-pending-fg))]">
                             {line.parseNote}
                           </p>
@@ -513,9 +616,9 @@ export default function Entradas() {
                         {ing && (
                           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
                             <p className="text-xs text-muted-foreground">
-                              Custo médio actual: {formatCostCents(ing.cost_per_unit_cents)}/{ing.unit}
+                              Custo médio atual: {formatCostCents(ing.cost_per_unit_cents)}/{ing.unit}
                               {lastCost != null && <> · última compra: {formatCostCents(lastCost)}/{ing.unit}</>}
-                              {" "}· saldo: {ing.stock_qty} {ing.unit}
+                              {" "}· saldo: {formatQty(ing.stock_qty)} {ing.unit}
                             </p>
                             <label className="flex items-center gap-1 text-xs text-muted-foreground">
                               Validade estimada:
@@ -584,7 +687,7 @@ export default function Entradas() {
                 <ul className="mt-1 space-y-0.5">
                   {g.lines.map((m) => (
                     <li key={m.id} className="text-xs text-muted-foreground">
-                      {ingredientById.get(m.ingredient_id)?.name ?? "—"} · {m.qty} {m.unit}
+                      {ingredientById.get(m.ingredient_id)?.name ?? "—"} · {formatQty(m.qty)} {m.unit}
                       {m.cost_per_unit_cents != null && (
                         <> · {formatCostCents(m.cost_per_unit_cents)}/{m.unit}</>
                       )}
@@ -600,10 +703,27 @@ export default function Entradas() {
   );
 }
 
+// Etiqueta permanente por cima de um campo (item 7): o nome fica visível, não
+// só dentro da caixa.
+function FieldLabel({ children, control }: { children: React.ReactNode; control: React.ReactNode }) {
+  return (
+    <label className="flex flex-col gap-0.5">
+      <span className="text-xs font-medium text-muted-foreground">{children}</span>
+      {control}
+    </label>
+  );
+}
+
+// Número para o campo de quantidade: vírgula decimal, sem separador de milhares
+// (tem de voltar a parsear-se com Number).
+function qtyToInput(qty: number): string {
+  return String(qty).replace(".", ",");
+}
+
 // Controlo por linha: escolher artigo de compra + nº de embalagens (com a
 // quantidade na unidade do ingrediente e o custo por unidade base calculados
 // antes de gravar), ou entrada directa em quantidade. Também propõe criar um
-// artigo a partir do nome lido na fatura.
+// artigo a partir do nome lido na fatura, coerente com a unidade do ingrediente.
 function LineArticleControls({
   line,
   ing,
@@ -617,8 +737,8 @@ function LineArticleControls({
   onChange: (patch: Partial<LineDraft>) => void;
   createArticle: ReturnType<typeof useCreatePurchaseItem>;
 }) {
-  const [showCreate, setShowCreate] = React.useState(false);
-  const proposal = proposeArticleFromRawName(line.rawName ?? "");
+  const [showCreate, setShowCreate] = React.useState(!!line.autoCreateArticle);
+  const proposal = proposeArticleForIngredient(line.rawName ?? "", ing);
   const [brand, setBrand] = React.useState(proposal.brand);
   const [label, setLabel] = React.useState(proposal.label);
   const [packQty, setPackQty] = React.useState(
@@ -635,6 +755,53 @@ function LineArticleControls({
   const previewCost = art
     ? packEntryBaseCostCents(parsePriceToCents(line.cost), art.pack_qty, art.pack_unit, ing.unit, ing.unit_weight_g)
     : null;
+
+  // Conteúdo da proposta convertível para a unidade do ingrediente? Caso
+  // contrário, mostra-se a mensagem que diz o que fazer (item 5).
+  const createQtyNum = Number(packQty.replace(",", "."));
+  const createConvertible =
+    Number.isFinite(createQtyNum) &&
+    createQtyNum > 0 &&
+    packEntryQty(1, createQtyNum, packUnit, ing.unit, ing.unit_weight_g) != null;
+
+  // Passagem para um artigo (escolhido ou criado): embalagens a partir da
+  // quantidade da fatura/directa e preço por embalagem da fatura (itens 1 e 3).
+  function applyArticle(a: { id: string; pack_qty: number; pack_unit: string }) {
+    const t = packsOnArticleChange({
+      invoiceUnit: line.invoiceUnit,
+      invoiceQty: line.invoiceQty,
+      directQty: line.qty ? Number(line.qty.replace(",", ".")) : null,
+      pack: { packQty: a.pack_qty, packUnit: a.pack_unit },
+      ingredientUnit: ing.unit,
+      ingredientUnitWeightG: ing.unit_weight_g,
+    });
+    const packCost = packCostCentsFromInvoice({
+      invoiceUnit: line.invoiceUnit,
+      invoiceUnitCostCents: line.invoiceUnitCostCents,
+    });
+    const patch: Partial<LineDraft> = {
+      purchaseItemId: a.id,
+      packs: t.packs,
+      packsFlagged: t.flagged,
+    };
+    if (packCost != null) patch.cost = (packCost / 100).toFixed(2).replace(".", ",");
+    onChange(patch);
+  }
+
+  // Voltar a entrada directa: a quantidade parte das embalagens convertidas para
+  // a unidade do ingrediente (item 1).
+  function backToDirect() {
+    const qty =
+      art && Number.isFinite(packsNum) && packsNum > 0
+        ? packEntryQty(packsNum, art.pack_qty, art.pack_unit, ing.unit, ing.unit_weight_g)
+        : null;
+    onChange({
+      purchaseItemId: "",
+      packs: "",
+      packsFlagged: false,
+      ...(qty != null ? { qty: qtyToInput(qty) } : {}),
+    });
+  }
 
   function submitCreate() {
     const qtyNum = Number(packQty.replace(",", "."));
@@ -656,7 +823,7 @@ function LineArticleControls({
       },
       {
         onSuccess: (a) => {
-          onChange({ purchaseItemId: a.id, packs: line.packs || "1" });
+          applyArticle(a);
           setShowCreate(false);
           toast.success("Artigo criado.");
         },
@@ -672,11 +839,17 @@ function LineArticleControls({
         <Select
           aria-label="Artigo de compra"
           value={line.purchaseItemId}
-          onChange={(e) =>
-            onChange({ purchaseItemId: e.target.value, packs: e.target.value ? line.packs || "1" : "" })
-          }
+          onChange={(e) => {
+            const id = e.target.value;
+            if (!id) {
+              backToDirect();
+              return;
+            }
+            const next = articles.find((a) => a.id === id);
+            if (next) applyArticle(next);
+          }}
         >
-          <option value="">Entrada directa (quantidade)</option>
+          <option value="">Entrada direta (quantidade)</option>
           {articles.map((a) => (
             <option key={a.id} value={a.id}>
               {[a.brand, a.label].filter(Boolean).join(" · ") || "Artigo"} ({a.pack_qty} {a.pack_unit})
@@ -732,26 +905,43 @@ function LineArticleControls({
               Cancelar
             </Button>
           </div>
+          {packQty.trim() !== "" && !createConvertible && (
+            <p className="text-xs font-medium text-[hsl(var(--status-pending-fg))]">
+              {unconvertibleFormatMessage(ing.unit)}
+            </p>
+          )}
         </div>
       )}
 
       {line.purchaseItemId ? (
-        <div className="grid gap-2 sm:grid-cols-[110px_160px_1fr] sm:items-center">
-          <Input
-            aria-label="Nº de embalagens"
-            inputMode="decimal"
-            placeholder="Embalagens"
-            value={line.packs}
-            onChange={(e) => onChange({ packs: e.target.value })}
-          />
-          <Input
-            aria-label="Custo por embalagem sem IVA"
-            inputMode="decimal"
-            placeholder="€/embalagem s/IVA"
-            value={line.cost}
-            onChange={(e) => onChange({ cost: e.target.value })}
-          />
-          <p className="text-xs text-muted-foreground">
+        <div className="grid gap-2 sm:grid-cols-[110px_180px_1fr] sm:items-start">
+          <FieldLabel
+            control={
+              <Input
+                aria-label="Nº de embalagens"
+                inputMode="decimal"
+                placeholder="Embalagens"
+                value={line.packs}
+                onChange={(e) => onChange({ packs: e.target.value, packsFlagged: false })}
+              />
+            }
+          >
+            Embalagens
+          </FieldLabel>
+          <FieldLabel
+            control={
+              <Input
+                aria-label="Preço por embalagem sem IVA"
+                inputMode="decimal"
+                placeholder="0,00"
+                value={line.cost}
+                onChange={(e) => onChange({ cost: e.target.value })}
+              />
+            }
+          >
+            Preço por embalagem (s/IVA)
+          </FieldLabel>
+          <p className="pt-5 text-xs text-muted-foreground">
             {previewQty != null ? (
               <>
                 = {formatQty(previewQty)} {ing.unit}
@@ -765,26 +955,136 @@ function LineArticleControls({
                 · {formatCostCents(previewCost)}/{ing.unit}
               </>
             )}
+            {line.packsFlagged && (
+              <span className="block font-medium text-[hsl(var(--status-pending-fg))]">
+                Confirme o nº de embalagens a partir da quantidade da fatura.
+              </span>
+            )}
           </p>
         </div>
       ) : (
-        <div className="grid gap-2 sm:grid-cols-[110px_160px]">
-          <Input
-            aria-label="Quantidade"
-            inputMode="decimal"
-            placeholder={`Qtd (${ing.unit})`}
-            value={line.qty}
-            onChange={(e) => onChange({ qty: e.target.value })}
-          />
-          <Input
-            aria-label="Custo unitário sem IVA"
-            inputMode="decimal"
-            placeholder={`€/${ing.unit} s/IVA`}
-            value={line.cost}
-            onChange={(e) => onChange({ cost: e.target.value })}
-          />
+        <div className="grid gap-2 sm:grid-cols-[130px_180px]">
+          <FieldLabel
+            control={
+              <Input
+                aria-label="Quantidade"
+                inputMode="decimal"
+                placeholder="0"
+                value={line.qty}
+                onChange={(e) => onChange({ qty: e.target.value })}
+              />
+            }
+          >
+            Quantidade ({ing.unit})
+          </FieldLabel>
+          <FieldLabel
+            control={
+              <Input
+                aria-label="Custo unitário sem IVA"
+                inputMode="decimal"
+                placeholder="0,00"
+                value={line.cost}
+                onChange={(e) => onChange({ cost: e.target.value })}
+              />
+            }
+          >
+            Preço por {ing.unit} (s/IVA)
+          </FieldLabel>
         </div>
       )}
+    </div>
+  );
+}
+
+// Item 4: criar o ingrediente a partir da linha da fatura, sem sair da página.
+// Nome e unidade propostos (editáveis); ao criar, fica escolhido na linha e
+// aparece nas outras linhas sem recarregar (invalida a query dos ingredientes).
+function CreateIngredientInline({
+  rawName,
+  createIngredient,
+  onCreated,
+}: {
+  rawName: string;
+  createIngredient: ReturnType<typeof useCreateIngredient>;
+  onCreated: (created: Ingredient) => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const proposal = proposeIngredientFromRawName(rawName);
+  const [name, setName] = React.useState(proposal.name);
+  const [unit, setUnit] = React.useState<string>(proposal.unit);
+
+  function submit() {
+    if (name.trim().length < 2) {
+      toast.error("Indique o nome do ingrediente.");
+      return;
+    }
+    createIngredient.mutate(
+      { name: name.trim(), unit, costPerUnitCents: null },
+      {
+        onSuccess: (created) => {
+          onCreated(created);
+          setOpen(false);
+          toast.success("Ingrediente criado.");
+        },
+        onError: (e) =>
+          toast.error(e instanceof Error ? e.message : "Não foi possível criar o ingrediente."),
+      },
+    );
+  }
+
+  if (!open) {
+    return (
+      <div className="mt-2">
+        <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)}>
+          <Plus className="h-4 w-4" /> Criar ingrediente
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 space-y-2 rounded-md border border-input bg-muted/30 p-2">
+      <p className="text-xs text-muted-foreground">
+        Criar ingrediente a partir da linha da fatura. Rever o nome e a unidade.
+      </p>
+      <div className="flex flex-wrap items-end gap-2">
+        <FieldLabel
+          control={
+            <Input
+              aria-label="Nome do ingrediente"
+              className="w-56"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          }
+        >
+          Nome
+        </FieldLabel>
+        <FieldLabel
+          control={
+            <Select
+              aria-label="Unidade do ingrediente"
+              className="w-20"
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+            >
+              {UNIT_OPTIONS.map((u) => (
+                <option key={u.code} value={u.code}>
+                  {u.label}
+                </option>
+              ))}
+            </Select>
+          }
+        >
+          Unidade
+        </FieldLabel>
+        <Button type="button" size="sm" disabled={createIngredient.isPending} onClick={submit}>
+          Criar ingrediente
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
+          Cancelar
+        </Button>
+      </div>
     </div>
   );
 }

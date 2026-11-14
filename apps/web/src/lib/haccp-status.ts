@@ -26,7 +26,7 @@ export const HACCP_STATUS_META: Record<HaccpCellStatus, StatusMeta> = {
   por_verificar: { label: "por verificar", tone: "ambar" },
   conforme: { label: "conforme", tone: "alga" },
   desvio_sem_resposta: { label: "desvio sem resposta", tone: "coral" },
-  desvio_aberto: { label: "acção registada, por verificar", tone: "coral" },
+  desvio_aberto: { label: "ação registada, por verificar", tone: "coral" },
   desvio_resolvido: { label: "desvio resolvido", tone: "alga" },
   em_falta: { label: "em falta (não recuperável)", tone: "coral" },
 };

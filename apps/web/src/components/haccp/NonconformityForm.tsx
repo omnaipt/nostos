@@ -30,8 +30,8 @@ const ncSchema = z.object({
   measuredValue: z.string().trim().max(200).nullable(),
   limitText: z.string().trim().max(200).nullable(),
   productDisposition: z.string().trim().min(2, "Indique o destino do produto."),
-  immediateAction: z.string().trim().min(2, "Indique a acção imediata."),
-  rootCauseAction: z.string().trim().min(2, "Indique a acção sobre a causa."),
+  immediateAction: z.string().trim().min(2, "Indique a ação imediata."),
+  rootCauseAction: z.string().trim().min(2, "Indique a ação sobre a causa."),
   executedByName: z.string().trim().min(2, "Indique quem executou."),
 });
 
@@ -157,7 +157,7 @@ export function NonconformityForm({
         />
       )}
 
-      <Field id="nc-immediate" label="Acção imediata" required error={errors.immediateAction}>
+      <Field id="nc-immediate" label="Ação imediata" required error={errors.immediateAction}>
         {(p) => (
           <Textarea
             {...p}
@@ -168,7 +168,7 @@ export function NonconformityForm({
         )}
       </Field>
 
-      <Field id="nc-root" label="Acção sobre a causa" required error={errors.rootCauseAction}>
+      <Field id="nc-root" label="Ação sobre a causa" required error={errors.rootCauseAction}>
         {(p) => (
           <Textarea
             {...p}

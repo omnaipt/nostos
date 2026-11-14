@@ -96,7 +96,7 @@ function IngredientRow({
             )
           }
         />
-        Activo
+        Ativo
       </label>
       <Button
         size="icon"

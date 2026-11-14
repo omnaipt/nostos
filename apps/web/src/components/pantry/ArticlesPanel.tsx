@@ -309,7 +309,7 @@ function ArticleRow({
             )
           }
         />
-        Activo
+        Ativo
       </label>
     </div>
   );

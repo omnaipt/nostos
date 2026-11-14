@@ -198,11 +198,11 @@ export default function HaccpRecepcao() {
         // Abre a recusa de imediato.
         setRejection({ receptionId: reception.id });
       } else {
-        toast.success("Recepção registada.");
+        toast.success("Receção registada.");
         resetForm();
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Não foi possível registar a recepção.");
+      toast.error(err instanceof Error ? err.message : "Não foi possível registar a receção.");
     } finally {
       setBusy(false);
     }
@@ -254,7 +254,7 @@ export default function HaccpRecepcao() {
   return (
     <HaccpLayout>
       <h1 className="mb-4 font-display text-2xl font-semibold text-atlantico-900">
-        Recepção de mercadoria
+        Receção de mercadoria
       </h1>
 
       <Card className="mb-6">
@@ -428,19 +428,19 @@ export default function HaccpRecepcao() {
             </div>
 
             <Button type="submit" disabled={busy || createReception.isPending}>
-              {busy ? "A registar…" : "Registar recepção"}
+              {busy ? "A registar…" : "Registar receção"}
             </Button>
           </form>
         </CardContent>
       </Card>
 
       <h2 className="mb-2 text-sm font-medium text-muted-foreground">
-        Recepções (últimos 14 dias)
+        Receções (últimos 14 dias)
       </h2>
       {receptionsQuery.isLoading && <Skeleton className="h-16 w-full" />}
       {receptionsQuery.data && receptionsQuery.data.length === 0 && (
         <p className="rounded-md border border-dashed border-input p-4 text-sm text-muted-foreground">
-          Ainda sem recepções registadas.
+          Ainda sem receções registadas.
         </p>
       )}
       <div className="space-y-2">
@@ -498,13 +498,13 @@ export default function HaccpRecepcao() {
         <div className="fixed inset-0 z-50 overflow-y-auto bg-card">
           <div className="container max-w-2xl py-6">
             <h2 className="mb-4 font-display text-xl font-semibold text-atlantico-900">
-              Não conformidade da recepção
+              Não conformidade da receção
             </h2>
             <NonconformityForm
               submitting={createNcHook.isPending}
               onSubmit={submitNc}
               secondary={{
-                label: "Registar acção mais tarde",
+                label: "Registar ação mais tarde",
                 onClick: () => {
                   setNcStep(null);
                   resetForm();
