@@ -254,7 +254,7 @@ export default function Landing() {
             <Feature
               icon={<Users className="h-5 w-5" aria-hidden />}
               title="Clientes que voltam"
-              text="O nostos lembra-se por ti: aniversários, alergias, mesa preferida, no-shows. Nostos é o regresso, em grego, e é isso que vendemos."
+              text="O nostos lembra-se por ti: aniversários, alergias, mesa preferida, no-shows. É assim que um cliente volta."
             />
             <Feature
               icon={<MessageCircle className="h-5 w-5" aria-hidden />}
