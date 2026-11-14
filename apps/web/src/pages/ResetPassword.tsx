@@ -22,8 +22,8 @@ export default function ResetPassword() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(undefined);
-    if (password.length < 8) {
-      setError("A palavra-passe tem de ter pelo menos 8 caracteres.");
+    if (password.length < 10) {
+      setError("A palavra-passe tem de ter pelo menos 10 caracteres.");
       return;
     }
     if (password !== confirm) {

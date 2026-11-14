@@ -83,8 +83,17 @@ export default function Login() {
   }
 
   const entrar = async () => {
+    // Limite de tentativas (5 falhas em 15 minutos bloqueiam a conta 15 minutos; regra comum Nostos)
+    const rpc = supabase.rpc.bind(supabase) as unknown as (f: string, a?: object) => Promise<{ data: number | null }>;
+    const bloqueio = (n: number) => `Demasiadas tentativas falhadas. Por segurança, esta conta fica bloqueada durante ${n} min.`;
+    const { data: falta } = await rpc("login_estado", { p_email: email });
+    if (falta && falta > 0) { falhar(bloqueio(falta)); return; }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      if (/invalid login/i.test(error.message)) {
+        const { data: min } = await rpc("login_falhou", { p_email: email });
+        if (min && min > 0) { falhar(bloqueio(min)); return; }
+      }
       falhar(
         /invalid login/i.test(error.message)
           ? "Email ou palavra-passe errados."
@@ -92,12 +101,13 @@ export default function Login() {
       );
       return;
     }
+    await rpc("login_ok");
     navigate("/");
   };
 
   const criar = async () => {
-    if (password.length < 8) {
-      falhar("A palavra-passe tem de ter pelo menos 8 caracteres.");
+    if (password.length < 10) {
+      falhar("A palavra-passe tem de ter pelo menos 10 caracteres.");
       return;
     }
     if (password !== confirm) {
