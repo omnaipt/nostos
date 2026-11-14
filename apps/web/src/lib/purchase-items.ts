@@ -47,12 +47,13 @@ export function parsePackFromText(
 ): { packQty: number; packUnit: "g" | "kg" | "ml" | "l" } | null {
   const m = text
     .toLowerCase()
-    .match(/(\d+(?:[.,]\d+)?)\s*(kg|g|ml|lt|l)\b/);
+    .match(/(\d+(?:[.,]\d+)?)\s*(kg|gr|g|ml|lt|l)\b/);
   if (!m) return null;
   const qty = Number(m[1].replace(",", "."));
   if (!Number.isFinite(qty) || qty <= 0) return null;
   const raw = m[2];
-  const packUnit = raw === "lt" ? "l" : (raw as "g" | "kg" | "ml" | "l");
+  // "lt" e "gr" são variantes comuns em faturas de "l" e "g" (item 3, 06b).
+  const packUnit = raw === "lt" ? "l" : raw === "gr" ? "g" : (raw as "g" | "kg" | "ml" | "l");
   return { packQty: qty, packUnit };
 }
 
@@ -138,9 +139,20 @@ const PACKAGING: Record<string, string> = {
   garrafoes: "Garrafão",
 };
 
+// Termos de qualidade e de descrição comuns em faturas que NÃO são marca (item
+// 3, 06b, achado 13): a heurística de marca ignora-os, tal como as abreviaturas
+// com ponto ("v.extra", "v.") e as palavras de embalagem. Minúsculas sem acentos.
+const QUALITY_TERMS = new Set([
+  "virgem", "extra", "ve", "gourmet", "premium", "bio", "biologico", "light",
+  "natural", "posta", "postas", "lombo", "lombos", "grosso", "fino", "branco",
+  "carolino", "agulha", "integral", "meio", "gordo", "magro", "selecao",
+  // Descrições/meios comuns (ex.: "atum em azeite") que não são marca.
+  "azeite", "agua", "oleo", "molho", "salmoura", "picante", "tomate", "sabor",
+]);
+
 // Regex do conteúdo (número + unidade) no texto da linha, preservando a posição
 // para separar o que vem antes (marca/embalagem) do formato.
-const CONTENT_RE = /(\d+(?:[.,]\d+)?)\s*(kg|g|ml|lt|l)\b/i;
+const CONTENT_RE = /(\d+(?:[.,]\d+)?)\s*(kg|gr|g|ml|lt|l)\b/i;
 
 // ── Item 1: transição entrada directa -> artigo (achado 11) ─────────────────
 // A entrada directa guarda a quantidade na unidade do ingrediente. Ao escolher
@@ -194,6 +206,66 @@ export function packsOnArticleChange(args: {
     args.ingredientUnit,
     args.ingredientUnitWeightG,
   );
+}
+
+// ── Item 1 (06b, achado 14): transição ao escolher um artigo existente ──────
+// Ao escolher/propor um artigo existente, as embalagens vêm de
+// packsOnArticleChange e o preço por embalagem de packCostCentsFromInvoice (a
+// mesma função da aprendizagem e da criação). O preço não se preenche quando o
+// utilizador já escreveu um (hasUserCost), para não o apagar; packCostCents fica
+// null nesse caso ou quando a fatura não vem em `un`.
+export interface ExistingArticleTransition {
+  packs: string;
+  flagged: boolean;
+  packCostCents: number | null;
+}
+
+export function existingArticleTransition(args: {
+  invoiceUnit: string | null | undefined;
+  invoiceQty: number | null | undefined;
+  invoiceUnitCostCents: number | null | undefined;
+  directQty: number | null;
+  pack: { packQty: number; packUnit: string };
+  ingredientUnit: string;
+  ingredientUnitWeightG?: number | null;
+  hasUserCost: boolean;
+}): ExistingArticleTransition {
+  const t = packsOnArticleChange({
+    invoiceUnit: args.invoiceUnit,
+    invoiceQty: args.invoiceQty,
+    directQty: args.directQty,
+    pack: args.pack,
+    ingredientUnit: args.ingredientUnit,
+    ingredientUnitWeightG: args.ingredientUnitWeightG,
+  });
+  const packCostCents = args.hasUserCost
+    ? null
+    : packCostCentsFromInvoice({
+        invoiceUnit: args.invoiceUnit,
+        invoiceUnitCostCents: args.invoiceUnitCostCents,
+      });
+  return { packs: t.packs, flagged: t.flagged, packCostCents };
+}
+
+// ── Item 2 (06b, achado 12): sugerir o artigo existente em vez de criar ─────
+// Artigos activos do ingrediente cujo conteúdo (pack_qty × pack_unit) é igual ao
+// conteúdo lido na linha da fatura, depois de convertido para a unidade base do
+// ingrediente — por exemplo 5 l da fatura contra um artigo de 5 l, ou 120 g
+// contra 0,12 kg. Vazio quando a linha não tem conteúdo legível ou nenhum artigo
+// bate certo; nesse caso mantém-se o comportamento do sprint 06.
+export function articlesMatchingContent<T extends { pack_qty: number; pack_unit: string }>(
+  rawName: string | null | undefined,
+  articles: T[],
+  ingredient: { unit: string; unit_weight_g?: number | null },
+): T[] {
+  const pack = parsePackFromText(rawName ?? "");
+  if (!pack) return [];
+  const lineQty = packEntryQty(1, pack.packQty, pack.packUnit, ingredient.unit, ingredient.unit_weight_g);
+  if (lineQty == null) return [];
+  return articles.filter((a) => {
+    const artQty = packEntryQty(1, a.pack_qty, a.pack_unit, ingredient.unit, ingredient.unit_weight_g);
+    return artQty != null && Math.abs(artQty - lineQty) < 1e-9;
+  });
 }
 
 // ── Item 2: modo inicial da linha e bloqueio de registo (achado 5) ──────────
@@ -304,11 +376,13 @@ export function proposeArticleForIngredient(
   const m = raw.match(CONTENT_RE);
   const before = m ? raw.slice(0, m.index).trim() : raw;
   const beforeTokens = before.length ? before.split(/\s+/) : [];
+  // A palavra de embalagem final (ex.: "GARRAFAO") vira o label e sai da lista
+  // de candidatos a marca.
+  const brandTokens = [...beforeTokens];
   let pkgDisplay: string | null = null;
-  let brandTok: string | undefined = beforeTokens[beforeTokens.length - 1];
-  if (brandTok && PACKAGING[lowerNoAccents(brandTok)]) {
-    pkgDisplay = PACKAGING[lowerNoAccents(brandTok)];
-    brandTok = beforeTokens[beforeTokens.length - 2];
+  if (brandTokens.length && PACKAGING[lowerNoAccents(brandTokens[brandTokens.length - 1])]) {
+    pkgDisplay = PACKAGING[lowerNoAccents(brandTokens[brandTokens.length - 1])];
+    brandTokens.pop();
   }
 
   const contentStr = pack ? `${fmtNum(pack.packQty)} ${unitLabel(pack.packUnit)}` : "";
@@ -316,12 +390,18 @@ export function proposeArticleForIngredient(
   if (pkgDisplay) label = contentStr ? `${pkgDisplay} ${contentStr}` : pkgDisplay;
   else if (contentStr) label = `Embalagem ${contentStr}`;
 
-  // Marca: a palavra antes do conteúdo/embalagem, quando não faz parte do nome
-  // do ingrediente. Caso contrário fica vazia (nunca o nome inteiro da linha).
+  // Marca: a primeira palavra antes do conteúdo que não faça parte do nome do
+  // ingrediente, não seja um termo de qualidade/descrição, uma abreviatura com
+  // ponto nem uma palavra de embalagem (item 3, 06b). Vazia se não sobrar nenhuma
+  // (nunca o nome inteiro da linha).
+  const ingWords = new Set(lowerNoAccents(ingredient.name).split(/\s+/).filter(Boolean));
   let brand = "";
-  if (brandTok) {
-    const ingWords = new Set(lowerNoAccents(ingredient.name).split(/\s+/));
-    if (!ingWords.has(lowerNoAccents(brandTok))) brand = titleCaseWord(brandTok);
+  for (const tok of brandTokens) {
+    if (tok.includes(".")) continue; // abreviatura com ponto ("v.extra", "v.")
+    const low = lowerNoAccents(tok);
+    if (ingWords.has(low) || QUALITY_TERMS.has(low) || PACKAGING[low]) continue;
+    brand = titleCaseWord(tok);
+    break;
   }
 
   return { brand, label, packQty, packUnit };
@@ -374,4 +454,46 @@ export function proposeEntryFromAlias(args: {
     args.ingredientUnitWeightG,
   );
   return { purchaseItemId: args.purchaseItem.id, packs, qty, baseCostCents };
+}
+
+// ── Item 3b (06b): fatura já registada bloqueia o registo (achado 15) ───────
+// Em Portugal o número de fatura é único por fornecedor e série; uma correção
+// faz-se com nota de crédito, que tem outro número. Logo bloqueia-se SEMPRE o
+// registo de uma fatura cujo fornecedor + número já exista nas entradas. A note
+// de cada entrada ("Fatura {fornecedor} {nº}") é a chave: constrói-se a mesma e
+// compara-se normalizada (minúsculas sem acentos, espaços colapsados), para
+// "FA 2026/0412" bater com "fa  2026/0412".
+export function purchaseEntryNote(supplier: string, invoiceNo: string): string {
+  return `Fatura ${supplier} ${invoiceNo}`.trim();
+}
+
+function normNote(note: string): string {
+  return lowerNoAccents(note).replace(/\s+/g, " ").trim();
+}
+
+export function invoiceAlreadyRegistered(
+  supplier: string,
+  invoiceNo: string,
+  existingNotes: (string | null | undefined)[],
+): boolean {
+  const key = normNote(purchaseEntryNote(supplier, invoiceNo));
+  return existingNotes.some((n) => n != null && normNote(n) === key);
+}
+
+// Padrão largo para a consulta directa ao servidor antes de gravar (item 3b,
+// iteração 3): o bloqueio definitivo deixa de depender das 300 entradas
+// carregadas e passa a consultar a BD por `source_ref` (o nº da fatura), de
+// qualquer idade. Como a comparação final normaliza (minúsculas, sem acentos,
+// espaços colapsados), o servidor filtra de forma LARGA: os caracteres
+// alfanuméricos do número separados por '%' (ilike), p.ex. "FA 2026/0412" dá
+// "%f%a%2%0%2%6%0%4%1%2%". A igualdade normalizada + fornecedor (a mesma
+// `invoiceAlreadyRegistered`, sobre as notes devolvidas) fecha a verificação no
+// cliente. Devolve "%" quando o número não tem alfanuméricos (apanha tudo; a
+// confirmação decide na mesma). O padrão largo apanha de propósito números
+// parecidos (ex.: "...0412" apanha também "...04123"); é a confirmação que os
+// descarta.
+export function invoiceNoLikePattern(invoiceNo: string): string {
+  const alnum = lowerNoAccents(invoiceNo).replace(/[^a-z0-9]/g, "");
+  if (!alnum) return "%";
+  return `%${alnum.split("").join("%")}%`;
 }

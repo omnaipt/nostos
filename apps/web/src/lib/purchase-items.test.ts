@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  articlesMatchingContent,
+  existingArticleTransition,
+  invoiceAlreadyRegistered,
+  invoiceNoLikePattern,
   lineBlockReason,
+  purchaseEntryNote,
   packCostCentsFromInvoice,
   packEntryBaseCostCents,
   packEntryQty,
@@ -205,6 +210,94 @@ describe("packsOnArticleChange (item 1, fluxo da fatura)", () => {
   });
 });
 
+// ── Sprint 06b ────────────────────────────────────────────────────────────
+
+describe("existingArticleTransition (06b item 1, achado 14)", () => {
+  // Caso real: "AZEITE GALLO V.EXTRA 5 LT", 2 UN a 19,90; artigo existente de 5 l.
+  const pack = { packQty: 5, packUnit: "l" };
+
+  it("escolher o artigo de 5 l preenche 2 embalagens e 19,90 €/embalagem", () => {
+    const t = existingArticleTransition({
+      invoiceUnit: "un",
+      invoiceQty: 2,
+      invoiceUnitCostCents: 1990,
+      directQty: null,
+      pack,
+      ingredientUnit: "l",
+      hasUserCost: false,
+    });
+    expect(t.packs).toBe("2");
+    expect(t.flagged).toBe(false);
+    expect(t.packCostCents).toBe(1990);
+    // 2 embalagens de 5 l = 10 l; 1990 cents / 5 l = 398 cents/l (3,98 €/l).
+    expect(packEntryQty(2, pack.packQty, pack.packUnit, "l")).toBe(10);
+    expect(packEntryBaseCostCents(t.packCostCents, pack.packQty, pack.packUnit, "l")).toBe(398);
+  });
+
+  it("não apaga um preço que o utilizador já escreveu", () => {
+    const t = existingArticleTransition({
+      invoiceUnit: "un",
+      invoiceQty: 2,
+      invoiceUnitCostCents: 1990,
+      directQty: null,
+      pack,
+      ingredientUnit: "l",
+      hasUserCost: true,
+    });
+    expect(t.packs).toBe("2");
+    expect(t.packCostCents).toBeNull();
+  });
+
+  it("fatura fora de `un`: embalagens pela conversão e sem preço por embalagem", () => {
+    const t = existingArticleTransition({
+      invoiceUnit: "l",
+      invoiceQty: 10,
+      invoiceUnitCostCents: 398,
+      directQty: 10,
+      pack,
+      ingredientUnit: "l",
+      hasUserCost: false,
+    });
+    expect(t.packs).toBe("2");
+    expect(t.packCostCents).toBeNull();
+  });
+});
+
+describe("articlesMatchingContent (06b item 2, achado 12)", () => {
+  const azeite = { name: "Azeite virgem extra", unit: "l", unit_weight_g: null };
+
+  it("um artigo de 5 l com a mesma leitura (5 LT) é o único compatível", () => {
+    const articles = [
+      { id: "a-5l", pack_qty: 5, pack_unit: "l" },
+      { id: "a-1l", pack_qty: 1, pack_unit: "l" },
+    ];
+    const m = articlesMatchingContent("AZEITE GALLO V.EXTRA 5 LT", articles, azeite);
+    expect(m.map((a) => a.id)).toEqual(["a-5l"]);
+  });
+
+  it("conteúdos iguais em unidades diferentes batem certo (120 g contra 0,12 kg)", () => {
+    const atum = { name: "Atum", unit: "kg", unit_weight_g: null };
+    const articles = [{ id: "a-120g", pack_qty: 0.12, pack_unit: "kg" }];
+    const m = articlesMatchingContent("ATUM RAMIREZ 120 GR", articles, atum);
+    expect(m.map((a) => a.id)).toEqual(["a-120g"]);
+  });
+
+  it("mais de um artigo compatível devolve todos", () => {
+    const articles = [
+      { id: "a-5l-gallo", pack_qty: 5, pack_unit: "l" },
+      { id: "a-5l-oliveira", pack_qty: 5, pack_unit: "l" },
+      { id: "a-1l", pack_qty: 1, pack_unit: "l" },
+    ];
+    const m = articlesMatchingContent("AZEITE 5L", articles, azeite);
+    expect(m.map((a) => a.id).sort()).toEqual(["a-5l-gallo", "a-5l-oliveira"]);
+  });
+
+  it("sem conteúdo legível ou sem artigo compatível devolve vazio", () => {
+    expect(articlesMatchingContent("AZEITE A GRANEL", [{ id: "a-5l", pack_qty: 5, pack_unit: "l" }], azeite)).toEqual([]);
+    expect(articlesMatchingContent("AZEITE 5L", [{ id: "a-3l", pack_qty: 3, pack_unit: "l" }], azeite)).toEqual([]);
+  });
+});
+
 describe("shouldOpenNewArticle / lineBlockReason (item 2)", () => {
   it("abre novo artigo quando há conteúdo no nome e não há artigo", () => {
     expect(
@@ -359,5 +452,116 @@ describe("proposeArticleForIngredient (item 5)", () => {
     expect(unconvertibleFormatMessage("un")).toContain("conta-se em unidades");
     expect(unconvertibleFormatMessage("l")).toContain("mililitros ou litros");
     expect(unconvertibleFormatMessage("l")).toContain("peso médio");
+  });
+});
+
+describe("marca proposta (06b item 3, achado 13)", () => {
+  const brandOf = (raw: string, ing: { name: string; unit: string }) =>
+    proposeArticleForIngredient(raw, { ...ing, unit_weight_g: null }).brand;
+  const azeite = { name: "Azeite virgem extra", unit: "l" };
+
+  it("ignora termos de qualidade e abreviaturas com ponto", () => {
+    expect(brandOf("AZEITE GALLO V.EXTRA 5 LT", azeite)).toBe("Gallo");
+    expect(brandOf("AZEITE V.EXTRA GALLO GARRAFAO 5L", azeite)).toBe("Gallo");
+    expect(brandOf("ATUM RAMIREZ POSTA AZEITE 120 GR", { name: "Atum", unit: "kg" })).toBe("Ramirez");
+    expect(brandOf("MASSA ESPARGUETE MILANEZA 500G", { name: "Massa esparguete", unit: "kg" })).toBe("Milaneza");
+    expect(brandOf("ARROZ CAROLINO CIGALA 1KG", { name: "Arroz carolino", unit: "kg" })).toBe("Cigala");
+    expect(brandOf("SAL MARINHO GROSSO 1KG", { name: "Sal marinho grosso", unit: "kg" })).toBe("");
+  });
+
+  it("'5 LT' é lido como 5 l e 'GR' como g", () => {
+    expect(parsePackFromText("AZEITE GALLO V.EXTRA 5 LT")).toEqual({ packQty: 5, packUnit: "l" });
+    expect(parsePackFromText("ATUM RAMIREZ POSTA AZEITE 120 GR")).toEqual({ packQty: 120, packUnit: "g" });
+  });
+});
+
+describe("invoiceAlreadyRegistered (06b item 3b, achado 15)", () => {
+  const notes = [
+    purchaseEntryNote("Distribuidora Atlântico Oeste", "FA 2026/0412"),
+    purchaseEntryNote("Frutas do Vale", "2026/88"),
+  ];
+
+  it("bloqueia o mesmo fornecedor + número já registado", () => {
+    expect(invoiceAlreadyRegistered("Distribuidora Atlântico Oeste", "FA 2026/0412", notes)).toBe(true);
+  });
+
+  it("ignora maiúsculas, acentos e espaços a mais", () => {
+    expect(invoiceAlreadyRegistered("distribuidora atlantico oeste", "fa  2026/0412", notes)).toBe(true);
+  });
+
+  it("não bloqueia número diferente do mesmo fornecedor", () => {
+    expect(invoiceAlreadyRegistered("Distribuidora Atlântico Oeste", "FA 2026/0413", notes)).toBe(false);
+  });
+
+  it("não bloqueia o mesmo número de outro fornecedor (único por fornecedor e série)", () => {
+    expect(invoiceAlreadyRegistered("Outro Fornecedor", "FA 2026/0412", notes)).toBe(false);
+  });
+
+  it("sem entradas registadas, nunca bloqueia", () => {
+    expect(invoiceAlreadyRegistered("Distribuidora Atlântico Oeste", "FA 2026/0412", [])).toBe(false);
+    expect(invoiceAlreadyRegistered("Fornecedor", "1", [null, undefined])).toBe(false);
+  });
+});
+
+// Simula o `ilike` do Postgres (case-insensitive, '%' = qualquer sequência) para
+// provar, em teste, que o filtro largo da consulta directa apanha o conjunto
+// certo de source_refs. O '%' é o único curinga usado pelo padrão.
+function ilikeMatch(pattern: string, value: string): boolean {
+  const re = new RegExp(
+    "^" +
+      pattern
+        .split("%")
+        .map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+        .join(".*") +
+      "$",
+    "i",
+  );
+  return re.test(value);
+}
+
+describe("invoiceNoLikePattern (06b item 3b, iteração 3 — filtro largo da consulta directa)", () => {
+  it("devolve os alfanuméricos do número separados por '%', ignorando acentos e símbolos", () => {
+    expect(invoiceNoLikePattern("FA 2026/0412")).toBe("%f%a%2%0%2%6%0%4%1%2%");
+    expect(invoiceNoLikePattern("Nº 1-A")).toBe("%n%1%a%");
+  });
+
+  it("número sem alfanuméricos devolve '%' (apanha tudo; a confirmação decide)", () => {
+    expect(invoiceNoLikePattern("///")).toBe("%");
+    expect(invoiceNoLikePattern("")).toBe("%");
+  });
+
+  it("o padrão apanha o próprio número gravado tal como está na BD", () => {
+    const pattern = invoiceNoLikePattern("FA 2026/0412");
+    expect(ilikeMatch(pattern, "FA 2026/0412")).toBe(true);
+    // Variantes de grafia que a normalização final também aceitaria.
+    expect(ilikeMatch(pattern, "fa 2026/0412")).toBe(true);
+  });
+
+  it("o padrão largo apanha de propósito um número parecido mas diferente…", () => {
+    const pattern = invoiceNoLikePattern("FA 2026/0412");
+    // "...04123" tem o nº como subsequência, logo o filtro largo trá-lo também.
+    expect(ilikeMatch(pattern, "FA 2026/04123")).toBe(true);
+  });
+
+  it("…mas a confirmação normalizada descarta esse parecido e só bloqueia o igual", () => {
+    const supplier = "Distribuidora Atlântico Oeste";
+    // A consulta larga devolveu as notes de um parecido e do verdadeiro igual.
+    const parecido = purchaseEntryNote(supplier, "FA 2026/04123");
+    const igual = purchaseEntryNote(supplier, "FA 2026/0412");
+    // Só com o parecido: NÃO bloqueia (o filtro largo apanhou-o, a confirmação não).
+    expect(invoiceAlreadyRegistered(supplier, "FA 2026/0412", [parecido])).toBe(false);
+    // Com o verdadeiro igual presente: bloqueia.
+    expect(invoiceAlreadyRegistered(supplier, "FA 2026/0412", [parecido, igual])).toBe(true);
+  });
+
+  it("filtro largo não descarta por acento/caixa; a confirmação fecha fornecedor + número", () => {
+    const pattern = invoiceNoLikePattern("FA 2026/0412");
+    // Linha gravada sem acentos no source_ref continua a bater no filtro largo.
+    expect(ilikeMatch(pattern, "FA2026-0412")).toBe(true);
+    // Mesmo número, outro fornecedor: o filtro largo apanha, a confirmação rejeita.
+    const outroFornecedor = purchaseEntryNote("Outro Fornecedor", "FA 2026/0412");
+    expect(invoiceAlreadyRegistered("Distribuidora Atlântico Oeste", "FA 2026/0412", [outroFornecedor])).toBe(
+      false,
+    );
   });
 });

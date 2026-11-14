@@ -459,3 +459,98 @@ As duas faturas de teste são do mesmo fornecedor novo.
    Definições). Em **telemóvel**, a barra mantém o scroll horizontal.
 
 Capturas de ecrã: pendentes (validação visual pelo orquestrador/David).
+
+# Sprint 06b — Afinações da entrada de faturas (14-11-2026)
+
+## Testado automaticamente (com resultados)
+
+Gate `pnpm turbo run typecheck test build --force` (Windows, pnpm 10.6 + Turborepo):
+
+| Gate | Comando | Resultado |
+|---|---|---|
+| Typecheck | `pnpm typecheck` | ✅ `@stoa/web`, `tsc --noEmit` sem erros |
+| Testes unitários | `pnpm test` | ✅ 20 ficheiros, **249 testes** verdes (eram 235; +14, dos quais +5 na iteração 2 do item 3b) |
+| Build | `pnpm build` | ✅ `vite build` OK (aviso pré-existente de chunk >500 kB) |
+| Lint | — | ⚠️ `@stoa/web` continua sem script `lint` (0 tarefas) |
+
+Testes novos (funções puras em `lib/purchase-items.test.ts`, 42 → 51):
+- **Item 1 — `existingArticleTransition`**: caso real "AZEITE GALLO V.EXTRA 5 LT",
+  2 UN a 19,90 com artigo existente de 5 l → **2 embalagens** e **19,90 €/embalagem**
+  (via `packCostCentsFromInvoice`), e `packEntryQty`/`packEntryBaseCostCents` confirmam
+  **10 l a 3,98 €/l (398 cents/l)**; não apaga um preço já escrito (`hasUserCost`);
+  fora de `un` dá embalagens pela conversão e sem preço por embalagem.
+- **Item 2 — `articlesMatchingContent`**: um artigo de 5 l é o único compatível com
+  "5 LT"; conteúdos iguais em unidades diferentes batem certo (120 g contra 0,12 kg);
+  devolve todos quando há mais do que um; vazio sem conteúdo legível ou sem compatível.
+- **Item 3 — marca proposta**: "AZEITE GALLO V.EXTRA 5 LT"→Gallo,
+  "AZEITE V.EXTRA GALLO GARRAFAO 5L"→Gallo, "ATUM RAMIREZ POSTA AZEITE 120 GR"→Ramirez,
+  "MASSA ESPARGUETE MILANEZA 500G"→Milaneza, "ARROZ CAROLINO CIGALA 1KG"→Cigala,
+  "SAL MARINHO GROSSO 1KG"→vazio; `parsePackFromText` lê "5 LT" como 5 l e "120 GR"
+  como 120 g. Os testes do sprint 06 continuam verdes.
+- **Item 3b (iteração 2) — `invoiceAlreadyRegistered`** (51 → 56 testes): mesmo fornecedor +
+  número já registado bloqueia (incl. maiúsculas/acentos/espaços a mais); número diferente
+  do mesmo fornecedor e mesmo número de outro fornecedor **não** bloqueiam; sem entradas
+  nunca bloqueia. A note do bloqueio vem de `purchaseEntryNote`, a mesma que o registo grava.
+
+A lógica das três afinações está coberta ao nível das funções puras e ligada na UI
+(verificada por typecheck + build). A composição na UI (`Entradas.tsx`: pré-escolha no
+parse, nota discreta, ordenação do seletor, preenchimento do preço ao escolher) não tem
+teste de componente automatizado — fica para teste manual abaixo.
+
+## Testes manuais pendentes — repete o teste do David (passos numerados)
+
+Pré-requisito: login como `owner`/`gestor`/`cozinha`. O ingrediente "Azeite virgem
+extra" (l) já tem o artigo "gallo · Garrafão 5L" (5 l) na despensa. A fatura **FA
+2026/0412** é de um **fornecedor novo** (Distribuidora Atlântico Oeste) e inclui a linha
+"AZEITE GALLO V.EXTRA 5 LT", **2 UN a 19,90**.
+
+### A. Azeite resolvido pelo artigo existente (itens 1, 2 e 3)
+1. Abrir **Entradas de compra** e carregar a fatura 0412. O formulário pré-preenche-se.
+2. Na linha do azeite, confirmar que **NÃO** abriu o formulário "Criar artigo" e que o
+   artigo **"gallo · Garrafão 5L"** aparece já **escolhido** no seletor, com a nota
+   discreta **"Artigo existente sugerido; confirme"**.
+3. Confirmar **2 embalagens** e **preço por embalagem = 19,90**; a pré-visualização
+   mostra **= 10 l** a **3,98 €/l**.
+4. Se existisse mais do que um artigo de 5 l para este ingrediente, confirmar (num tenant
+   com esse caso) que o seletor abre com **esses artigos primeiro** e a criação não abre.
+5. Apagar o preço e voltar a escolher o artigo no seletor: o preço **19,90** volta a
+   preencher-se; escrever um preço à mão e trocar de artigo: o preço escrito **não é
+   apagado**.
+6. **Registar entrada**. O saldo do azeite sobe **+10 l** (3,98 €/l) e o custo médio
+   actualiza-se.
+
+### B. Aprendizagem do fornecedor novo (item 2, último ponto)
+1. Carregar outra fatura do **mesmo fornecedor** com a mesma linha de azeite.
+2. Confirmar que a linha vem já com o **mesmo artigo** resolvido (o alias ligou-se ao
+   artigo escolhido em A), sem reescrever nada.
+
+### C. Marca proposta (item 3) — quando se cria artigo
+1. Numa linha cujo ingrediente **não** tenha artigo compatível (ex.: outro azeite),
+   confirmar que a marca proposta no formulário "Criar artigo" é **Gallo** e não
+   "V.extra".
+
+### D. Fatura já registada bloqueia o registo (item 3b)
+1. Com a fatura 0412 já registada em A, voltar a **Entradas de compra** e tentar registar
+   outra entrada com o **mesmo fornecedor** (Distribuidora Atlântico Oeste) e o **mesmo
+   número** (FA 2026/0412).
+2. Confirmar que ao **Registar entrada** aparece o erro **"Esta fatura já está registada…"**
+   (explica a unicidade e aponta a nota de crédito) e que **nenhum** movimento é gravado
+   (a lista de entradas recentes não ganha nova entrada).
+3. Mudar só o número (ex.: FA 2026/0413) ou só o fornecedor: o registo deixa de estar
+   bloqueado.
+
+#### D1. Bloqueio definitivo por consulta directa (item 3b, iteração 3)
+O bloqueio deixou de depender das 300 entradas carregadas no ecrã; ao gravar, consulta a BD
+directamente pelo número da fatura (qualquer idade).
+1. Registar muitas entradas depois da 0412 (ou garantir que a 0412 está fora das 300 mais
+   recentes mostradas na lista). Voltar a tentar registar a 0412 do mesmo fornecedor:
+   continua a ser **bloqueada** ("Esta fatura já está registada…"), mesmo não aparecendo na
+   lista de entradas recentes.
+2. Assim que o fornecedor + número começam a bater numa entrada recente, aparece ainda um
+   **aviso antecipado** (âmbar) por baixo do formulário antes de gravar; o bloqueio a sério
+   é na submissão.
+3. Simular falha de rede (ex.: offline) e tentar registar a 0412: aparece o erro **"Não foi
+   possível verificar se a fatura já está registada (erro de rede). Não se gravou nada…"** e
+   **nenhum** movimento é gravado (não se assume que não há duplicado).
+
+Capturas de ecrã: pendentes (validação visual pelo orquestrador/David).

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/query-keys";
+import { purchaseEntryNote } from "@/lib/purchase-items";
 import type { StockMovement } from "@/lib/types";
 
 // Entradas de compra (Gap A, auditoria 29-07): registo manual de faturas de
@@ -44,7 +45,7 @@ export function useCreatePurchaseEntry(restaurantId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: PurchaseEntryInput) => {
-      const note = `Fatura ${input.supplier} ${input.invoiceNo}`.trim();
+      const note = purchaseEntryNote(input.supplier, input.invoiceNo);
       const createdAt = `${input.invoiceDate}T12:00:00Z`;
       const rows = input.lines.map((l) => ({
         restaurant_id: restaurantId as string,

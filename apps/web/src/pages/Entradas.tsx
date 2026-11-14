@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { Field } from "@/components/ui/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
 import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import { useIngredients, useCreateIngredient } from "@/hooks/use-ingredients";
 import { useRole } from "@/contexts/RoleContext";
@@ -31,11 +32,14 @@ import { todayServiceDate } from "@/lib/service-date";
 import { estimateExpiryDate, resolveShelfLifeDays } from "@/lib/expiry";
 import { parsePriceToCents, UNIT_OPTIONS, type Ingredient, type PurchaseItem } from "@/lib/types";
 import {
+  articlesMatchingContent,
+  existingArticleTransition,
+  invoiceAlreadyRegistered,
+  invoiceNoLikePattern,
   lineBlockReason,
   packCostCentsFromInvoice,
   packEntryBaseCostCents,
   packEntryQty,
-  packsOnArticleChange,
   parsePackFromText,
   proposeArticleForIngredient,
   proposeIngredientFromRawName,
@@ -77,6 +81,7 @@ interface LineDraft {
   invoiceQty?: number | null;
   invoiceUnitCostCents?: number | null;
   autoCreateArticle?: boolean; // abrir já o formulário de novo artigo (item 2)
+  articleSuggested?: boolean; // artigo existente pré-escolhido, a confirmar (06b item 2)
 }
 
 const EMPTY_LINE: LineDraft = {
@@ -102,6 +107,8 @@ export default function Entradas() {
   const [invoiceDate, setInvoiceDate] = React.useState(todayServiceDate());
   const [lines, setLines] = React.useState<LineDraft[]>([{ ...EMPTY_LINE }]);
   const [formError, setFormError] = React.useState<string>();
+  // Item 3b (06b): consulta directa à BD antes de gravar (bloqueio definitivo).
+  const [checkingDuplicate, setCheckingDuplicate] = React.useState(false);
   // supplier_norm do PARSE (chave da aprendizagem de aliases; estável entre
   // faturas do mesmo fornecedor mesmo que o dono corrija o campo visível).
   const [parsedSupplierNorm, setParsedSupplierNorm] = React.useState<string | null>(null);
@@ -114,6 +121,18 @@ export default function Entradas() {
   const createIngredient = useCreateIngredient(restaurantId);
   const { role } = useRole();
   const mayManagePantry = canManagePantry(role);
+
+  // Aviso antecipado no ecrã (item 3b): as 300 entradas recentes já carregadas
+  // sinalizam logo uma fatura repetida; o bloqueio definitivo ao gravar é a
+  // consulta directa à BD (onSubmit), que apanha faturas fora dessa janela.
+  const invoiceLikelyDuplicate =
+    supplier.trim().length >= 2 &&
+    invoiceNo.trim().length > 0 &&
+    invoiceAlreadyRegistered(
+      supplier.trim(),
+      invoiceNo.trim(),
+      (entriesQuery.data ?? []).map((g) => g.note),
+    );
 
   const ingredients = (ingredientsQuery.data ?? []).filter((i) => i.active !== false);
   const ingredientById = new Map(ingredients.map((i) => [i.id, i]));
@@ -203,23 +222,58 @@ export default function Entradas() {
           : l.fill_cost_cents != null
             ? (l.fill_cost_cents / 100).toFixed(2).replace(".", ",")
             : "";
+      // Item 2 (06b, achado 12): sem artigo por aprendizagem mas com o
+      // ingrediente resolvido, procura artigos activos com o mesmo conteúdo da
+      // linha. Com exactamente um, pré-escolhe-se (embalagens e preço já
+      // preenchidos) e NÃO se abre o formulário de criação. Com mais de um, não
+      // se abre a criação (o seletor mostra-os primeiro). Sem nenhum, segue o
+      // comportamento do sprint 06.
+      const compatible =
+        ing && !hasArticle
+          ? articlesMatchingContent(l.raw_name, articlesByIngredient.get(ing.id) ?? [], ing)
+          : [];
+      const suggested = compatible.length === 1 ? compatible[0] : undefined;
+      const suggestedTransition =
+        suggested && ing
+          ? existingArticleTransition({
+              invoiceUnit,
+              invoiceQty: l.qty,
+              invoiceUnitCostCents,
+              directQty: l.fill_qty ?? l.qty ?? null,
+              pack: { packQty: suggested.pack_qty, packUnit: suggested.pack_unit },
+              ingredientUnit: ing.unit,
+              ingredientUnitWeightG: ing.unit_weight_g,
+              hasUserCost: false,
+            })
+          : null;
       // Linha sem artigo mas com embalagem detetável ou fatura em un para um
-      // ingrediente em massa/volume: abre já no formulário de novo artigo.
+      // ingrediente em massa/volume: abre já no formulário de novo artigo. Não
+      // abre quando há artigos compatíveis (pré-escolhido ou a escolher).
       const autoCreateArticle =
         !!ing &&
+        compatible.length === 0 &&
         shouldOpenNewArticle({
           rawName: l.raw_name,
           invoiceUnit,
           ingredientUnit: ing.unit,
           hasArticle,
         });
+      const suggestedCost =
+        suggestedTransition?.packCostCents != null
+          ? (suggestedTransition.packCostCents / 100).toFixed(2).replace(".", ",")
+          : null;
       return {
         ingredientId: ing?.id ?? "",
         qty: l.fill_qty != null ? String(l.fill_qty) : l.qty != null ? String(l.qty) : "",
-        cost,
+        cost: suggestedCost ?? cost,
         expires: ing ? estimateForDate(ing, date) : "",
-        purchaseItemId: hasArticle ? (proposedArticleId as string) : "",
-        packs: hasArticle && l.qty != null ? String(l.qty) : "",
+        purchaseItemId: hasArticle
+          ? (proposedArticleId as string)
+          : suggested
+            ? suggested.id
+            : "",
+        packs: hasArticle && l.qty != null ? String(l.qty) : (suggestedTransition?.packs ?? ""),
+        packsFlagged: suggestedTransition?.flagged ?? false,
         fromParse: true,
         rawName: l.raw_name,
         grade: l.confidence === "baixa" && l.match_grade === "verde" ? "ambar" : l.match_grade,
@@ -228,6 +282,7 @@ export default function Entradas() {
         invoiceQty: l.qty,
         invoiceUnitCostCents,
         autoCreateArticle,
+        articleSuggested: !!suggested,
       };
     });
     if (drafts.length === 0) {
@@ -269,7 +324,7 @@ export default function Entradas() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(undefined);
     if (supplier.trim().length < 2) {
@@ -278,6 +333,44 @@ export default function Entradas() {
     }
     if (!invoiceNo.trim()) {
       setFormError("Indique o nº da fatura.");
+      return;
+    }
+    if (!restaurantId) {
+      setFormError("Restaurante não carregado. Recarregue a página.");
+      return;
+    }
+    // Item 3b (06b, iteração 3): o número de fatura é único por fornecedor e
+    // série, logo uma fatura já registada bloqueia sempre (correção = nota de
+    // crédito). O bloqueio definitivo consulta a BD directamente antes de
+    // gravar, não as 300 entradas carregadas: filtra de forma larga por
+    // source_ref (ilike com os alfanuméricos do nº) e confirma a igualdade
+    // normalizada (fornecedor + nº) no cliente, pela mesma chave partilhada.
+    // Se a consulta falhar (rede), NÃO grava e mostra erro.
+    setCheckingDuplicate(true);
+    const { data: dupRows, error: dupError } = await supabase
+      .from("stock_movements")
+      .select("note")
+      .eq("restaurant_id", restaurantId)
+      .eq("kind", "purchase")
+      .eq("source", "invoice")
+      .ilike("source_ref", invoiceNoLikePattern(invoiceNo.trim()));
+    setCheckingDuplicate(false);
+    if (dupError) {
+      setFormError(
+        "Não foi possível verificar se a fatura já está registada (erro de rede). Não se gravou nada; tente de novo.",
+      );
+      return;
+    }
+    if (
+      invoiceAlreadyRegistered(
+        supplier.trim(),
+        invoiceNo.trim(),
+        (dupRows ?? []).map((r) => r.note),
+      )
+    ) {
+      setFormError(
+        "Esta fatura já está registada. O número é único por fornecedor; para corrigir, emita uma nota de crédito (com outro número).",
+      );
       return;
     }
     const parsed: PurchaseEntryLine[] = [];
@@ -646,6 +739,18 @@ export default function Entradas() {
                   <Plus className="h-4 w-4" /> Linha
                 </Button>
 
+                {/* Aviso antecipado (item 3b): sinal imediato a partir das
+                    entradas recentes; o bloqueio definitivo é ao gravar. */}
+                {invoiceLikelyDuplicate && !formError && (
+                  <div
+                    role="status"
+                    className="rounded-md border border-amber-400/50 bg-amber-50 p-3 text-sm font-medium text-amber-900"
+                  >
+                    Parece que esta fatura já está registada. O número é único por
+                    fornecedor; ao registar, será verificada e bloqueada se já existir.
+                  </div>
+                )}
+
                 {formError && (
                   <div
                     role="alert"
@@ -655,9 +760,15 @@ export default function Entradas() {
                   </div>
                 )}
 
-                <Button type="submit" disabled={create.isPending}>
-                  {create.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {create.isPending ? "A registar..." : "Registar entrada"}
+                <Button type="submit" disabled={create.isPending || checkingDuplicate}>
+                  {(create.isPending || checkingDuplicate) && (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  )}
+                  {checkingDuplicate
+                    ? "A verificar..."
+                    : create.isPending
+                      ? "A registar..."
+                      : "Registar entrada"}
                 </Button>
                 <p className="text-xs text-muted-foreground">
                   Validade estimada por categoria: o rótulo prevalece. Ajuste a
@@ -739,6 +850,19 @@ function LineArticleControls({
 }) {
   const [showCreate, setShowCreate] = React.useState(!!line.autoCreateArticle);
   const proposal = proposeArticleForIngredient(line.rawName ?? "", ing);
+  // Item 2 (06b): artigos com o mesmo conteúdo da linha aparecem primeiro no
+  // seletor, para a escolha ficar à mão quando há mais do que um compatível.
+  const compatibleIds = React.useMemo(
+    () => new Set(articlesMatchingContent(line.rawName, articles, ing).map((a) => a.id)),
+    [line.rawName, articles, ing],
+  );
+  const orderedArticles = React.useMemo(
+    () =>
+      [...articles].sort(
+        (a, b) => Number(compatibleIds.has(b.id)) - Number(compatibleIds.has(a.id)),
+      ),
+    [articles, compatibleIds],
+  );
   const [brand, setBrand] = React.useState(proposal.brand);
   const [label, setLabel] = React.useState(proposal.label);
   const [packQty, setPackQty] = React.useState(
@@ -766,25 +890,24 @@ function LineArticleControls({
 
   // Passagem para um artigo (escolhido ou criado): embalagens a partir da
   // quantidade da fatura/directa e preço por embalagem da fatura (itens 1 e 3).
+  // Não apaga um preço que o utilizador já tenha escrito na linha (item 1, 06b).
   function applyArticle(a: { id: string; pack_qty: number; pack_unit: string }) {
-    const t = packsOnArticleChange({
+    const t = existingArticleTransition({
       invoiceUnit: line.invoiceUnit,
       invoiceQty: line.invoiceQty,
+      invoiceUnitCostCents: line.invoiceUnitCostCents,
       directQty: line.qty ? Number(line.qty.replace(",", ".")) : null,
       pack: { packQty: a.pack_qty, packUnit: a.pack_unit },
       ingredientUnit: ing.unit,
       ingredientUnitWeightG: ing.unit_weight_g,
-    });
-    const packCost = packCostCentsFromInvoice({
-      invoiceUnit: line.invoiceUnit,
-      invoiceUnitCostCents: line.invoiceUnitCostCents,
+      hasUserCost: line.cost.trim() !== "",
     });
     const patch: Partial<LineDraft> = {
       purchaseItemId: a.id,
       packs: t.packs,
       packsFlagged: t.flagged,
     };
-    if (packCost != null) patch.cost = (packCost / 100).toFixed(2).replace(".", ",");
+    if (t.packCostCents != null) patch.cost = (t.packCostCents / 100).toFixed(2).replace(".", ",");
     onChange(patch);
   }
 
@@ -841,6 +964,7 @@ function LineArticleControls({
           value={line.purchaseItemId}
           onChange={(e) => {
             const id = e.target.value;
+            onChange({ articleSuggested: false });
             if (!id) {
               backToDirect();
               return;
@@ -850,7 +974,7 @@ function LineArticleControls({
           }}
         >
           <option value="">Entrada direta (quantidade)</option>
-          {articles.map((a) => (
+          {orderedArticles.map((a) => (
             <option key={a.id} value={a.id}>
               {[a.brand, a.label].filter(Boolean).join(" · ") || "Artigo"} ({a.pack_qty} {a.pack_unit})
             </option>
@@ -862,6 +986,10 @@ function LineArticleControls({
           </Button>
         )}
       </div>
+
+      {line.articleSuggested && line.purchaseItemId && (
+        <p className="text-xs text-muted-foreground">Artigo existente sugerido; confirme.</p>
+      )}
 
       {showCreate && (
         <div className="space-y-2 rounded-md border border-input bg-muted/30 p-2">
