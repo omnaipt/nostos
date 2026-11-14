@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       admin_audit_log: {
@@ -765,6 +790,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "ingredients_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "ingredient_families"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ingredients_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
@@ -813,6 +845,27 @@ export type Database = {
           restaurant_name?: string
           source?: string
           status?: string
+        }
+        Relationships: []
+      }
+      login_tentativas: {
+        Row: {
+          bloqueado_ate: string | null
+          email_hash: string
+          falhas: number
+          primeira_em: string
+        }
+        Insert: {
+          bloqueado_ate?: string | null
+          email_hash: string
+          falhas?: number
+          primeira_em?: string
+        }
+        Update: {
+          bloqueado_ate?: string | null
+          email_hash?: string
+          falhas?: number
+          primeira_em?: string
         }
         Relationships: []
       }
@@ -1323,82 +1376,6 @@ export type Database = {
           },
         ]
       }
-      purchase_items: {
-        Row: {
-          active: boolean
-          brand: string | null
-          catalog_item_id: string | null
-          created_at: string
-          ean: string | null
-          id: string
-          ingredient_id: string
-          label: string | null
-          pack_qty: number
-          pack_unit: string
-          restaurant_id: string
-          supplier_code: string | null
-          supplier_norm: string | null
-          tare_g: number | null
-          updated_at: string
-        }
-        Insert: {
-          active?: boolean
-          brand?: string | null
-          catalog_item_id?: string | null
-          created_at?: string
-          ean?: string | null
-          id?: string
-          ingredient_id: string
-          label?: string | null
-          pack_qty: number
-          pack_unit: string
-          restaurant_id: string
-          supplier_code?: string | null
-          supplier_norm?: string | null
-          tare_g?: number | null
-          updated_at?: string
-        }
-        Update: {
-          active?: boolean
-          brand?: string | null
-          catalog_item_id?: string | null
-          created_at?: string
-          ean?: string | null
-          id?: string
-          ingredient_id?: string
-          label?: string | null
-          pack_qty?: number
-          pack_unit?: string
-          restaurant_id?: string
-          supplier_code?: string | null
-          supplier_norm?: string | null
-          tare_g?: number | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "purchase_items_ingredient_id_fkey"
-            columns: ["ingredient_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_items_restaurant_id_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "admin_tenant_overview"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_items_restaurant_id_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       pos_product_map: {
         Row: {
           confirmed: boolean
@@ -1513,6 +1490,82 @@ export type Database = {
           id?: string
         }
         Relationships: []
+      }
+      purchase_items: {
+        Row: {
+          active: boolean
+          brand: string | null
+          catalog_item_id: string | null
+          created_at: string
+          ean: string | null
+          id: string
+          ingredient_id: string
+          label: string | null
+          pack_qty: number
+          pack_unit: string
+          restaurant_id: string
+          supplier_code: string | null
+          supplier_norm: string | null
+          tare_g: number | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          brand?: string | null
+          catalog_item_id?: string | null
+          created_at?: string
+          ean?: string | null
+          id?: string
+          ingredient_id: string
+          label?: string | null
+          pack_qty: number
+          pack_unit: string
+          restaurant_id: string
+          supplier_code?: string | null
+          supplier_norm?: string | null
+          tare_g?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          brand?: string | null
+          catalog_item_id?: string | null
+          created_at?: string
+          ean?: string | null
+          id?: string
+          ingredient_id?: string
+          label?: string | null
+          pack_qty?: number
+          pack_unit?: string
+          restaurant_id?: string
+          supplier_code?: string | null
+          supplier_norm?: string | null
+          tare_g?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_tenant_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reservation_events: {
         Row: {
@@ -1803,12 +1856,14 @@ export type Database = {
           invoice_at: string | null
           invoice_date: string | null
           invoice_no: string
+          line_number: number
           menu_item_id: string | null
           pos_code: string | null
           pos_description: string | null
           qty: number
           restaurant_id: string
           status: string
+          stock_applied_at: string | null
           unit_price_cents: number | null
         }
         Insert: {
@@ -1818,12 +1873,14 @@ export type Database = {
           invoice_at?: string | null
           invoice_date?: string | null
           invoice_no: string
+          line_number: number
           menu_item_id?: string | null
           pos_code?: string | null
           pos_description?: string | null
           qty: number
           restaurant_id: string
           status?: string
+          stock_applied_at?: string | null
           unit_price_cents?: number | null
         }
         Update: {
@@ -1833,12 +1890,14 @@ export type Database = {
           invoice_at?: string | null
           invoice_date?: string | null
           invoice_no?: string
+          line_number?: number
           menu_item_id?: string | null
           pos_code?: string | null
           pos_description?: string | null
           qty?: number
           restaurant_id?: string
           status?: string
+          stock_applied_at?: string | null
           unit_price_cents?: number | null
         }
         Relationships: [
@@ -2029,6 +2088,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_movements_purchase_item_id_fkey"
+            columns: ["purchase_item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "stock_movements_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
@@ -2081,6 +2147,13 @@ export type Database = {
             columns: ["ingredient_id"]
             isOneToOne: false
             referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_product_aliases_purchase_item_id_fkey"
+            columns: ["purchase_item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_items"
             referencedColumns: ["id"]
           },
           {
@@ -2564,6 +2637,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      login_estado: { Args: { p_email: string }; Returns: number }
+      login_falhou: { Args: { p_email: string }; Returns: number }
+      login_hash: { Args: { p_email: string }; Returns: string }
+      login_ok: { Args: never; Returns: undefined }
       member_role: { Args: { p_restaurant_id: string }; Returns: string }
       menu_translation_progress: {
         Args: { p_restaurant: string }
@@ -2844,6 +2921,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
