@@ -112,19 +112,19 @@ select is(
 select throws_ok($$
   insert into public.stock_movements (restaurant_id, ingredient_id, kind, qty, unit, reason)
   values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110001-0000-0000-0000-000000000001', 'internal_use', 100, 'g', 'pessoal')
-$$, '23514', 'internal_use positivo viola a coerencia de sinal');
+$$, '23514', null, 'internal_use positivo viola a coerencia de sinal');
 
 -- A3) internal_use sem motivo e rejeitado (coerencia de motivo).
 select throws_ok($$
   insert into public.stock_movements (restaurant_id, ingredient_id, kind, qty, unit)
   values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110001-0000-0000-0000-000000000001', 'internal_use', -100, 'g')
-$$, '23514', 'internal_use sem motivo e rejeitado');
+$$, '23514', null, 'internal_use sem motivo e rejeitado');
 
 -- A4) motivo invalido e rejeitado (dominio do motivo).
 select throws_ok($$
   insert into public.stock_movements (restaurant_id, ingredient_id, kind, qty, unit, reason)
   values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110001-0000-0000-0000-000000000001', 'internal_use', -100, 'g', 'furto')
-$$, '23514', 'motivo fora do dominio e rejeitado');
+$$, '23514', null, 'motivo fora do dominio e rejeitado');
 
 -- A5) waste com motivo entra.
 select lives_ok($$
@@ -142,7 +142,7 @@ $$, 'waste sem motivo entra');
 select throws_ok($$
   insert into public.stock_movements (restaurant_id, ingredient_id, kind, qty, unit, reason)
   values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110001-0000-0000-0000-000000000001', 'purchase', 100, 'g', 'pessoal')
-$$, '23514', 'purchase com motivo e rejeitado');
+$$, '23514', null, 'purchase com motivo e rejeitado');
 
 -- A8) estimated true grava-se.
 select lives_ok($$
@@ -238,9 +238,13 @@ select is(
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'b1000002-0000-0000-0000-000000000002',
     1, 'internal_use', 'oferta', 'cortesia') ->> 'estimated')::boolean,
   true, 'ficha em rascunho devolve estimated true');
+-- Conta so o movimento desta ficha (Massa A). A8 ja semeou um internal_use
+-- estimado no Frango A para provar a coluna estimated; a contagem tem de ser
+-- do abate da RPC, nao global.
 select is(
   (select count(*)::int from public.stock_movements
-    where kind = 'internal_use' and estimated = true),
+    where kind = 'internal_use' and estimated = true
+      and ingredient_id = '11110010-0000-0000-0000-000000000010'),
   1, 'ficha em rascunho gera 1 movimento estimado');
 
 -- B3) linha livre + ingrediente em contagem: dois em nao_abatidas, um abatido.
