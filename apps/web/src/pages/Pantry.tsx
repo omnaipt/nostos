@@ -381,7 +381,7 @@ function MovementsDialog({
         if (!open) onClose();
       }}
       title={ingredient.name}
-      description={`Saldo actual: ${formatQty(ingredient.stock_qty)} ${ingredient.unit}${
+      description={`Saldo atual: ${formatQty(ingredient.stock_qty)} ${ingredient.unit}${
         isBelowMin(ingredient) ? " · abaixo do mínimo" : ""
       }`}
       className="sm:max-w-xl"

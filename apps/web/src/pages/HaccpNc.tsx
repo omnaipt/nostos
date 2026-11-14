@@ -152,7 +152,7 @@ export default function HaccpNc() {
                 hour: "2-digit",
                 minute: "2-digit",
               }).format(new Date(r.occurred_at))}
-              {r.source === "reception" && " · recepção"}
+              {r.source === "reception" && " · receção"}
               {r.source === "temperature" && " · temperatura"}
               {r.source === "manual" && " · manual"}
             </p>

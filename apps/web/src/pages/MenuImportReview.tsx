@@ -124,7 +124,7 @@ export default function MenuImportReview() {
 
   function onDiscard() {
     if (!importId) return;
-    if (!window.confirm("Descartar este rascunho? A ementa actual não é alterada.")) return;
+    if (!window.confirm("Descartar este rascunho? A ementa atual não é alterada.")) return;
     discard.mutate(importId, {
       onSuccess: () => {
         toast.success("Rascunho descartado.");

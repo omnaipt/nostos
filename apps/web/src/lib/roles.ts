@@ -65,6 +65,13 @@ const ALLOWED: Record<MemberRole, string[]> = {
 // não pode alcançá-las nem por URL directo (o resto de /haccp/* mantém-se).
 export const WRITE_ONLY_HACCP = ["/haccp/registar", "/haccp/recepcao"];
 
+// Quem gere a despensa (fichas, despensa, entradas, inventário): owner, gestor
+// e cozinha. Critério usado para acções como "Criar ingrediente" nas entradas
+// (item 4 do sprint 06). É o mesmo conjunto que alcança /despensa e /entradas.
+export function canManagePantry(role: MemberRole): boolean {
+  return role === "owner" || role === "gestor" || role === "cozinha";
+}
+
 export function navForRole(role: MemberRole): NavItem[] {
   const allow = new Set(ALLOWED[role]);
   return ALL_NAV.filter((n) => allow.has(n.to));

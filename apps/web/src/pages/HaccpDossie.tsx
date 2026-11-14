@@ -79,7 +79,7 @@ export default function HaccpDossie() {
     <HaccpLayout>
       <header className="mb-4">
         <h1 className="font-display text-2xl font-semibold text-atlantico-900">
-          Dossiê para inspecção
+          Dossiê para inspeção
         </h1>
         <p className="text-sm text-muted-foreground">
           Escolha o período e gere o dossiê. Guarda-se em PDF pelo diálogo de impressão.

@@ -173,7 +173,7 @@ const PT: Dict = {
   valPrato: "Escolha pelo menos um prato.",
   valEmailEncomenda: "Precisamos de um email para lhe confirmar a encomenda.",
   valHoraLevantamento: "Escolha a hora de levantamento.",
-  errEncomendasInactivas: "As encomendas ainda não estão activas. Tente mais logo.",
+  errEncomendasInactivas: "As encomendas ainda não estão ativas. Tente mais logo.",
   errEncomendaGeral: "Não foi possível encomendar.",
 
   // Sommelier Virtual (widget do menu público). Só rótulos: os valores que o

@@ -228,7 +228,7 @@ export default function HaccpDossiePrint() {
           {restaurant && <CasaLogo name={restaurant.name} logoUrl={restaurant.logo_url} size={56} />}
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground print:text-black">
-              Dossiê HACCP para inspecção
+              Dossiê HACCP para inspeção
             </p>
             <h1 className="mt-1 font-display text-3xl font-semibold print:text-black">{estab}</h1>
             <p className="mt-1 text-sm text-muted-foreground print:text-black">{restaurant?.slug}</p>
@@ -276,7 +276,7 @@ export default function HaccpDossiePrint() {
             />
             <SummaryRow label="NC abertas" value={summary.nc_open} coral={summary.nc_open > 0} />
             <SummaryRow label="NC verificadas" value={summary.nc_verified} />
-            <SummaryRow label="Recepções" value={summary.receptions} />
+            <SummaryRow label="Receções" value={summary.receptions} />
             <SummaryRow label="Recusas" value={summary.rejections} coral={summary.rejections > 0} />
           </div>
         )}
@@ -368,8 +368,8 @@ export default function HaccpDossiePrint() {
 
       {/* (4) RECEPÇÕES E RECUSAS */}
       <section className="dossie-section">
-        <h2 className="dossie-h2">Recepções e recusas</h2>
-        {receptions.length === 0 && <p className="text-sm">Sem recepções no período.</p>}
+        <h2 className="dossie-h2">Receções e recusas</h2>
+        {receptions.length === 0 && <p className="text-sm">Sem receções no período.</p>}
         <div className="space-y-3">
           {receptions.map((r) => (
             <ReceptionBlock
@@ -404,8 +404,8 @@ export default function HaccpDossiePrint() {
                 <dl className="mt-1 grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs">
                   <NcRow label="Valor / limite" value={ncValue(nc.measured_value, nc.limit_text)} />
                   <NcRow label="Destino do produto" value={nc.product_disposition} />
-                  <NcRow label="Acção imediata" value={nc.immediate_action} />
-                  <NcRow label="Acção sobre a causa" value={nc.root_cause_action} />
+                  <NcRow label="Ação imediata" value={nc.immediate_action} />
+                  <NcRow label="Ação sobre a causa" value={nc.root_cause_action} />
                   <NcRow label="Quem executou" value={nc.executed_by_name} />
                   <NcRow label="Registada por" value={who(nc.recorded_by)} />
                 </dl>
@@ -501,7 +501,7 @@ function ReceptionBlock({
           )}
         </div>
         {photoUrl && (
-          <img src={photoUrl} alt="Fotografia da recepção" className="h-16 w-16 rounded object-cover" />
+          <img src={photoUrl} alt="Fotografia da receção" className="h-16 w-16 rounded object-cover" />
         )}
       </div>
     </div>

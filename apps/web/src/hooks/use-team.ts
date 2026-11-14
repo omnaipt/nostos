@@ -99,7 +99,7 @@ export function useInviteMember(restaurantId: string | undefined) {
       });
       if (error) {
         if (isMissingContract(error)) {
-          throw new Error("Os convites ainda não estão activos neste ambiente.");
+          throw new Error("Os convites ainda não estão ativos neste ambiente.");
         }
         throw new Error(error.message);
       }

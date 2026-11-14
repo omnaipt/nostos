@@ -106,7 +106,7 @@ export function EquipaCard({ restaurantId }: { restaurantId: string }) {
                       changeRole.mutate(
                         { userId: m.userId, role: e.target.value as MemberRole },
                         {
-                          onSuccess: () => toast.success("Perfil actualizado."),
+                          onSuccess: () => toast.success("Perfil atualizado."),
                           onError: (err) => toast.error(errMsg(err)),
                         },
                       )
