@@ -146,7 +146,7 @@ const CONTENT_RE = /(\d+(?:[.,]\d+)?)\s*(kg|g|ml|lt|l)\b/i;
 // A entrada directa guarda a quantidade na unidade do ingrediente. Ao escolher
 // ou criar um artigo, converte-se essa quantidade para nº de embalagens pelo
 // conteúdo do artigo. Só vale um inteiro: fraccionário ou não convertível fica
-// vazio e assinalado, para o dono confirmar — NUNCA o valor por omissão de 1.
+// vazio e assinalado, para o dono confirmar: NUNCA o valor por omissão de 1.
 export interface PacksTransition {
   packs: string; // "" quando não se pôde determinar
   flagged: boolean; // true quando havia quantidade mas não deu nº inteiro de embalagens
@@ -199,7 +199,7 @@ export function packsOnArticleChange(args: {
 // ── Item 2: modo inicial da linha e bloqueio de registo (achado 5) ──────────
 // Abre já no formulário de novo artigo quando há conteúdo de embalagem no nome,
 // ou quando a fatura vem em `un` para um ingrediente em massa/volume e não há
-// artigo escolhido — em vez de uma entrada directa que registaria o nº errado.
+// artigo escolhido, em vez de uma entrada directa que registaria o nº errado.
 export function shouldOpenNewArticle(args: {
   rawName: string | null | undefined;
   invoiceUnit: string | null | undefined;
