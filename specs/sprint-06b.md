@@ -49,7 +49,7 @@ Hoje cada linha de uma entrada grava um movimento em `stock_movements` com
 source `invoice`, source_ref igual ao número da fatura e note
 `Fatura {fornecedor} {nº}`. A lista de entradas recentes já agrupa por essa note.
 
-- [x] Ao submeter, se já existir uma entrada registada com o mesmo fornecedor e número de fatura (comparação normalizada: minúsculas, sem acentos, espaços colapsados), o registo é bloqueado com uma mensagem clara que explica a unicidade e aponta a nota de crédito. Não se grava nenhum movimento. — `invoiceAlreadyRegistered` (lib/purchase-items.ts) sobre as notes de `entriesQuery.data`; guarda em `onSubmit` (Entradas.tsx) a seguir à validação do nº.
+- [x] Ao submeter, se já existir uma entrada registada com o mesmo fornecedor e número de fatura (comparação normalizada: minúsculas, sem acentos, espaços colapsados), o registo é bloqueado com uma mensagem clara que explica a unicidade e aponta a nota de crédito. Não se grava nenhum movimento. — `invoiceAlreadyRegistered` (lib/purchase-items.ts); guarda em `onSubmit` (Entradas.tsx) a seguir à validação do nº. **Iteração 3 (14-11-2026):** o bloqueio definitivo deixou de usar as 300 entradas carregadas e passou a **consultar a BD directamente** antes de gravar — `stock_movements` com `source=invoice`, `kind=purchase` e `source_ref` filtrado de forma larga por `ilike` (`invoiceNoLikePattern`: alfanuméricos do nº separados por `%`), confirmando no cliente a igualdade normalizada + fornecedor com a mesma `invoiceAlreadyRegistered`. Sem limite de data/linhas. Se a consulta falhar (rede), **não grava** e mostra erro. A verificação sobre as entradas recentes ficou como **aviso antecipado** no ecrã (`invoiceLikelyDuplicate`). Sem migração.
 - [x] A chave do bloqueio é a mesma note escrita no registo, por uma função partilhada, para não divergirem. — `purchaseEntryNote` em lib/purchase-items.ts, usada por `useCreatePurchaseEntry` (use-entries.ts) e pela verificação.
 - [x] O mesmo número de outro fornecedor, ou outro número do mesmo fornecedor, não é bloqueado. — testes `invoiceAlreadyRegistered (06b item 3b)` em purchase-items.test.ts.
 
@@ -63,6 +63,7 @@ source `invoice`, source_ref igual ao número da fatura e note
 
 - 14-11-2026 (David): sprint 06 validado em produção com a fatura 0412; estas três afinações seguem já.
 - 14-11-2026 (David, iteração 2): fatura já registada bloqueia sempre o registo (item 3b). O número de fatura é único por fornecedor e série; uma correção faz-se com nota de crédito, que tem outro número.
+- 14-11-2026 (iteração 3, achado da verificação independente): o bloqueio do 3b não podia depender das 300 entradas carregadas (uma fatura antiga passava). Passou a consultar a BD directamente ao gravar, por `source_ref` com filtro largo (`ilike` sobre os alfanuméricos do nº) + confirmação normalizada no cliente, sem migração. A verificação sobre as entradas recentes fica como aviso antecipado; falha de rede não grava.
 
 ## Blockers
 
@@ -71,10 +72,13 @@ nota, ordenação do seletor, preenchimento do preço ao escolher) está ligada 
 por typecheck + build, mas não há testes de componente; a verificação ponta-a-ponta fica
 nos testes manuais de `TESTING.md`.
 
-Nota (item 3b): a verificação de duplicado corre no cliente sobre as entradas recentes
-carregadas (`useRecentPurchaseEntries`, limite de 300 movimentos). Para o volume v0 chega;
-uma fatura antiga para lá desse limite não seria apanhada. Uma guarda definitiva seria um
-índice único em `stock_movements` (fora de scope: mexe em schema de produção).
+Nota (item 3b, resolvida na iteração 3): a verificação de duplicado corria no cliente sobre
+as entradas recentes carregadas (`useRecentPurchaseEntries`, limite de 300 movimentos), pelo
+que uma fatura antiga para lá desse limite não era apanhada. A iteração 3 fechou o buraco com
+uma **consulta directa à BD** no `onSubmit`, filtrada por `source_ref` (sem limite de data),
+mantendo a verificação sobre as entradas recentes só como aviso antecipado no ecrã. Uma guarda
+ainda mais forte (e defensiva contra corridas) seria um índice único em `stock_movements`
+(continua fora de scope: mexe em schema de produção).
 
 ## Evidência
 
@@ -120,3 +124,27 @@ Turborepo): typecheck sem erros, **249 testes** verdes (eram 244; +5), `vite bui
 - `pages/Entradas.tsx`: guarda em `onSubmit` (a seguir à validação do nº) que bloqueia o
   registo de uma fatura já registada, com mensagem que explica a unicidade e a nota de crédito.
 - Testes novos em `lib/purchase-items.test.ts` (51 → 56): `invoiceAlreadyRegistered (06b item 3b)`.
+
+### Iteração 3 (item 3b — consulta directa à BD, achado da verificação independente)
+
+Gate `pnpm turbo run typecheck test build --force` verde (14-11-2026, Windows, pnpm 10.6 +
+Turborepo): typecheck sem erros, **268 testes** verdes (eram 262 na verificação independente;
++6), `vite build` OK (mantém o aviso pré-existente de chunk >500 kB). Sem script `lint` no repo.
+`purchase-items.test.ts` com **62 testes** (eram 56; +6).
+
+- `lib/purchase-items.ts`: nova `invoiceNoLikePattern` — padrão largo `ilike` a partir dos
+  caracteres alfanuméricos do número separados por `%` (p.ex. "FA 2026/0412" →
+  `%f%a%2%0%2%6%0%4%1%2%`; `%` quando não há alfanuméricos). A confirmação continua a ser a
+  mesma `invoiceAlreadyRegistered` (igualdade normalizada de fornecedor + nº), agora sobre as
+  notes devolvidas pela consulta.
+- `pages/Entradas.tsx`: `onSubmit` passou a `async`. Antes de gravar, consulta directa a
+  `stock_movements` (`restaurant_id`, `kind=purchase`, `source=invoice`, `ilike source_ref`
+  com o padrão largo), sem limite de data/linhas, e bloqueia se `invoiceAlreadyRegistered`
+  confirmar. Falha de rede → **não grava** e mostra erro. A verificação sobre as entradas
+  recentes (`invoiceLikelyDuplicate`) ficou como aviso antecipado (banner âmbar) e o botão
+  mostra "A verificar..." durante a consulta (`checkingDuplicate`).
+- Testes novos em `lib/purchase-items.test.ts` (56 → 62): `invoiceNoLikePattern (06b item 3b,
+  iteração 3 — filtro largo da consulta directa)` — padrão sobre alfanuméricos, número sem
+  alfanuméricos, o padrão apanha o próprio nº e um **nº parecido mas diferente** ("…04123"),
+  caso em que a confirmação normalizada **não bloqueia**; só o nº igual bloqueia; e o mesmo nº
+  de outro fornecedor, apanhado pelo filtro largo, é descartado pela confirmação.

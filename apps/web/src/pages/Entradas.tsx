@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { Field } from "@/components/ui/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
 import { useActiveRestaurant } from "@/hooks/use-active-restaurant";
 import { useIngredients, useCreateIngredient } from "@/hooks/use-ingredients";
 import { useRole } from "@/contexts/RoleContext";
@@ -34,6 +35,7 @@ import {
   articlesMatchingContent,
   existingArticleTransition,
   invoiceAlreadyRegistered,
+  invoiceNoLikePattern,
   lineBlockReason,
   packCostCentsFromInvoice,
   packEntryBaseCostCents,
@@ -105,6 +107,8 @@ export default function Entradas() {
   const [invoiceDate, setInvoiceDate] = React.useState(todayServiceDate());
   const [lines, setLines] = React.useState<LineDraft[]>([{ ...EMPTY_LINE }]);
   const [formError, setFormError] = React.useState<string>();
+  // Item 3b (06b): consulta directa à BD antes de gravar (bloqueio definitivo).
+  const [checkingDuplicate, setCheckingDuplicate] = React.useState(false);
   // supplier_norm do PARSE (chave da aprendizagem de aliases; estável entre
   // faturas do mesmo fornecedor mesmo que o dono corrija o campo visível).
   const [parsedSupplierNorm, setParsedSupplierNorm] = React.useState<string | null>(null);
@@ -117,6 +121,18 @@ export default function Entradas() {
   const createIngredient = useCreateIngredient(restaurantId);
   const { role } = useRole();
   const mayManagePantry = canManagePantry(role);
+
+  // Aviso antecipado no ecrã (item 3b): as 300 entradas recentes já carregadas
+  // sinalizam logo uma fatura repetida; o bloqueio definitivo ao gravar é a
+  // consulta directa à BD (onSubmit), que apanha faturas fora dessa janela.
+  const invoiceLikelyDuplicate =
+    supplier.trim().length >= 2 &&
+    invoiceNo.trim().length > 0 &&
+    invoiceAlreadyRegistered(
+      supplier.trim(),
+      invoiceNo.trim(),
+      (entriesQuery.data ?? []).map((g) => g.note),
+    );
 
   const ingredients = (ingredientsQuery.data ?? []).filter((i) => i.active !== false);
   const ingredientById = new Map(ingredients.map((i) => [i.id, i]));
@@ -308,7 +324,7 @@ export default function Entradas() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(undefined);
     if (supplier.trim().length < 2) {
@@ -319,13 +335,37 @@ export default function Entradas() {
       setFormError("Indique o nº da fatura.");
       return;
     }
-    // Item 3b (06b): o número de fatura é único por fornecedor e série — uma
-    // fatura já registada bloqueia sempre o registo (correção = nota de crédito).
+    if (!restaurantId) {
+      setFormError("Restaurante não carregado. Recarregue a página.");
+      return;
+    }
+    // Item 3b (06b, iteração 3): o número de fatura é único por fornecedor e
+    // série, logo uma fatura já registada bloqueia sempre (correção = nota de
+    // crédito). O bloqueio definitivo consulta a BD directamente antes de
+    // gravar, não as 300 entradas carregadas: filtra de forma larga por
+    // source_ref (ilike com os alfanuméricos do nº) e confirma a igualdade
+    // normalizada (fornecedor + nº) no cliente, pela mesma chave partilhada.
+    // Se a consulta falhar (rede), NÃO grava e mostra erro.
+    setCheckingDuplicate(true);
+    const { data: dupRows, error: dupError } = await supabase
+      .from("stock_movements")
+      .select("note")
+      .eq("restaurant_id", restaurantId)
+      .eq("kind", "purchase")
+      .eq("source", "invoice")
+      .ilike("source_ref", invoiceNoLikePattern(invoiceNo.trim()));
+    setCheckingDuplicate(false);
+    if (dupError) {
+      setFormError(
+        "Não foi possível verificar se a fatura já está registada (erro de rede). Não se gravou nada; tente de novo.",
+      );
+      return;
+    }
     if (
       invoiceAlreadyRegistered(
         supplier.trim(),
         invoiceNo.trim(),
-        (entriesQuery.data ?? []).map((g) => g.note),
+        (dupRows ?? []).map((r) => r.note),
       )
     ) {
       setFormError(
@@ -699,6 +739,18 @@ export default function Entradas() {
                   <Plus className="h-4 w-4" /> Linha
                 </Button>
 
+                {/* Aviso antecipado (item 3b): sinal imediato a partir das
+                    entradas recentes; o bloqueio definitivo é ao gravar. */}
+                {invoiceLikelyDuplicate && !formError && (
+                  <div
+                    role="status"
+                    className="rounded-md border border-amber-400/50 bg-amber-50 p-3 text-sm font-medium text-amber-900"
+                  >
+                    Parece que esta fatura já está registada. O número é único por
+                    fornecedor; ao registar, será verificada e bloqueada se já existir.
+                  </div>
+                )}
+
                 {formError && (
                   <div
                     role="alert"
@@ -708,9 +760,15 @@ export default function Entradas() {
                   </div>
                 )}
 
-                <Button type="submit" disabled={create.isPending}>
-                  {create.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {create.isPending ? "A registar..." : "Registar entrada"}
+                <Button type="submit" disabled={create.isPending || checkingDuplicate}>
+                  {(create.isPending || checkingDuplicate) && (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  )}
+                  {checkingDuplicate
+                    ? "A verificar..."
+                    : create.isPending
+                      ? "A registar..."
+                      : "Registar entrada"}
                 </Button>
                 <p className="text-xs text-muted-foreground">
                   Validade estimada por categoria: o rótulo prevalece. Ajuste a

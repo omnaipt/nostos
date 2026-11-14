@@ -539,4 +539,18 @@ extra" (l) já tem o artigo "gallo · Garrafão 5L" (5 l) na despensa. A fatura 
 3. Mudar só o número (ex.: FA 2026/0413) ou só o fornecedor: o registo deixa de estar
    bloqueado.
 
+#### D1. Bloqueio definitivo por consulta directa (item 3b, iteração 3)
+O bloqueio deixou de depender das 300 entradas carregadas no ecrã; ao gravar, consulta a BD
+directamente pelo número da fatura (qualquer idade).
+1. Registar muitas entradas depois da 0412 (ou garantir que a 0412 está fora das 300 mais
+   recentes mostradas na lista). Voltar a tentar registar a 0412 do mesmo fornecedor:
+   continua a ser **bloqueada** ("Esta fatura já está registada…"), mesmo não aparecendo na
+   lista de entradas recentes.
+2. Assim que o fornecedor + número começam a bater numa entrada recente, aparece ainda um
+   **aviso antecipado** (âmbar) por baixo do formulário antes de gravar; o bloqueio a sério
+   é na submissão.
+3. Simular falha de rede (ex.: offline) e tentar registar a 0412: aparece o erro **"Não foi
+   possível verificar se a fatura já está registada (erro de rede). Não se gravou nada…"** e
+   **nenhum** movimento é gravado (não se assume que não há duplicado).
+
 Capturas de ecrã: pendentes (validação visual pelo orquestrador/David).

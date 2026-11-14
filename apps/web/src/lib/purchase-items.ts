@@ -479,3 +479,21 @@ export function invoiceAlreadyRegistered(
   const key = normNote(purchaseEntryNote(supplier, invoiceNo));
   return existingNotes.some((n) => n != null && normNote(n) === key);
 }
+
+// Padrão largo para a consulta directa ao servidor antes de gravar (item 3b,
+// iteração 3): o bloqueio definitivo deixa de depender das 300 entradas
+// carregadas e passa a consultar a BD por `source_ref` (o nº da fatura), de
+// qualquer idade. Como a comparação final normaliza (minúsculas, sem acentos,
+// espaços colapsados), o servidor filtra de forma LARGA: os caracteres
+// alfanuméricos do número separados por '%' (ilike), p.ex. "FA 2026/0412" dá
+// "%f%a%2%0%2%6%0%4%1%2%". A igualdade normalizada + fornecedor (a mesma
+// `invoiceAlreadyRegistered`, sobre as notes devolvidas) fecha a verificação no
+// cliente. Devolve "%" quando o número não tem alfanuméricos (apanha tudo; a
+// confirmação decide na mesma). O padrão largo apanha de propósito números
+// parecidos (ex.: "...0412" apanha também "...04123"); é a confirmação que os
+// descarta.
+export function invoiceNoLikePattern(invoiceNo: string): string {
+  const alnum = lowerNoAccents(invoiceNo).replace(/[^a-z0-9]/g, "");
+  if (!alnum) return "%";
+  return `%${alnum.split("").join("%")}%`;
+}
