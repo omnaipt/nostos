@@ -79,6 +79,19 @@ declare
   v_expected  numeric;
   v_given     numeric;
 begin
+  -- (b) Perfil primeiro: com utilizador autenticado, consumo interno e quebras
+  -- so para owner, gestor ou cozinha. Avaliado antes da leitura do ingrediente
+  -- para que balcao e consultor sejam travados com perfil_sem_permissao mesmo
+  -- quando a RLS do ingrediente nao os deixa le-lo (consultor nao e membro
+  -- operacional, 0029). Nao enfraquece a guarda de tenant: o ingrediente de
+  -- outro restaurante continua a ser rejeitado a seguir, pela leitura abaixo.
+  -- Service role (auth.uid() nulo, edge functions) nao e afectado.
+  if auth.uid() is not null and new.kind in ('internal_use','waste') then
+    if coalesce(public.member_role(new.restaurant_id), '') not in ('owner','gestor','cozinha') then
+      raise exception 'perfil_sem_permissao';
+    end if;
+  end if;
+
   select unit, unit_weight_g, depletion_mode into v_unit, v_uwg, v_mode
     from public.ingredients g
    where g.id = new.ingredient_id and g.restaurant_id = new.restaurant_id;
@@ -90,14 +103,6 @@ begin
   -- consumo interno (o apuramento e por contagem, Sprint 06).
   if new.kind in ('sale_depletion','internal_use') and v_mode = 'contagem' then
     raise exception 'ingrediente_consumido_por_contagem';
-  end if;
-
-  -- (b) Perfil: com utilizador autenticado, consumo interno e quebras so para
-  -- owner, gestor ou cozinha. Service role (auth.uid() nulo) nao e afectado.
-  if auth.uid() is not null and new.kind in ('internal_use','waste') then
-    if coalesce(public.member_role(new.restaurant_id), '') not in ('owner','gestor','cozinha') then
-      raise exception 'perfil_sem_permissao';
-    end if;
   end if;
 
   -- Entrada por embalagens: packs x pack_qty do artigo, convertido ao ingrediente.
