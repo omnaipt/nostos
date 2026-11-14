@@ -10,12 +10,12 @@ import {
   MessageCircle,
   Package,
   QrCode,
-  ShieldCheck,
   ShoppingBag,
   Users,
   Wine,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { usePageMeta } from "@/components/site/SiteChrome";
 
 // Landing pública de nostos.pt — identidade Pinho & Tinta (Zé, 07-Jul).
 // Tokens de marca scoped em .landing (index.css): creme, verde pinho,
@@ -31,7 +31,7 @@ const LINE = [
 ];
 
 const pine = "text-[hsl(var(--brand-pine))]";
-const terra = "text-[hsl(var(--brand-terracotta))]";
+const soft = "text-[hsl(var(--brand-pine-soft))]";
 
 // Símbolo da marca (o meandro do favicon), como glifo único e nítido.
 function Mark({ className }: { className?: string }) {
@@ -73,7 +73,7 @@ function CtaPrimary({
   full?: boolean;
 }) {
   const cls =
-    "inline-flex items-center justify-center gap-2 rounded-full bg-[hsl(var(--brand-terracotta))] px-7 py-3.5 text-base font-semibold text-[hsl(var(--brand-cream))] shadow-[0_2px_0_hsl(var(--brand-terracotta-deep))] transition-all hover:-translate-y-0.5 hover:bg-[hsl(var(--brand-terracotta-deep))] hover:shadow-[0_4px_12px_hsl(var(--brand-terracotta)/0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--brand-terracotta))] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60 " +
+    "inline-flex items-center justify-center gap-2 rounded-[7px] bg-[hsl(var(--brand-terracotta))] px-7 py-3.5 text-base font-semibold text-[hsl(var(--brand-cream))] shadow-[0_2px_0_hsl(var(--brand-terracotta-deep))] transition-all hover:-translate-y-0.5 hover:bg-[hsl(var(--brand-terracotta-deep))] hover:shadow-[0_4px_12px_hsl(var(--brand-terracotta)/0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--brand-terracotta))] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60 " +
     (full ? "w-full" : "");
   if (href) {
     return (
@@ -95,7 +95,7 @@ function CtaGhost({ href, children }: { href: string; children: React.ReactNode 
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-[hsl(var(--brand-pine)/0.25)] px-7 py-3 text-base font-medium text-[hsl(var(--brand-pine))] transition-colors hover:border-[hsl(var(--brand-pine))] hover:bg-[hsl(var(--brand-pine)/0.05)]"
+      className="inline-flex items-center justify-center gap-2 rounded-[7px] border-2 border-[hsl(var(--brand-pine)/0.25)] px-7 py-3 text-base font-medium text-[hsl(var(--brand-pine))] transition-colors hover:border-[hsl(var(--brand-pine))] hover:bg-[hsl(var(--brand-pine)/0.05)]"
     >
       {children}
     </a>
@@ -103,6 +103,10 @@ function CtaGhost({ href, children }: { href: string; children: React.ReactNode 
 }
 
 export default function Landing() {
+  usePageMeta(
+    "nostos rest · o sistema operativo do teu restaurante",
+    "Da despensa à reserva, num só sítio. Reservas sem comissões, menu digital com QR e a ficha técnica de cada prato escrita por IA, com food cost e margem. Feito em Portugal.",
+  );
   return (
     <div className="landing min-h-screen bg-[hsl(var(--brand-cream))] text-[hsl(var(--brand-pine))] antialiased">
       {/* Header */}
@@ -110,7 +114,7 @@ export default function Landing() {
         <img src="/brand/nostos-restaurantes.svg" alt="nostos restaurantes" className="h-14 sm:h-[4.5rem]" />
         <Link
           to="/login"
-          className="rounded-full px-4 py-2 text-sm font-medium text-[hsl(var(--brand-pine-soft))] transition-colors hover:bg-[hsl(var(--brand-pine)/0.06)] hover:text-[hsl(var(--brand-pine))]"
+          className="rounded-[7px] px-4 py-2 text-sm font-medium text-[hsl(var(--brand-pine-soft))] transition-colors hover:bg-[hsl(var(--brand-pine)/0.06)] hover:text-[hsl(var(--brand-pine))]"
         >
           Entrar
         </Link>
@@ -118,9 +122,6 @@ export default function Landing() {
 
       {/* Hero */}
       <section className="container pb-16 pt-12 text-center sm:pb-24 sm:pt-16">
-        <p className={"text-sm font-semibold uppercase tracking-[0.25em] " + terra}>
-          restaurantes fundadores · portugal
-        </p>
         <h1 className={"font-display mx-auto mt-4 max-w-3xl text-5xl font-semibold leading-[1.05] sm:text-6xl " + pine}>
           O sistema operativo do teu <em className="italic">restaurante</em>.
         </h1>
@@ -143,20 +144,20 @@ export default function Landing() {
       {/* A linha completa */}
       <section className="bg-[hsl(var(--brand-paper))] py-14">
         <div className="container">
-          <h2 className={"text-center text-xs font-bold uppercase tracking-[0.3em] " + terra}>
+          <h2 className={"font-display text-center text-3xl font-semibold " + pine}>
             A linha completa
           </h2>
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:items-stretch sm:justify-center sm:gap-3">
             {LINE.map((step, i) => (
               <React.Fragment key={step.label}>
-                <div className="w-full max-w-[15rem] rounded-xl border border-[hsl(var(--brand-pine)/0.14)] bg-[hsl(var(--brand-cream))] px-3 py-4 text-center shadow-[0_1px_2px_hsl(var(--brand-pine)/0.06)] sm:w-32 sm:max-w-none">
+                <div className="w-full max-w-[15rem] rounded-[7px] border border-[hsl(var(--brand-pine)/0.14)] bg-white px-3 py-4 text-center shadow-[0_1px_2px_hsl(var(--brand-pine)/0.06)] sm:w-32 sm:max-w-none">
                   <p className={"font-display text-base font-semibold " + pine}>{step.label}</p>
                   <p className="mt-0.5 text-xs text-[hsl(var(--brand-pine-soft))]">{step.sub}</p>
                 </div>
                 {i < LINE.length - 1 && (
                   <>
-                    <ArrowDown className={"h-5 w-5 shrink-0 sm:hidden " + terra} aria-hidden />
-                    <ArrowRight className={"hidden h-4 w-4 shrink-0 self-center sm:block " + terra} aria-hidden />
+                    <ArrowDown className={"h-5 w-5 shrink-0 sm:hidden " + soft} aria-hidden />
+                    <ArrowRight className={"hidden h-4 w-4 shrink-0 self-center sm:block " + soft} aria-hidden />
                   </>
                 )}
               </React.Fragment>
@@ -174,10 +175,7 @@ export default function Landing() {
       <section className="container py-20">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div>
-            <p className={"text-xs font-bold uppercase tracking-[0.3em] " + terra}>
-              O diferenciador
-            </p>
-            <h2 className={"font-display mt-3 text-4xl font-semibold leading-tight " + pine}>
+            <h2 className={"font-display text-4xl font-semibold leading-tight " + pine}>
               A ficha técnica de cada prato, escrita por IA.
             </h2>
             <p className="mt-3 text-lg text-[hsl(var(--brand-pine-soft))]">
@@ -201,9 +199,9 @@ export default function Landing() {
 
           {/* Card "ficha de papel" — o herói visual */}
           <div className="relative mx-auto w-full max-w-md">
-            <div className="absolute inset-0 translate-x-2 translate-y-2 rounded-2xl bg-[hsl(var(--brand-pine)/0.10)]" aria-hidden />
-            <div className="relative rounded-2xl border border-[hsl(var(--brand-pine)/0.15)] border-t-4 border-t-[hsl(var(--brand-terracotta))] bg-[hsl(var(--brand-paper))] p-7 shadow-sm">
-              <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[hsl(var(--brand-pine-soft))]">
+            <div className="absolute inset-0 translate-x-2 translate-y-2 rounded-[10px] bg-[hsl(var(--brand-pine)/0.10)]" aria-hidden />
+            <div className="relative rounded-[10px] border border-[hsl(var(--brand-pine)/0.15)] border-t-4 border-t-[hsl(var(--brand-terracotta))] bg-[hsl(var(--brand-paper))] p-7 shadow-sm">
+              <p className="text-xs font-semibold text-[hsl(var(--brand-pine-soft))]">
                 Ficha técnica · exemplo real
               </p>
               <p className={"font-display mt-1 text-2xl font-semibold " + pine}>Bacalhau à Brás</p>
@@ -218,10 +216,10 @@ export default function Landing() {
                 <SheetRow k="Preço de venda" v="14,50 €" />
                 <div className="flex items-baseline justify-between">
                   <span className="text-[hsl(var(--brand-pine-soft))]">Margem</span>
-                  <span className={"font-display text-2xl font-semibold " + terra}>75%</span>
+                  <span className={"font-display text-2xl font-semibold " + pine}>75%</span>
                 </div>
               </div>
-              <p className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--brand-pine)/0.08)] px-3 py-1 text-xs font-medium text-[hsl(var(--brand-pine))]">
+              <p className="mt-5 inline-flex items-center gap-1.5 rounded-[7px] bg-[hsl(var(--brand-pine)/0.08)] px-3 py-1 text-xs font-medium text-[hsl(var(--brand-pine))]">
                 <ChefHat className="h-3.5 w-3.5" aria-hidden /> Gerada por IA · validada pelo chef
               </p>
             </div>
@@ -246,7 +244,7 @@ export default function Landing() {
             <Feature
               icon={<QrCode className="h-5 w-5" aria-hidden />}
               title="Menu digital + QR"
-              text="O menu numa página, QR para as mesas, alergénios declarados e esgotado em tempo real. Acabou o PDF desactualizado."
+              text="O menu numa página, QR para as mesas, alergénios declarados e esgotado em tempo real. Acabou o PDF desatualizado."
             />
             <Feature
               icon={<Wine className="h-5 w-5" aria-hidden />}
@@ -261,12 +259,12 @@ export default function Landing() {
             <Feature
               icon={<MessageCircle className="h-5 w-5" aria-hidden />}
               title="Mensagens em nome da casa"
-              text="Confirmação de reserva, lembrete na véspera e estado da encomenda para levar seguem para o cliente por email e WhatsApp, sempre em nome do teu restaurante, nunca do nostos. Só para quem deixou o contacto ao reservar ou encomendar."
+              text="Confirmação de reserva, lembrete na véspera e estado da encomenda para levar seguem para o cliente por email; o WhatsApp entra quando a Meta aprovar o pedido. Vão sempre em nome do teu restaurante, nunca do nostos. Só para quem deixou o contacto ao reservar ou encomendar."
             />
             <Feature
               icon={<ShoppingBag className="h-5 w-5" aria-hidden />}
               title="Take-away sem comissões"
-              text="Encomendas directas no teu link, com as doses e os preços da tua carta. Caem na fila do balcão, o cliente é avisado quando está pronta, e paga ao levantar. Nenhuma plataforma leva percentagem."
+              text="Encomendas diretas no teu link, com as doses e os preços da tua carta. Caem na fila do balcão, o cliente é avisado quando está pronta, e paga ao levantar. Nenhuma plataforma leva percentagem."
             />
           </div>
         </div>
@@ -278,16 +276,12 @@ export default function Landing() {
         <p className="mx-auto mt-3 max-w-xl text-center text-[hsl(var(--brand-pine-soft))]">
           Os restaurantes fundadores recebem tudo isto à medida que sai, sem pagar mais por módulo.
         </p>
-        <div className="mt-9 grid gap-5 sm:grid-cols-3">
+        <div className="mt-9 grid gap-5 sm:grid-cols-2">
           <Upcoming
             icon={<Package className="h-5 w-5" aria-hidden />}
             title="Stock a sério"
-            text="Dedução automática na venda a partir das fichas técnicas, com ligação ao teu POS."
-          />
-          <Upcoming
-            icon={<ShieldCheck className="h-5 w-5" aria-hidden />}
-            title="Reputação e escudo anti no-show"
-            text="Reviews num só sítio e protecção contra mesas vazias que ninguém avisou."
+            text="Abate automático do stock por prato vendido, a partir das fichas técnicas."
+            estado="Em desenvolvimento"
           />
           <Upcoming
             icon={<MessageCircle className="h-5 w-5" aria-hidden />}
@@ -311,8 +305,8 @@ export default function Landing() {
             em cima está todo lá dentro, no primeiro dia.
           </p>
 
-          <div className="mx-auto mt-10 max-w-md rounded-2xl border border-[hsl(var(--brand-pine)/0.15)] bg-[hsl(var(--brand-cream))] p-8 text-center shadow-sm">
-            <p className="text-sm font-medium uppercase tracking-[0.14em] text-[hsl(var(--brand-terracotta))]">
+          <div className="mx-auto mt-10 max-w-md rounded-[10px] border border-[hsl(var(--brand-pine)/0.15)] bg-white p-8 text-center shadow-sm">
+            <p className="text-sm font-semibold text-[hsl(var(--brand-pine-soft))]">
               Restaurantes fundadores
             </p>
             <p className={"mt-4 font-display text-5xl font-semibold " + pine}>
@@ -324,14 +318,14 @@ export default function Landing() {
             <div className="my-6 h-px bg-[hsl(var(--brand-pine)/0.12)]" />
             <p className="text-sm text-[hsl(var(--brand-pine-soft))]">
               Preço normal <strong className={pine}>99 € por mês</strong>, mais IVA. Sem fidelização
-              e sem hardware para comprar: sai quando quiser e leva os seus dados.
+              e sem hardware para comprar: sais quando quiseres e levas os teus dados.
             </p>
           </div>
 
           <div className="mx-auto mt-10 grid max-w-3xl gap-5 sm:grid-cols-3">
             <Point icon={<Users className="h-5 w-5" aria-hidden />}>
-              <strong className={pine}>Menos de quatro clientes por mês.</strong> Se o nostos lhe
-              trouxer quatro reservas que não teria, já está pago.
+              <strong className={pine}>Menos de quatro clientes por mês.</strong> Se o nostos te
+              trouxer quatro reservas que não terias, já está pago.
             </Point>
             <Point icon={<LineChart className="h-5 w-5" aria-hidden />}>
               <strong className={pine}>Um ponto de food cost.</strong> Numa casa que fature 30 mil
@@ -377,7 +371,7 @@ export default function Landing() {
           </p>
           <ul className="mt-7 space-y-4 text-[hsl(var(--brand-pine-soft))]">
             <li className="flex gap-3">
-              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[hsl(var(--brand-terracotta))]" />
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[hsl(var(--brand-pine))]" />
               <span>
                 <strong className={pine}>Só quem pediu.</strong> O contacto é dado pelo próprio
                 cliente ao reservar ou encomendar, e serve apenas para essa reserva ou encomenda.
@@ -385,7 +379,7 @@ export default function Landing() {
               </span>
             </li>
             <li className="flex gap-3">
-              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[hsl(var(--brand-terracotta))]" />
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[hsl(var(--brand-pine))]" />
               <span>
                 <strong className={pine}>Cada casa com o seu número.</strong> O restaurante liga a
                 sua própria conta WhatsApp Business e continua dono dela; o nostos é o fornecedor
@@ -393,7 +387,7 @@ export default function Landing() {
               </span>
             </li>
             <li className="flex gap-3">
-              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[hsl(var(--brand-terracotta))]" />
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[hsl(var(--brand-pine))]" />
               <span>
                 <strong className={pine}>Parar é imediato.</strong> Basta responder STOP ou pedir ao
                 restaurante; deixa de receber e o registo fica na ficha do cliente. Dados tratados
@@ -408,7 +402,7 @@ export default function Landing() {
         <div className="container flex flex-col items-center gap-3 text-center">
           <Mark className="h-8 w-8 text-[hsl(var(--brand-terracotta))]" aria-hidden="true" />
           <p className="text-sm text-[hsl(var(--brand-pine-soft))]">
-            nostos.pt · uma plataforma OMNAI · reservas@nostos.pt
+            nostos rest · um produto nostos · reservas@nostos.pt
           </p>
           <p className="max-w-xl text-xs leading-relaxed text-[hsl(var(--brand-pine-soft))]">
             O nostos é um produto da OMNAI Consulting, Lda · NIPC 519270592 · Rua dos Janotas 12,
@@ -429,7 +423,7 @@ export default function Landing() {
 function Point({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <li className="flex gap-4">
-      <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--brand-terracotta)/0.12)] text-[hsl(var(--brand-terracotta))]">
+      <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--brand-pine)/0.08)] text-[hsl(var(--brand-pine))]">
         {icon}
       </span>
       <span className="leading-relaxed text-[hsl(var(--brand-pine-soft))]">{children}</span>
@@ -451,8 +445,8 @@ function SheetRow({ k, v, strong }: { k: string; v: string; strong?: boolean }) 
 
 function Feature({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
   return (
-    <div className="rounded-2xl border border-[hsl(var(--brand-pine)/0.12)] bg-[hsl(var(--brand-cream))] p-6 shadow-[0_1px_2px_hsl(var(--brand-pine)/0.05)] transition-shadow hover:shadow-[0_6px_20px_hsl(var(--brand-pine)/0.10)]">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[hsl(var(--brand-terracotta)/0.12)] text-[hsl(var(--brand-terracotta))]">
+    <div className="rounded-[10px] border border-[hsl(var(--brand-pine)/0.12)] bg-white p-6 shadow-[0_1px_2px_hsl(var(--brand-pine)/0.05)] transition-shadow hover:shadow-[0_6px_20px_hsl(var(--brand-pine)/0.10)]">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[hsl(var(--brand-pine)/0.08)] text-[hsl(var(--brand-pine))]">
         {icon}
       </div>
       <h3 className={"font-display mt-4 text-xl font-semibold " + pine}>{title}</h3>
@@ -463,15 +457,25 @@ function Feature({ icon, title, text }: { icon: React.ReactNode; title: string; 
 
 // Card de funcionalidade futura ("O que aí vem"): mesmo DNA visual dos
 // Feature, mas tracejado e com selo "em breve" para não vender como actual.
-function Upcoming({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
+function Upcoming({
+  icon,
+  title,
+  text,
+  estado = "Em breve",
+}: {
+  icon: React.ReactNode;
+  title: string;
+  text: string;
+  estado?: string;
+}) {
   return (
-    <div className="rounded-2xl border-2 border-dashed border-[hsl(var(--brand-pine)/0.2)] bg-[hsl(var(--brand-cream))] p-6">
+    <div className="rounded-[10px] border-2 border-dashed border-[hsl(var(--brand-pine)/0.2)] bg-white p-6">
       <div className="flex items-center justify-between">
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[hsl(var(--brand-pine)/0.08)] text-[hsl(var(--brand-pine-soft))]">
           {icon}
         </div>
-        <span className="rounded-full bg-[hsl(var(--brand-terracotta)/0.12)] px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-[hsl(var(--brand-terracotta))]">
-          em breve
+        <span className="rounded-[7px] bg-[hsl(var(--brand-pine)/0.08)] px-2.5 py-0.5 text-xs font-semibold text-[hsl(var(--brand-pine))]">
+          {estado}
         </span>
       </div>
       <h3 className={"font-display mt-4 text-xl font-semibold " + pine}>{title}</h3>
@@ -481,7 +485,7 @@ function Upcoming({ icon, title, text }: { icon: React.ReactNode; title: string;
 }
 
 const inputCls =
-  "flex h-12 w-full rounded-xl border border-[hsl(var(--brand-pine)/0.2)] bg-[hsl(var(--brand-paper))] px-4 text-base text-[hsl(var(--brand-pine))] placeholder:text-[hsl(var(--brand-pine)/0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--brand-terracotta))]";
+  "flex h-12 w-full rounded-[7px] border border-[hsl(var(--brand-pine)/0.2)] bg-[hsl(var(--brand-paper))] px-4 text-base text-[hsl(var(--brand-pine))] placeholder:text-[hsl(var(--brand-pine)/0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--brand-terracotta))]";
 
 function LeadForm() {
   const [name, setName] = React.useState("");
@@ -529,7 +533,7 @@ function LeadForm() {
 
   if (done) {
     return (
-      <div className="mt-9 rounded-2xl border border-[hsl(var(--brand-pine)/0.15)] bg-[hsl(var(--brand-paper))] p-9 text-center shadow-sm">
+      <div className="mt-9 rounded-[10px] border border-[hsl(var(--brand-pine)/0.15)] bg-[hsl(var(--brand-paper))] p-9 text-center shadow-sm">
         <p className={"font-display text-2xl font-semibold " + pine}>Recebido. Falamos em breve.</p>
         <p className="mt-3 text-sm leading-relaxed text-[hsl(var(--brand-pine-soft))]">
           Vamos contactar-te para marcar uma demonstração de 15 minutos com o teu restaurante em
@@ -542,7 +546,7 @@ function LeadForm() {
   return (
     <form
       onSubmit={submit}
-      className="mt-9 space-y-3 rounded-2xl border border-[hsl(var(--brand-pine)/0.15)] bg-[hsl(var(--brand-paper))] p-6 shadow-sm sm:p-8"
+      className="mt-9 space-y-3 rounded-[10px] border border-[hsl(var(--brand-pine)/0.15)] bg-[hsl(var(--brand-paper))] p-6 shadow-sm sm:p-8"
     >
       <div className="grid gap-3 sm:grid-cols-2">
         <input

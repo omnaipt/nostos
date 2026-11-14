@@ -70,3 +70,26 @@
 /* Ornamento de secção: o SÍMBOLO da marca (meandro único, o mesmo do
    favicon), não friso repetido — decisão David 07-Jul ("não gosto destes
    traços"). Implementado como componente <Ornament/> na Landing. */
+
+/* ── Site público da marca nostos (13-11-2026) ───────────────────────────────
+   Página da marca e páginas curtas das verticais. Valores do ficheiro comum
+   nostos-tokens.css, superfície clara "creme afinado". Cada página define só
+   --acento a partir do acento da sua vertical; o resto é igual em todas. */
+.nostos-site {
+  --palavra: #16403C;
+  --fundo: #F7F2E8;
+  --cartao: #FFFFFF;
+  --realce: #EFE8DA;
+  --titulo: #16403C;
+  --texto: #1B2A27;
+  --texto-2: #5A645F;
+  --regua: #DDD3C0;
+  --borda-controlo: #8C836F;
+  --botao: #FFFFFF;
+  --acento-texto: #FFFFFF;
+  --acento-rest: #7A2E3A;
+  --acento-urbs: #1B4F9C;
+  --acento-pulse: #1E7B6A;
+  --acento-fire: #C84500;
+  --acento: var(--palavra);
+}

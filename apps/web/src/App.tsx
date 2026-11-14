@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { Toaster } from "sonner";
@@ -11,6 +11,9 @@ import { homeForRole } from "@/lib/roles";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Landing from "@/pages/Landing";
+import Marca from "@/pages/Marca";
+import Urbs from "@/pages/Urbs";
+import Pulse from "@/pages/Pulse";
 import { useAuth } from "@/contexts/AuthContext";
 import Onboarding from "@/pages/Onboarding";
 import Availability from "@/pages/Availability";
@@ -45,13 +48,18 @@ import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Raiz condicionada pela sessão: anónimo vê a landing; membro vê o Início do
+// nostos fire: só entra em builds a partir de 01-12-2026 (vite.config.ts).
+// Com a constante a false, a página nem chega ao bundle.
+const Fire = __NOSTOS_FIRE__ ? lazy(() => import("@/pages/Fire")) : null;
+
+// Raiz condicionada pela sessão: anónimo vê a página da marca (a landing de
+// restaurantes passou para /rest a 13-11-2026); membro vê o Início do
 // seu perfil. owner/gestor → Dashboard; balcão → /balcao; cozinha → /ementa
 // (spec Roles 29-07). Sem redirect para owner/gestor (não parte bookmarks).
 function HomeGate() {
   const { user, loading } = useAuth();
   if (loading) return null;
-  if (!user) return <Landing />;
+  if (!user) return <Marca />;
   return (
     <RoleProvider>
       <AppShell>
@@ -101,7 +109,21 @@ export default function App() {
             <Route path="/m/:slug/levar" element={<PublicTakeaway />} />
             <Route path="/recuperar-password" element={<RecoverPassword />} />
             <Route path="/repor-password" element={<ResetPassword />} />
-            {/* Raiz: landing pública para anónimos, Dashboard para membros (S4). */}
+            {/* Site da marca (13-11-2026): verticais em páginas públicas próprias. */}
+            <Route path="/rest" element={<Landing />} />
+            <Route path="/urbs" element={<Urbs />} />
+            <Route path="/pulse" element={<Pulse />} />
+            {Fire && (
+              <Route
+                path="/fire"
+                element={
+                  <Suspense fallback={null}>
+                    <Fire />
+                  </Suspense>
+                }
+              />
+            )}
+            {/* Raiz: página da marca para anónimos, Dashboard para membros (S4). */}
             <Route path="/" element={<HomeGate />} />
             <Route path="/disponibilidade" element={<Backoffice><Availability /></Backoffice>} />
             <Route path="/balcao" element={<Backoffice><Balcao /></Backoffice>} />
