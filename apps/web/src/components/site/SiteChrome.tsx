@@ -84,9 +84,9 @@ export function Logotipo({ vertical, className }: { vertical: Vertical; classNam
         <path key={d.slice(0, 24)} d={d} fill="var(--palavra)" />
       ))}
       {/* Versão para tamanhos reduzidos: o descritor do lockup oficial (12,5 em
-          120 de altura) fica ilegível num cabeçalho, por isso cresce 1,6 vezes
+          120 de altura) fica ilegível num cabeçalho, por isso cresce 2 vezes
           a partir da margem esquerda, sem mexer no meandro nem na palavra. */}
-      <g transform="translate(101.6 104) scale(1.6) translate(-101.6 -101.5)">
+      <g transform="translate(101.6 108) scale(2) translate(-101.6 -101.5)">
         {DESCRITOR[vertical].map((d, i) => (
           <path key={i} d={d} fill={acento} />
         ))}
