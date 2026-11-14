@@ -76,8 +76,9 @@ export default function Marca() {
           <div className="container max-w-3xl">
             <h2 className="text-lg font-semibold text-[var(--titulo)]">O nome</h2>
             <p className="mt-3 text-lg leading-relaxed">
-              Nostos é o regresso a casa, em grego. Fazemos software para negócios que vivem de
-              clientes que voltam.
+              Nostos é o regresso a casa, em grego. Fazemos software em que cada setor se sente em
+              casa, com as suas regras e as suas palavras. Ele trata das reservas, dos prazos, das
+              escalas e das contas, para que cada equipa volte ao que sabe fazer.
             </p>
           </div>
         </section>
