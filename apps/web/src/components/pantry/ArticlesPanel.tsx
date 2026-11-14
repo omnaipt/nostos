@@ -18,7 +18,7 @@ import { UNIT_OPTIONS, type Ingredient, type PurchaseItem } from "@/lib/types";
 
 // Stock S1 (item 4): no detalhe de um ingrediente da despensa, mostra e gere os
 // artigos de compra (formatos), a família e o peso médio por unidade. Tudo via
-// RLS; as guardas da 0031 validam convertibilidade e tenant.
+// RLS; as guardas da 0032 validam convertibilidade e tenant.
 
 function errMsg(e: unknown): string {
   if (e instanceof Error && e.message.includes("formato_incompativel_com_ingrediente")) {

@@ -1,4 +1,4 @@
--- 0031 - Stock S1: conversao de unidades, peso medio por unidade, familias e
+-- 0032 - Stock S1: conversao de unidades, peso medio por unidade, familias e
 -- artigos de compra. Primeiro de tres sprints de stock (S1 formatos; S2 consumo
 -- interno; S3 inventario). Origem: spec "Nostos Rest: camada de stock" (David,
 -- decisoes fechadas a 13-11-2026).

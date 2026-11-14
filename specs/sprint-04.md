@@ -21,7 +21,7 @@ Uma fatura com "Azeite Gallo VE 5L, 2 un, 39,80 €" passa a entrar como 10 l de
 
 ## Convenções deste repo que se aplicam
 
-- Migração nova: `supabase/migrations/0031_stock_formatos.sql`. Teste pgTAP novo: `supabase/tests/0015_stock_formatos.sql`, no estilo de `0014_haccp.sql` e `0009_supplier_aliases.sql` (`begin; select plan(N); ... select * from finish(); rollback;`, UUIDs fixos, simulação de utilizador com `set local role authenticated` e `request.jwt.claims`).
+- Migração nova: `supabase/migrations/0032_stock_formatos.sql`. Teste pgTAP novo: `supabase/tests/0015_stock_formatos.sql`, no estilo de `0014_haccp.sql` e `0009_supplier_aliases.sql` (`begin; select plan(N); ... select * from finish(); rollback;`, UUIDs fixos, simulação de utilizador com `set local role authenticated` e `request.jwt.claims`).
 - Multi-tenant: toda a tabela nova tem `restaurant_id`, RLS pelo padrão `*_member_all` com `public.is_restaurant_member` e trigger de guarda de tenant como os da 0011 e 0018. Funções expostas: `grant execute ... to authenticated`, revogar de `anon` e `public`; funções de gatilho sem grant.
 - Comentários em português, sem travessão. Cada tabela e função com `comment on`.
 - Tipos: acrescentar à mão em `apps/web/src/integrations/supabase/database.types.ts` as tabelas e colunas novas, espelhando a migração. O orquestrador regenera os tipos depois de aplicar.
@@ -30,7 +30,7 @@ Uma fatura com "Azeite Gallo VE 5L, 2 un, 39,80 €" passa a entrar como 10 l de
 
 ## Itens
 
-### 1. Migração 0031: conversão de unidades e peso médio por unidade
+### 1. Migração 0032: conversão de unidades e peso médio por unidade
 
 - [x] `ingredients` ganha `unit_weight_g numeric(10,3)` opcional (> 0 quando preenchido), com `comment on` a explicar o uso (cebola, limão, alho).
 - [x] Função `public.unit_factor(p_from text, p_to text, p_unit_weight_g numeric default null) returns numeric` (IMMUTABLE): devolve o multiplicador de `p_from` para `p_to` dentro da mesma grandeza (g e kg; ml e l; un e un); entre `un` e `g` ou `kg` usa `p_unit_weight_g`; devolve null quando a conversão não é possível (massa contra volume, ou `un` sem peso médio).
@@ -39,7 +39,7 @@ Uma fatura com "Azeite Gallo VE 5L, 2 un, 39,80 €" passa a entrar como 10 l de
 
 Evidência exigida: pgTAP com casos 2 kg em ingrediente em `g` (2000 g), 10 l em ingrediente em `ml`, 2 `un` em ingrediente em `g` com peso médio 150 (300 g), 2 `un` sem peso médio (rejeitado), 1 kg em ingrediente em `ml` (rejeitado).
 
-### 2. Migração 0031: famílias e artigos de compra
+### 2. Migração 0032: famílias e artigos de compra
 
 - [x] Tabela `ingredient_families` (`id`, `restaurant_id`, `name`, timestamps), nome único por restaurante sem distinção de maiúsculas, RLS e guarda de tenant.
 - [x] `ingredients.family_id` opcional, com guarda: a família pertence ao mesmo restaurante.
@@ -85,6 +85,8 @@ Notas: não alterar o prompt nem o modelo de `parse-invoice` neste sprint. Se a 
 - 13-11-2026 (David): cadência de contagem ligada à importação de vendas (Sprint 06).
 - 14-11-2026 (orquestrador): a migração é a 0031. O ramo `feat/omnai-console-admin-nostos` tem `0030_saft_idempotencia.sql`, já aplicada em produção a 09-09 com o registo `0025_saft_idempotencia`, e só toca em `saft_import_lines`. Não há conflito de tabelas, mas o número 0030 fica-lhe reservado.
 - 14-11-2026 (orquestrador): a migração não é aplicada em produção durante o sprint; aplica-se só depois do gate do David e depois de comparar as funções recriadas com `pg_get_functiondef` em produção.
+
+- 14-11-2026 (orquestrador, depois da verificação): a migração passa de 0031 a 0032. O main recebeu a 0031_login_tentativas (revisão de segurança, renumerada de 0030 porque o número estava ocupado pela idempotência do SAF-T) e foi aplicada em produção a 14-11. A verificação, a evidência do pgTAP e as mensagens de commit anteriores referem 0031: é a mesma migração, só mudou o número.
 
 ## Blockers
 

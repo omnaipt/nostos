@@ -41,7 +41,7 @@ export const queryKeys = {
     ["fichas", restaurantId, "sheets"] as const,
   techSheetLines: (restaurantId: string | undefined) =>
     ["fichas", restaurantId, "lines"] as const,
-  // Artigos de compra e famílias (Stock S1, 0031). Vivem sob fichasRoot para
+  // Artigos de compra e famílias (Stock S1, 0032). Vivem sob fichasRoot para
   // partilharem invalidação com a despensa (um artigo pertence a um ingrediente).
   purchaseItems: (restaurantId: string | undefined) =>
     ["fichas", restaurantId, "purchase-items"] as const,

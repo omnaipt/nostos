@@ -1,7 +1,7 @@
-# Contrato Stock S1 (migration 0031)
+# Contrato Stock S1 (migration 0032)
 
 Para os Sprints 05 (consumo interno) e 06 (inventário com parciais) consumirem
-sem adivinhar. Fonte de verdade: `supabase/migrations/0031_stock_formatos.sql` e
+sem adivinhar. Fonte de verdade: `supabase/migrations/0032_stock_formatos.sql` e
 os tipos em `apps/web/src/integrations/supabase/database.types.ts`.
 
 ## Conversão de unidades

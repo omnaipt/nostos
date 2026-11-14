@@ -18,7 +18,7 @@ export interface PurchaseEntryLine {
   // Validade ESTIMADA (0017): data da fatura + shelf life resolvido (override
   // > categoria > fallback), editável no acto do registo. null = sem estimativa.
   expiresAt: string | null;
-  // Stock S1 (0031): entrada por embalagens. Quando preenchidos, qty/unit/custo
+  // Stock S1 (0032): entrada por embalagens. Quando preenchidos, qty/unit/custo
   // já vêm na unidade do ingrediente (calculados no cliente) e a guarda confere
   // packs × pack_qty. null = entrada directa em quantidade.
   purchaseItemId?: string | null;

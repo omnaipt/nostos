@@ -257,7 +257,7 @@ Testes novos deste sprint:
 
 - **Não corrido nesta máquina**: não há Postgres local e a instrução é não o instalar.
 - Escrito e revisto pelo executor; execução pelo **orquestrador** com `supabase test db`
-  (requer 0001..0018 + 0031), dentro de transacção com rollback.
+  (requer 0001..0018 + 0032), dentro de transacção com rollback.
 - Cobre: conversão kg→g, l→ml, un→g com peso médio, un sem peso (rejeitado),
   kg→ml (rejeitado); entrada por 2 embalagens de 5 l em ingrediente em l (10 l) e em
   ml (10000 ml); custo por litro preservado; duas marcas somam no mesmo `stock_qty`;

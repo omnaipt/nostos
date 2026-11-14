@@ -1,4 +1,4 @@
-// Artigos de compra (Stock S1, public.purchase_items da 0031): cálculos puros
+// Artigos de compra (Stock S1, public.purchase_items da 0032): cálculos puros
 // partilhados pela UI de entradas/despensa e pelos testes. A conversão usa a
 // mesma unitFactor da ficha técnica (lib/types.ts), espelho de public.unit_factor.
 
@@ -6,7 +6,7 @@ import { unitFactor } from "@/lib/types";
 
 // Quantidade na unidade do ingrediente para `packs` embalagens de um artigo
 // (pack_qty + pack_unit). null quando packs/pack_qty inválidos ou o formato não
-// é convertível para a unidade do ingrediente (a guarda da 0031 rejeitaria).
+// é convertível para a unidade do ingrediente (a guarda da 0032 rejeitaria).
 export function packEntryQty(
   packs: number,
   packQty: number,

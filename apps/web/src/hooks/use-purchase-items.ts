@@ -8,9 +8,9 @@ import type {
   PurchaseItemUpdate,
 } from "@/lib/types";
 
-// Artigos de compra e famílias (Stock S1, migration 0031). Tudo tenant-scoped
+// Artigos de compra e famílias (Stock S1, migration 0032). Tudo tenant-scoped
 // via RLS (*_member_all); restaurant_id só entra nas criações. As guardas da
-// 0031 garantem ingrediente/família/artigo do mesmo restaurante e formatos
+// 0032 garantem ingrediente/família/artigo do mesmo restaurante e formatos
 // convertíveis — aqui só se reporta o erro ao utilizador.
 
 export function usePurchaseItems(restaurantId: string | undefined) {

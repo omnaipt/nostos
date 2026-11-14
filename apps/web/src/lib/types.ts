@@ -157,7 +157,7 @@ export type TechSheetUpdate = TablesUpdate<"tech_sheets">;
 export type TechSheetIngredient = Tables<"tech_sheet_ingredients">;
 export type TechSheetIngredientInsert = TablesInsert<"tech_sheet_ingredients">;
 
-// ── Famílias e artigos de compra (Stock S1, migration 0031) ──────────────────
+// ── Famílias e artigos de compra (Stock S1, migration 0032) ──────────────────
 export type IngredientFamily = Tables<"ingredient_families">;
 export type IngredientFamilyInsert = TablesInsert<"ingredient_families">;
 
@@ -181,7 +181,7 @@ export const UNIT_OPTIONS = [
 ] as const;
 export type Unit = (typeof UNIT_OPTIONS)[number]["code"];
 
-// Conversão de unidades (Stock S1, espelha public.unit_factor da 0031 e
+// Conversão de unidades (Stock S1, espelha public.unit_factor da 0032 e
 // toIngredientUnit da edge import-saft). Tabela de casos ÚNICA, partilhada pelas
 // três implementações:
 //   from=to                      -> 1

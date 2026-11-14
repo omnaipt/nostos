@@ -86,7 +86,7 @@ describe("computeFoodCost", () => {
   });
 });
 
-// Stock S1: tabela de casos de unitFactor (espelha public.unit_factor da 0031 e
+// Stock S1: tabela de casos de unitFactor (espelha public.unit_factor da 0032 e
 // toIngredientUnit da edge import-saft). Os mesmos casos da evidência do item 1.
 describe("unitFactor", () => {
   it("2 kg -> g: factor 1000 (2 kg = 2000 g)", () => {

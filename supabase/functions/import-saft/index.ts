@@ -63,7 +63,7 @@ function json(body: unknown, status = 200): Response {
 }
 
 // Conversão de unidades (Stock S1). Tabela de casos ÚNICA, partilhada com
-// apps/web/src/lib/types.ts (unitFactor) e public.unit_factor da 0031:
+// apps/web/src/lib/types.ts (unitFactor) e public.unit_factor da 0032:
 //   from=to                   -> qty
 //   g↔kg, ml↔l                -> ×0.001 / ×1000
 //   un→g/kg (com peso médio w)-> w / (w/1000)

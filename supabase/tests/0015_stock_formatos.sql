@@ -1,4 +1,4 @@
--- STOA/Nostos - Testes do Stock S1 (migration 0031).
+-- STOA/Nostos - Testes do Stock S1 (migration 0032).
 -- Grupos:
 --   A) Conversao de unidades no stock_movement_guard (item 1): kg->g, l->ml,
 --      un->g com peso medio, un sem peso (rejeitado), kg->ml (rejeitado).
@@ -7,7 +7,7 @@
 --      de convertibilidade, familias, aliases ligados a artigo, isolamento
 --      multi-tenant das tabelas e campos novos.
 --
--- Correr com: supabase test db (pgTAP). Requer 0001..0018 + 0031.
+-- Correr com: supabase test db (pgTAP). Requer 0001..0018 + 0032.
 -- Normas pgTAP da casa: UUIDs fixos, role authenticated + request.jwt.claims,
 -- tudo numa transaccao com rollback.
 
