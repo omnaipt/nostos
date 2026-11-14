@@ -31,22 +31,22 @@ A refeição do pessoal, a oferta da casa e o prato estragado passam a sair do s
 
 ### 1. Migração 0033: tipos de movimento, motivo, abate estimado e modo de consumo
 
-- [ ] `stock_movements.kind` aceita `internal_use` (sempre negativo); a restrição de coerência de sinal é actualizada sem afectar os tipos existentes.
-- [ ] `stock_movements.reason text` opcional com valores `pessoal`, `oferta`, `prova`, `outro`; obrigatório quando `kind` é `internal_use`; permitido em `waste`; nulo nos restantes tipos.
-- [ ] `stock_movements.estimated boolean not null default false`.
-- [ ] `ingredients.depletion_mode text not null default 'ficha'` com valores `ficha` e `contagem`, com `comment on`.
-- [ ] Guarda: um movimento `sale_depletion` ou `internal_use` num ingrediente em modo `contagem` é rejeitado com a excepção `ingrediente_consumido_por_contagem`.
-- [ ] Guarda de perfil: quando há utilizador autenticado (`auth.uid()` não nulo), movimentos `internal_use` e `waste` só são aceites para `owner`, `gestor` ou `cozinha`; `balcao` e `consultor` são rejeitados com `perfil_sem_permissao`. Chamadas sem utilizador (edge functions com service role) não são afectadas.
+- [x] `stock_movements.kind` aceita `internal_use` (sempre negativo); a restrição de coerência de sinal é actualizada sem afectar os tipos existentes.
+- [x] `stock_movements.reason text` opcional com valores `pessoal`, `oferta`, `prova`, `outro`; obrigatório quando `kind` é `internal_use`; permitido em `waste`; nulo nos restantes tipos.
+- [x] `stock_movements.estimated boolean not null default false`.
+- [x] `ingredients.depletion_mode text not null default 'ficha'` com valores `ficha` e `contagem`, com `comment on`.
+- [x] Guarda: um movimento `sale_depletion` ou `internal_use` num ingrediente em modo `contagem` é rejeitado com a excepção `ingrediente_consumido_por_contagem`.
+- [x] Guarda de perfil: quando há utilizador autenticado (`auth.uid()` não nulo), movimentos `internal_use` e `waste` só são aceites para `owner`, `gestor` ou `cozinha`; `balcao` e `consultor` são rejeitados com `perfil_sem_permissao`. Chamadas sem utilizador (edge functions com service role) não são afectadas.
 
 Evidência exigida: pgTAP com cada regra, incluindo um caso por perfil.
 
 ### 2. RPC de consumo por prato
 
-- [ ] `public.register_dish_consumption(p_restaurant_id uuid, p_menu_item_id uuid, p_portions numeric, p_kind text, p_reason text, p_note text) returns jsonb`, SECURITY INVOKER, `p_kind` em `internal_use` ou `waste`, `p_portions > 0`.
-- [ ] Expande a ficha técnica do prato: por cada linha ligada a um ingrediente, gera um movimento com quantidade `-(p_portions × linha.qty ÷ servings)` convertida pela `unit_factor` para a unidade do ingrediente, com `estimated = (ficha.status = 'rascunho')`, o motivo e a nota.
-- [ ] Linhas livres, linhas sem conversão possível e ingredientes em modo `contagem` não geram movimento e voltam listadas no resultado (`nao_abatidas`, com o motivo de cada uma).
-- [ ] Prato sem ficha técnica: erro `prato_sem_ficha`, nada gravado. Tudo numa transacção: ou entram todos os movimentos válidos, ou nenhum se houver erro.
-- [ ] Grants: `authenticated` sim; `anon` e `public` não.
+- [x] `public.register_dish_consumption(p_restaurant_id uuid, p_menu_item_id uuid, p_portions numeric, p_kind text, p_reason text, p_note text) returns jsonb`, SECURITY INVOKER, `p_kind` em `internal_use` ou `waste`, `p_portions > 0`.
+- [x] Expande a ficha técnica do prato: por cada linha ligada a um ingrediente, gera um movimento com quantidade `-(p_portions × linha.qty ÷ servings)` convertida pela `unit_factor` para a unidade do ingrediente, com `estimated = (ficha.status = 'rascunho')`, o motivo e a nota.
+- [x] Linhas livres, linhas sem conversão possível e ingredientes em modo `contagem` não geram movimento e voltam listadas no resultado (`nao_abatidas`, com o motivo de cada uma).
+- [x] Prato sem ficha técnica: erro `prato_sem_ficha`, nada gravado. Tudo numa transacção: ou entram todos os movimentos válidos, ou nenhum se houver erro.
+- [x] Grants: `authenticated` sim; `anon` e `public` não.
 
 Evidência exigida: pgTAP com ficha de 3 ingredientes e 6 doses (quantidades exactas), ficha em rascunho (movimentos estimados), ficha com uma linha livre e um ingrediente em modo `contagem` (dois em `nao_abatidas`), prato sem ficha (nada gravado), perfil `balcao` rejeitado.
 

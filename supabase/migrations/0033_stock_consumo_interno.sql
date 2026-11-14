@@ -154,3 +154,122 @@ begin
 end $$;
 comment on function public.stock_movement_guard() is
   'Guarda BEFORE INSERT de stock_movements: tenant, modo de consumo (contagem nao abate), perfil (internal_use/waste so owner/gestor/cozinha com utilizador), conversao de unidades e entrada por embalagens. 0033.';
+
+-- == 5) RPC de consumo por prato =============================================
+-- Expande a ficha tecnica de um prato e gera os movimentos de consumo interno
+-- ou de quebra, pelo que a ficha diz que cada dose gasta. SECURITY INVOKER: a
+-- RLS e as guardas (modo de consumo, perfil) aplicam-se ao caller; o abate de
+-- um balcao e travado pela guarda da stock_movement_guard.
+--
+-- Por cada linha ligada a um ingrediente gera um movimento com quantidade
+--   -(p_portions x linha.qty / servings)
+-- convertida pela unit_factor para a unidade do ingrediente, com estimated
+-- igual a (ficha em rascunho), o motivo e a nota. Linhas livres, linhas sem
+-- conversao possivel e ingredientes em modo contagem nao geram movimento e
+-- voltam listados em nao_abatidas com o motivo de cada uma. Prato sem ficha:
+-- erro prato_sem_ficha, nada gravado. Atomico: ou entram todos os movimentos
+-- validos, ou nenhum se houver erro.
+create or replace function public.register_dish_consumption(
+  p_restaurant_id uuid,
+  p_menu_item_id  uuid,
+  p_portions      numeric,
+  p_kind          text,
+  p_reason        text,
+  p_note          text
+) returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_sheet     public.tech_sheets%rowtype;
+  v_servings  numeric;
+  v_estimated boolean;
+  v_line      record;
+  v_factor    numeric;
+  v_qty_conv  numeric;
+  v_abatidas  jsonb := '[]'::jsonb;
+  v_nao       jsonb := '[]'::jsonb;
+  v_count     int := 0;
+begin
+  if p_kind not in ('internal_use','waste') then
+    raise exception 'kind_invalido';
+  end if;
+  if p_portions is null or p_portions <= 0 then
+    raise exception 'doses_invalidas';
+  end if;
+
+  -- Ficha do prato, sob a RLS do caller (so ve as do seu restaurante).
+  select * into v_sheet
+    from public.tech_sheets s
+   where s.menu_item_id = p_menu_item_id
+     and s.restaurant_id = p_restaurant_id;
+  if v_sheet.id is null then
+    raise exception 'prato_sem_ficha';
+  end if;
+
+  v_servings := greatest(coalesce(v_sheet.servings, 1), 1);
+  v_estimated := (v_sheet.status = 'rascunho');
+
+  for v_line in
+    select tsi.ingredient_id, tsi.name as line_name, tsi.qty, tsi.unit,
+           g.name as ing_name, g.unit as ing_unit, g.unit_weight_g, g.depletion_mode
+      from public.tech_sheet_ingredients tsi
+      left join public.ingredients g on g.id = tsi.ingredient_id
+     where tsi.tech_sheet_id = v_sheet.id
+     order by tsi.sort_order
+  loop
+    -- Linha livre: sem ingrediente da despensa, nao abate.
+    if v_line.ingredient_id is null then
+      v_nao := v_nao || jsonb_build_object(
+        'ingredient_id', null, 'name', v_line.line_name, 'motivo', 'linha_livre');
+      continue;
+    end if;
+    -- Ingrediente em modo contagem: apura-se na contagem, nao abate.
+    if v_line.depletion_mode = 'contagem' then
+      v_nao := v_nao || jsonb_build_object(
+        'ingredient_id', v_line.ingredient_id, 'name', v_line.ing_name, 'motivo', 'contagem');
+      continue;
+    end if;
+    -- Conversao para a unidade do ingrediente.
+    v_factor := public.unit_factor(v_line.unit, v_line.ing_unit, v_line.unit_weight_g);
+    if v_factor is null then
+      v_nao := v_nao || jsonb_build_object(
+        'ingredient_id', v_line.ingredient_id, 'name', v_line.ing_name, 'motivo', 'sem_conversao');
+      continue;
+    end if;
+    v_qty_conv := round(p_portions * v_line.qty / v_servings * v_factor, 3);
+    if v_qty_conv <= 0 then
+      -- Arredondado a 0: nao gera movimento.
+      v_nao := v_nao || jsonb_build_object(
+        'ingredient_id', v_line.ingredient_id, 'name', v_line.ing_name, 'motivo', 'quantidade_nula');
+      continue;
+    end if;
+
+    insert into public.stock_movements
+      (restaurant_id, ingredient_id, kind, qty, unit, reason, note, estimated, source)
+    values
+      (p_restaurant_id, v_line.ingredient_id, p_kind, -v_qty_conv, v_line.ing_unit,
+       p_reason, p_note, v_estimated, 'manual');
+
+    v_count := v_count + 1;
+    v_abatidas := v_abatidas || jsonb_build_object(
+      'ingredient_id', v_line.ingredient_id, 'name', v_line.ing_name,
+      'qty', -v_qty_conv, 'unit', v_line.ing_unit, 'estimated', v_estimated);
+  end loop;
+
+  return jsonb_build_object(
+    'menu_item_id', p_menu_item_id,
+    'kind', p_kind,
+    'portions', p_portions,
+    'estimated', v_estimated,
+    'movimentos', v_count,
+    'abatidas', v_abatidas,
+    'nao_abatidas', v_nao
+  );
+end $$;
+comment on function public.register_dish_consumption(uuid, uuid, numeric, text, text, text) is
+  'Expande a ficha tecnica de um prato e gera movimentos internal_use/waste pelo que cada dose gasta. SECURITY INVOKER. Linhas livres, sem conversao e ingredientes em contagem voltam em nao_abatidas. Prato sem ficha: erro prato_sem_ficha. 0033.';
+
+revoke all on function public.register_dish_consumption(uuid, uuid, numeric, text, text, text) from public, anon;
+grant execute on function public.register_dish_consumption(uuid, uuid, numeric, text, text, text) to authenticated;

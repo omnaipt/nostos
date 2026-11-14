@@ -2729,6 +2729,17 @@ export type Database = {
         Args: { p_import_id: string; p_menu: Json; p_restaurant_id: string }
         Returns: Json
       }
+      register_dish_consumption: {
+        Args: {
+          p_kind: string
+          p_menu_item_id: string
+          p_note: string
+          p_portions: number
+          p_reason: string
+          p_restaurant_id: string
+        }
+        Returns: Json
+      }
       sales_by_item: {
         Args: {
           p_from: string
