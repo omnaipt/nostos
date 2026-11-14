@@ -358,7 +358,7 @@ export default function HaccpRegistar() {
             </h2>
             <p className="mb-4 text-sm text-muted-foreground">
               A leitura ({formatTemp(nc.value)} °C) está fora dos limites. Registe a
-              acção correctiva ou adie; o desvio fica visível como “desvio sem resposta”.
+              ação corretiva ou adie; o desvio fica visível como “desvio sem resposta”.
             </p>
             <NonconformityForm
               defaults={{
@@ -367,7 +367,7 @@ export default function HaccpRegistar() {
               }}
               submitting={createNc.isPending}
               onSubmit={submitNc}
-              secondary={{ label: "Registar acção mais tarde", onClick: () => setNc(null) }}
+              secondary={{ label: "Registar ação mais tarde", onClick: () => setNc(null) }}
             />
           </div>
         </div>

@@ -180,7 +180,7 @@ export function HaccpCard({ restaurant, isOwner }: { restaurant: Restaurant; isO
             {purgeResult && (
               <p className="text-xs text-muted-foreground">
                 Apagados: {purgeResult.readings} registos, {purgeResult.nonconformities} NC,{" "}
-                {purgeResult.verifications} verificações, {purgeResult.receptions} recepções,{" "}
+                {purgeResult.verifications} verificações, {purgeResult.receptions} receções,{" "}
                 {purgeResult.rejections} recusas, {purgeResult.photos} fotografias.
               </p>
             )}

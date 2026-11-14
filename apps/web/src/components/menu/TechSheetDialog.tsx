@@ -140,7 +140,7 @@ export function TechSheetDialog({
             const reason = result.reason ?? "erro desconhecido";
             toast.error(
               reason === "ANTHROPIC_API_KEY não configurada"
-                ? "A geração por IA ainda não está activa neste ambiente."
+                ? "A geração por IA ainda não está ativa neste ambiente."
                 : reason.startsWith("limite diário")
                   ? "Limite diário de gerações atingido. O limite renova amanhã; até lá, a ficha pode ser editada manualmente."
                   : `Não foi possível gerar o rascunho (${reason}).`,
@@ -218,7 +218,7 @@ export function TechSheetDialog({
           toast.success("Alergénios aplicados ao prato");
           setSuggestedAllergens([]);
         },
-        onError: () => toast.error("Não foi possível actualizar os alergénios."),
+        onError: () => toast.error("Não foi possível atualizar os alergénios."),
       },
     );
   }

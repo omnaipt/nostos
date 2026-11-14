@@ -13,6 +13,7 @@ import {
   type InventoryResult,
 } from "@/hooks/use-inventory";
 import { formatCostCents } from "@/components/menu/PantryManager";
+import { formatQty } from "@/lib/stock";
 
 // Inventário físico (Gap F): contagem mensal/trimestral. Lista o saldo teórico
 // e uma coluna "contado" (vazia por defeito — só as preenchidas contam); ao
@@ -171,7 +172,7 @@ export default function Inventario() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{ing.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      Teórico: {ing.stock_qty} {ing.unit}
+                      Teórico: {formatQty(ing.stock_qty)} {ing.unit}
                     </p>
                   </div>
                   <Input

@@ -394,7 +394,7 @@ export default function Entradas() {
           <h1 className="font-display text-2xl font-semibold text-atlantico-900">Entradas de compra</h1>
           <p className="text-sm text-muted-foreground">
             Registo das faturas de fornecedor. O saldo e o custo médio da despensa
-            actualizam-se automaticamente.
+            atualizam-se automaticamente.
           </p>
         </div>
         <Link to="/" className={buttonVariants({ variant: "outline", size: "sm" })}>
@@ -616,7 +616,7 @@ export default function Entradas() {
                         {ing && (
                           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
                             <p className="text-xs text-muted-foreground">
-                              Custo médio actual: {formatCostCents(ing.cost_per_unit_cents)}/{ing.unit}
+                              Custo médio atual: {formatCostCents(ing.cost_per_unit_cents)}/{ing.unit}
                               {lastCost != null && <> · última compra: {formatCostCents(lastCost)}/{ing.unit}</>}
                               {" "}· saldo: {formatQty(ing.stock_qty)} {ing.unit}
                             </p>

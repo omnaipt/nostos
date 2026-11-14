@@ -148,7 +148,7 @@ export default function Availability() {
       {
         onSuccess: () =>
           toast.success(status === "sentada" ? "Marcada como sentada" : "Marcada como no-show"),
-        onError: () => toast.error("Não foi possível actualizar o estado."),
+        onError: () => toast.error("Não foi possível atualizar o estado."),
       },
     );
   }
@@ -453,7 +453,7 @@ export default function Availability() {
           setFormOpen(false);
           // Invalidação das queries é feita no hook de save; o refetch do slot
           // actualiza a vista automaticamente.
-          toast.success(editInitial?.id ? "Reserva actualizada" : "Reserva guardada");
+          toast.success(editInitial?.id ? "Reserva atualizada" : "Reserva guardada");
         }}
       />
 

@@ -95,7 +95,7 @@ export default function Balcao() {
               new Date(`${date}T12:00:00`),
             )}
             {availability.isFetching && (
-              <RefreshCw className="h-3.5 w-3.5 animate-spin text-muted-foreground" aria-label="A actualizar" />
+              <RefreshCw className="h-3.5 w-3.5 animate-spin text-muted-foreground" aria-label="A atualizar" />
             )}
           </p>
         </div>
@@ -220,7 +220,7 @@ export default function Balcao() {
                     {
                       onSuccess: () =>
                         toast.success(status === "sentada" ? "Sentada" : "Marcada como faltou"),
-                      onError: () => toast.error("Não foi possível actualizar."),
+                      onError: () => toast.error("Não foi possível atualizar."),
                     },
                   )
                 }

@@ -69,7 +69,7 @@ export default function HaccpNcDetail() {
 
   function submitVerification() {
     if (!id || effective === "") {
-      toast.error("Indique se a acção foi eficaz.");
+      toast.error("Indique se a ação foi eficaz.");
       return;
     }
     verify.mutate(
@@ -136,7 +136,7 @@ export default function HaccpNcDetail() {
                     ? <Link to={`/haccp/registar/${nc.turn_id}`} className="underline">registo de temperatura</Link>
                     : "registo de temperatura"
                   : nc.source === "reception"
-                    ? <Link to="/haccp/recepcao" className="underline">recepção de mercadoria</Link>
+                    ? <Link to="/haccp/recepcao" className="underline">receção de mercadoria</Link>
                     : "registo manual"
               }
             />
@@ -149,8 +149,8 @@ export default function HaccpNcDetail() {
               }
             />
             <Row label="Destino do produto" value={nc.product_disposition} />
-            <Row label="Acção imediata" value={nc.immediate_action} />
-            <Row label="Acção sobre a causa" value={nc.root_cause_action} />
+            <Row label="Ação imediata" value={nc.immediate_action} />
+            <Row label="Ação sobre a causa" value={nc.root_cause_action} />
             <Row label="Quem executou" value={nc.executed_by_name} />
             <Row label="Registada" value={dt(nc.recorded_at)} />
           </dl>

@@ -132,7 +132,7 @@ export function useToggleTakeaway() {
         .eq("id", input.restaurantId);
       if (error) {
         if (isMissingContract(error)) {
-          throw new Error("O take-away ainda não está activo neste ambiente.");
+          throw new Error("O take-away ainda não está ativo neste ambiente.");
         }
         throw new Error(error.message);
       }
@@ -151,7 +151,7 @@ export function useAdvanceOrder(restaurantId: string | undefined) {
         p_note: input.note ?? null,
       });
       if (error) {
-        if (isMissingContract(error)) throw new Error("As encomendas ainda não estão activas.");
+        if (isMissingContract(error)) throw new Error("As encomendas ainda não estão ativas.");
         throw new Error(error.message);
       }
     },

@@ -197,8 +197,8 @@ export default function Haccp() {
 function StartCard() {
   const steps = [
     "Registar no turno: toque em HACCP no turno em curso e registe as temperaturas.",
-    "Corrigir desvios: quando um valor sai dos limites, registe a acção correctiva.",
-    "Gerar dossiê: no fim do período, gere o dossiê para a inspecção.",
+    "Corrigir desvios: quando um valor sai dos limites, registe a ação corretiva.",
+    "Gerar dossiê: no fim do período, gere o dossiê para a inspeção.",
   ];
   return (
     <Card className="mb-4 border-atlantico-500/30">
@@ -265,7 +265,7 @@ function BurstNote({
             </ul>
           )}
           <p className="text-xs text-muted-foreground">
-            Registos em bloco são o que a ASAE identifica como preenchimento retroactivo. Registe no
+            Registos em bloco são o que a ASAE identifica como preenchimento retroativo. Registe no
             momento da verificação.
           </p>
         </div>

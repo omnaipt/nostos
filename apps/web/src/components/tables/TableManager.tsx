@@ -139,7 +139,7 @@ export function TableManager({ tables, onChange, busy }: TableManagerProps) {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">
                   {t.label}{" "}
-                  {!t.active && <Badge variant="neutral">Inactiva</Badge>}
+                  {!t.active && <Badge variant="neutral">Inativa</Badge>}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {t.seats} {t.seats === 1 ? "lugar" : "lugares"}
@@ -151,7 +151,7 @@ export function TableManager({ tables, onChange, busy }: TableManagerProps) {
                 disabled={busy}
                 className="h-11 rounded-md px-2 text-xs font-medium text-muted-foreground hover:bg-muted"
               >
-                {t.active ? "Desactivar" : "Activar"}
+                {t.active ? "Desativar" : "Ativar"}
               </button>
               <Button type="button" variant="ghost" size="icon" aria-label={`Editar ${t.label}`} onClick={() => startEdit(t)} disabled={busy}>
                 <Pencil className="h-4 w-4" />

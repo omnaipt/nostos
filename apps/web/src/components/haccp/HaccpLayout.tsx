@@ -14,7 +14,7 @@ interface Tab {
 
 const TABS: Tab[] = [
   { to: "/haccp", label: "Hoje", end: true },
-  { to: "/haccp/recepcao", label: "Recepção" },
+  { to: "/haccp/recepcao", label: "Receção" },
   { to: "/haccp/nc", label: "Não conformidades" },
   { to: "/haccp/pontos", label: "Pontos" },
   { to: "/haccp/fornecedores", label: "Fornecedores" },
