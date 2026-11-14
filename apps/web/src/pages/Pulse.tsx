@@ -25,7 +25,7 @@ export default function Pulse() {
         por um setor de cada vez.
       </p>
       <a href={CONTACTO} className={botaoPrincipal + " mt-8"}>
-        Falar connosco
+        Fale connosco
       </a>
 
       <Bloco titulo="Primeiro setor, agentes de telecomunicações">

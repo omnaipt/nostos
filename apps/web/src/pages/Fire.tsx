@@ -28,7 +28,7 @@ export default function Fire() {
         escritório.
       </p>
       <a href={CONTACTO} className={botaoPrincipal + " mt-8"}>
-        Falar connosco
+        Fale connosco
       </a>
 
       <Bloco titulo="Em produção">
