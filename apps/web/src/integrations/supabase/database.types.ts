@@ -778,9 +778,9 @@ export type Database = {
           category?: string | null
           cost_per_unit_cents?: number | null
           created_at?: string
+          depletion_mode?: string
           family_id?: string | null
           id?: string
-          depletion_mode?: string
           low_stock_threshold?: number | null
           name?: string
           restaurant_id?: string
