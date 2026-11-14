@@ -93,6 +93,8 @@ Evidência exigida: testes de componente ou de hook para a pré-visualização d
   - Teste 17 (consultor não pode registar quebra): o `consultor` não é membro operacional (`is_restaurant_member` exclui-o desde a 0029), por isso a leitura do ingrediente dentro da `stock_movement_guard` (SECURITY INVOKER, sob RLS) devolvia nada e disparava `ingrediente_de_outro_restaurante` antes da guarda de perfil. Movida a guarda de perfil (b) para antes da leitura do ingrediente: com `auth.uid()`, `internal_use`/`waste` de quem não é owner/gestor/cozinha são rejeitados com `perfil_sem_permissao` primeiro. Não enfraquece o tenant: a leitura abaixo continua a rejeitar ingrediente de outro restaurante, e a guarda de perfil só se aplica a `internal_use`/`waste`. Teste 17 passa a asserção original.
   - Teste 25 (ficha em rascunho gera 1 movimento estimado): `have 2, want 1`. Não é defeito do produto — a ficha M2 em rascunho tem uma só linha (Massa A), logo a RPC gera exactamente 1 movimento. A asserção é que contava mal: contava `internal_use` com `estimated = true` em toda a tabela, apanhando também o movimento semeado em A8 (Frango A, prova de que a coluna `estimated` grava). Contagem restringida ao ingrediente da ficha (Massa A, `11110010`), que isola o abate da RPC. Nenhuma asserção enfraquecida; a prova de que a RPC gera um só movimento estimado mantém-se.
 
+- 14-11-2026 (orquestrador): reserva R1 do auditor corrigida na integração (travessão em ConsumoInternoDialog.tsx substituído por dois pontos); alteração só de texto, sem lógica.
+
 ## Blockers
 
 Nenhum.

@@ -44,7 +44,7 @@ export function ConsumoInternoDialog({
         if (!o) onClose();
       }}
       title="Registar consumo interno"
-      description="Refeição do pessoal, oferta da casa, prova ou prato estragado — sai do stock pelo que a ficha gasta."
+      description="Refeição do pessoal, oferta da casa, prova ou prato estragado: sai do stock pelo que a ficha gasta."
       className="sm:max-w-xl"
     >
       <div className="mb-4 inline-flex rounded-md border border-input p-0.5 text-sm">
