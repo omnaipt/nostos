@@ -742,6 +742,7 @@ export type Database = {
           category: string | null
           cost_per_unit_cents: number | null
           created_at: string
+          depletion_mode: string
           family_id: string | null
           id: string
           low_stock_threshold: number | null
@@ -759,6 +760,7 @@ export type Database = {
           category?: string | null
           cost_per_unit_cents?: number | null
           created_at?: string
+          depletion_mode?: string
           family_id?: string | null
           id?: string
           low_stock_threshold?: number | null
@@ -778,6 +780,7 @@ export type Database = {
           created_at?: string
           family_id?: string | null
           id?: string
+          depletion_mode?: string
           low_stock_threshold?: number | null
           name?: string
           restaurant_id?: string
@@ -2034,6 +2037,7 @@ export type Database = {
         Row: {
           cost_per_unit_cents: number | null
           created_at: string
+          estimated: boolean
           expires_at: string | null
           id: string
           ingredient_id: string
@@ -2042,6 +2046,7 @@ export type Database = {
           packs: number | null
           purchase_item_id: string | null
           qty: number
+          reason: string | null
           restaurant_id: string
           source: string
           source_ref: string | null
@@ -2050,6 +2055,7 @@ export type Database = {
         Insert: {
           cost_per_unit_cents?: number | null
           created_at?: string
+          estimated?: boolean
           expires_at?: string | null
           id?: string
           ingredient_id: string
@@ -2058,6 +2064,7 @@ export type Database = {
           packs?: number | null
           purchase_item_id?: string | null
           qty: number
+          reason?: string | null
           restaurant_id: string
           source?: string
           source_ref?: string | null
@@ -2066,6 +2073,7 @@ export type Database = {
         Update: {
           cost_per_unit_cents?: number | null
           created_at?: string
+          estimated?: boolean
           expires_at?: string | null
           id?: string
           ingredient_id?: string
@@ -2074,6 +2082,7 @@ export type Database = {
           packs?: number | null
           purchase_item_id?: string | null
           qty?: number
+          reason?: string | null
           restaurant_id?: string
           source?: string
           source_ref?: string | null
