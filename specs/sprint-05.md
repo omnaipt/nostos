@@ -87,6 +87,7 @@ Evidência exigida: testes de componente ou de hook para a pré-visualização d
 - 13-11-2026 (David): a cozinha regista consumo interno e quebras; o total mensal em euros fica visível só para o dono.
 - 14-11-2026 (David): gate do sprint 04 dado com "avança"; a bateria de testes manuais grande é feita depois, sobre os sprints 04 a 06 juntos.
 - 14-11-2026 (orquestrador): a migração é a 0033 (0031 é das tentativas de login, 0032 do stock S1, ambas em produção).
+- 14-11-2026 (iteração 2, só pgTAP): o bloco de preparação de dados do `0016_stock_consumo_interno.sql` inseria `menu_items` sem `price_type`/`price_cents`, violando `menu_items_price_type_coherent` (0010): o default de `price_type` é `fixed`, que exige `price_cents` não nulo. Corrigido com `price_type = 'fixed'` e preço em cêntimos nos quatro pratos. Revistas as restantes tabelas do bloco de preparação (`restaurant_members` aceita `consultor` desde a 0029; `tech_sheets`/`tech_sheet_ingredients` com unidades e `qty > 0` válidas; `purchase_items` com `pack_qty > 0` e `pack_unit` válido; `restaurants.owner_id` existe) sem mais violações. Migração e asserções intactas: nenhuma asserção estava errada.
 
 ## Blockers
 

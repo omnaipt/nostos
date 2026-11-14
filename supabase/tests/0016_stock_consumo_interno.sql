@@ -58,11 +58,13 @@ insert into public.purchase_items (id, restaurant_id, ingredient_id, brand, labe
 insert into public.menu_categories (id, restaurant_id, label) values
   ('ca000001-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Pratos');
 
-insert into public.menu_items (id, restaurant_id, category_id, name) values
-  ('b1000001-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ca000001-0000-0000-0000-000000000001', 'Massada A'),
-  ('b1000002-0000-0000-0000-000000000002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ca000001-0000-0000-0000-000000000001', 'Prato rascunho A'),
-  ('b1000003-0000-0000-0000-000000000003', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ca000001-0000-0000-0000-000000000001', 'Prato misto A'),
-  ('b1000004-0000-0000-0000-000000000004', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ca000001-0000-0000-0000-000000000001', 'Prato sem ficha A');
+-- price_type/price_cents coerentes (menu_items_price_type_coherent, 0010):
+-- o default de price_type e 'fixed', que exige price_cents nao nulo.
+insert into public.menu_items (id, restaurant_id, category_id, name, price_type, price_cents) values
+  ('b1000001-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ca000001-0000-0000-0000-000000000001', 'Massada A',        'fixed', 1200),
+  ('b1000002-0000-0000-0000-000000000002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ca000001-0000-0000-0000-000000000001', 'Prato rascunho A',  'fixed',  900),
+  ('b1000003-0000-0000-0000-000000000003', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ca000001-0000-0000-0000-000000000001', 'Prato misto A',     'fixed', 1100),
+  ('b1000004-0000-0000-0000-000000000004', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ca000001-0000-0000-0000-000000000001', 'Prato sem ficha A', 'fixed', 1000);
 
 -- M1: ficha validada, 2 doses, 3 ingredientes (quantidades exactas).
 insert into public.tech_sheets (id, restaurant_id, menu_item_id, servings, status) values
