@@ -14,7 +14,7 @@
 
 begin;
 
-select plan(36);
+select plan(39);
 
 -- ============================================================================
 -- SEED (superuser)
@@ -47,6 +47,13 @@ insert into public.ingredients (id, restaurant_id, name, unit, depletion_mode) v
   ('11110011-0000-0000-0000-000000000011', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Molho A',       'ml', 'ficha'),
   ('11110012-0000-0000-0000-000000000012', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Queijo A',      'g',  'ficha'),
   ('11110013-0000-0000-0000-000000000013', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Azeite mesa A', 'ml', 'contagem');
+
+-- Ingrediente e artigo de compra para a reserva do sprint 04 (item 5):
+-- azeite em ml comprado em garrafao de 5 l.
+insert into public.ingredients (id, restaurant_id, name, unit) values
+  ('11110020-0000-0000-0000-000000000020', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Azeite S4 A', 'ml');
+insert into public.purchase_items (id, restaurant_id, ingredient_id, brand, label, pack_qty, pack_unit) values
+  ('c2000001-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110020-0000-0000-0000-000000000020', 'Gallo', 'Garrafao 5 L', 5, 'l');
 
 insert into public.menu_categories (id, restaurant_id, label) values
   ('ca000001-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Pratos');
@@ -292,6 +299,28 @@ select ok(
   not has_function_privilege('anon',
     'public.register_dish_consumption(uuid,uuid,numeric,text,text,text)', 'execute'),
   'anon nao executa a RPC');
+
+-- ============================================================================
+-- C) RESERVA DO SPRINT 04: custo por unidade base apos entrada por embalagens
+--    (item 5)
+-- ============================================================================
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+
+-- 2 garrafoes de 5 l (pack em l) num ingrediente em ml, a 398 cents/l. Entra
+-- como 10000 ml e o custo normaliza para 0,398 cents/ml (unidade base).
+select lives_ok($$
+  insert into public.stock_movements (id, restaurant_id, ingredient_id, kind, qty, unit, cost_per_unit_cents, purchase_item_id, packs)
+  values ('d4000001-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110020-0000-0000-0000-000000000020', 'purchase', 10, 'l', 398, 'c2000001-0000-0000-0000-000000000001', 2)
+$$, 'entrada por 2 embalagens de 5 l num ingrediente em ml');
+select is(
+  (select stock_qty from public.ingredients where id = '11110020-0000-0000-0000-000000000020'),
+  10000::numeric, 'stock em unidade base: 2 x 5 l = 10000 ml');
+select is(
+  (select cost_per_unit_cents from public.ingredients where id = '11110020-0000-0000-0000-000000000020'),
+  0.398::numeric, 'cost_per_unit_cents por unidade base: 398/l = 0,398/ml');
+select is(
+  public.ingredient_avg_cost('11110020-0000-0000-0000-000000000020'),
+  0.398::numeric, 'ingredient_avg_cost por unidade base: 0,398/ml');
 
 select * from finish();
 rollback;

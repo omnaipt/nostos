@@ -71,7 +71,7 @@ Evidência exigida: testes de componente ou de hook para a pré-visualização d
 
 ### 5. Reserva do sprint 04
 
-- [ ] No pgTAP deste sprint, um teste explícito: depois de uma entrada por embalagens (sprint 04), `ingredients.cost_per_unit_cents` e `ingredient_avg_cost` do ingrediente têm o valor esperado por unidade base.
+- [x] No pgTAP deste sprint, um teste explícito: depois de uma entrada por embalagens (sprint 04), `ingredients.cost_per_unit_cents` e `ingredient_avg_cost` do ingrediente têm o valor esperado por unidade base.
 
 ### 6. Fecho
 
