@@ -1,0 +1,26 @@
+pgTAP do sprint 05, executado pelo orquestrador a 14-11-2026 por volta das 12:30.
+
+Método: migração supabase/migrations/0033_stock_consumo_interno.sql e teste
+supabase/tests/0016_stock_consumo_interno.sql corridos numa única transação com
+rollback contra o projeto de produção stoa (emuwqkdummdmacnkltte), já com a 0032
+aplicada, via `npx supabase@latest db query --linked --yes -o json -f`.
+Duas execuções: uma com os contadores do pgTAP antes de finish(); outra com cada
+asserção a gravar o seu resultado numa tabela temporária, para listar falhas.
+
+Histórico das execuções:
+  iteração 1: falhou na preparação de dados (menu_items_price_type_coherent)
+  iteração 2: 39 executados, 6 falhados (4, 5, 6, 9, 17, 25)
+  iteração 3: 39 executados, 0 falhados  <- resultado final
+
+Conclusão sobre o teste 25 (iteração 3): defeito do teste, não do produto. A
+contagem apanhava um movimento semeado noutro teste; a RPC gera um só movimento
+estimado para uma ficha de uma linha.
+
+Verificação posterior em produção (nada persistiu):
+  stock_movements.reason e estimated: inexistentes
+  ingredients.depletion_mode: inexistente
+  register_dish_consumption: inexistente
+  stock_movements_sign_coherent: sem internal_use (igual a antes)
+  migrações registadas: 34 (iguais a antes)
+
+Código testado: ramo feat/stock-s2 em e6ee278.
