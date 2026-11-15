@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Logotipo } from "@/components/site/SiteChrome";
 
 // Entrar OU criar conta de convidado.
 //
@@ -158,13 +159,16 @@ export default function Login() {
     <div className="grid min-h-screen place-items-center bg-muted/30 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>nostos · {mode === "criar" ? "Criar conta" : "Entrar"}</CardTitle>
+          <span className="nostos-site mb-2 block">
+            <Logotipo vertical="rest" className="-ml-2 h-14 w-auto" />
+          </span>
+          <CardTitle>{mode === "criar" ? "Criar conta" : "Entrar"}</CardTitle>
         </CardHeader>
         <CardContent>
           {mode === "criar" && (
             <p className="mb-4 text-sm text-muted-foreground">
               Foi convidado para uma equipa? Crie a conta com o mesmo email do
-              convite e o acesso fica activo de imediato.
+              convite e o acesso fica ativo de imediato.
             </p>
           )}
           <form onSubmit={onSubmit} className="space-y-4">

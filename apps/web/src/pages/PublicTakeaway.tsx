@@ -24,6 +24,7 @@ import {
   withLang,
   type Lang,
 } from "@/lib/i18n";
+import { Logotipo } from "@/components/site/SiteChrome";
 import {
   cartCount,
   cartTotalCents,
@@ -522,7 +523,7 @@ function Shell({
         <div className="flex w-full flex-col items-center gap-4 py-4">
           {children}
           <p className="text-xs text-muted-foreground">
-            {t(lang, "assinaturaEncomendas")} <span className="font-semibold">nostos</span>
+            {t(lang, "assinaturaEncomendas")} <span className="nostos-site inline-block align-middle"><Logotipo vertical="rest" className="ml-1 inline h-8 w-auto" /></span>
           </p>
         </div>
       </div>

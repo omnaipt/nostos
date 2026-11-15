@@ -22,6 +22,7 @@ import {
 import { CasaLogo } from "@/components/CasaLogo";
 import { themeStyle } from "@/lib/themes";
 import { todayServiceDate } from "@/lib/service-date";
+import { Logotipo } from "@/components/site/SiteChrome";
 import {
   detectLang,
   formatPriceCentsI18n,
@@ -474,7 +475,7 @@ function PublicShell({
       <div className="flex w-full flex-col items-center gap-4">
         {children}
         <p className="text-xs text-muted-foreground">
-          {t(lang, "assinaturaReservas")} <span className="font-semibold">nostos</span>
+          {t(lang, "assinaturaReservas")} <span className="nostos-site inline-block align-middle"><Logotipo vertical="rest" className="ml-1 inline h-8 w-auto" /></span>
         </p>
       </div>
     </div>
