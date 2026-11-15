@@ -6,7 +6,7 @@ import { DESCRITOR, MEANDRO, PALAVRA } from "./logotipos";
 // curtas das verticais). Tokens em .nostos-site (index.css); cada página só
 // escolhe o acento. Textos aprovados a 13-11-2026.
 
-export type Vertical = "rest" | "urbs" | "pulse" | "fire";
+export type Vertical = "rest" | "urbs" | "pulse" | "corps";
 
 export const CONTACTO = "mailto:hello@omnai.pt";
 

@@ -3,6 +3,13 @@
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm --filter @stoa/web build",
   "outputDirectory": "apps/web/dist",
+  "redirects": [
+    {
+      "source": "/fire",
+      "destination": "/corps",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",

@@ -48,9 +48,9 @@ import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// nostos fire: só entra em builds a partir de 01-12-2026 (vite.config.ts).
+// nostos corps: só entra em builds a partir de 01-12-2026 (vite.config.ts).
 // Com a constante a false, a página nem chega ao bundle.
-const Fire = __NOSTOS_FIRE__ ? lazy(() => import("@/pages/Fire")) : null;
+const Corps = __NOSTOS_CORPS__ ? lazy(() => import("@/pages/Corps")) : null;
 
 // Raiz condicionada pela sessão: anónimo vê a página da marca (a landing de
 // restaurantes passou para /rest a 13-11-2026); membro vê o Início do
@@ -113,12 +113,12 @@ export default function App() {
             <Route path="/rest" element={<Landing />} />
             <Route path="/urbs" element={<Urbs />} />
             <Route path="/pulse" element={<Pulse />} />
-            {Fire && (
+            {Corps && (
               <Route
-                path="/fire"
+                path="/corps"
                 element={
                   <Suspense fallback={null}>
-                    <Fire />
+                    <Corps />
                   </Suspense>
                 }
               />

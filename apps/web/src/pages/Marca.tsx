@@ -13,7 +13,7 @@ import {
 
 // Página de entrada de nostos.pt: apresenta a marca e encaminha para cada
 // vertical. Textos aprovados a 13-11-2026. O conteúdo de restaurantes vive em
-// /rest. A entrada do nostos fire só existe em builds a partir de 01-12-2026.
+// /rest. A entrada do nostos corps só existe em builds a partir de 01-12-2026.
 
 type Entrada = { vertical: Vertical; paraQuem: string; linha: string; estado: string };
 
@@ -36,12 +36,12 @@ const ENTRADAS: Entrada[] = [
     linha: "O CRM montado à volta da forma como a sua empresa vende",
     estado: "Em desenvolvimento com o primeiro cliente",
   },
-  ...(__NOSTOS_FIRE__
+  ...(__NOSTOS_CORPS__
     ? [
         {
-          vertical: "fire" as const,
-          paraQuem: "Brigadas de bombeiros industriais",
-          linha: "Ponto, escalas e equipas de brigadas privadas",
+          vertical: "corps" as const,
+          paraQuem: "Operações com pessoas e meios",
+          linha: "Ponto, escalas e equipas de serviços que vivem das suas pessoas",
           estado: "Em operação",
         },
       ]
