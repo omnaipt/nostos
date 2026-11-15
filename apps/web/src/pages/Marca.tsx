@@ -10,6 +10,7 @@ import {
   usePageMeta,
   type Vertical,
 } from "@/components/site/SiteChrome";
+import { ComoConstruimos } from "@/components/site/ComoConstruimos";
 
 // Página de entrada de nostos.pt: apresenta a marca e encaminha para cada
 // vertical. Textos aprovados a 13-11-2026. O conteúdo de restaurantes vive em
@@ -121,6 +122,7 @@ export default function Marca() {
             ))}
           </div>
         </section>
+        <ComoConstruimos />
       </main>
 
       <Rodape />
