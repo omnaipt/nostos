@@ -96,7 +96,7 @@ export function Logotipo({ vertical, className }: { vertical: Vertical; classNam
 }
 
 // Cabeçalho igual em todas as páginas de vertical: logótipo à esquerda;
-// "Todos os setores" e, quando o produto tem aplicação, "Entrar" à direita.
+// "Todos os produtos" e, quando o produto tem aplicação, "Entrar" à direita.
 export type Entrar = { href: string; interno?: boolean };
 
 export function CabecalhoVertical({ vertical, entrar }: { vertical: Vertical; entrar?: Entrar }) {
@@ -113,7 +113,7 @@ export function CabecalhoVertical({ vertical, entrar }: { vertical: Vertical; en
           state={VOLTAR}
           className="whitespace-nowrap text-sm font-medium text-[var(--texto-2)] underline-offset-4 hover:underline"
         >
-          Todos os setores
+          Todos os produtos
         </Link>
         {entrar &&
           (entrar.interno ? (

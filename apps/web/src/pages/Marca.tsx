@@ -49,7 +49,7 @@ const ENTRADAS: Entrada[] = [
 ];
 
 export default function Marca() {
-  usePageMeta("nostos · software feito para o seu setor", __NOSTOS_DESCRICAO_MARCA__);
+  usePageMeta("nostos · software que conhece o seu negócio", __NOSTOS_DESCRICAO_MARCA__);
 
   // Quem volta de uma vertical (botão "Voltar" ou retrocesso do browser)
   // regressa ao sítio onde estava; quem chega de novo começa no início.
@@ -75,15 +75,15 @@ export default function Marca() {
       <main>
         <section className="container max-w-3xl pb-16 pt-10 sm:pb-20 sm:pt-16">
           <h1 className="text-4xl font-semibold leading-[1.1] tracking-[-0.015em] text-[var(--titulo)] sm:text-6xl">
-            Software que conhece o seu setor.
+            Software que conhece o seu negócio.
           </h1>
           <p className="mt-6 text-lg leading-relaxed">
-            Nostos é uma família de produtos. Cada um é feito para um setor, com as regras e o
-            vocabulário de quem lá trabalha. A base é a mesma em todos; muda o que interessa a cada
+            Nostos é uma família de produtos. Uns são feitos para um setor, como os restaurantes e os ateliers de arquitetura. Outros são
+            plataformas que se configuram para cada empresa. A base é a mesma em todos; muda o que interessa a cada
             negócio.
           </p>
-          <a href="#setores" className={botaoPrincipal + " mt-8"}>
-            Escolher o meu setor
+          <a href="#produtos" className={botaoPrincipal + " mt-8"}>
+            Ver os produtos
           </a>
         </section>
 
@@ -98,7 +98,7 @@ export default function Marca() {
           </div>
         </section>
 
-        <section id="setores" className="container scroll-mt-6 py-16" aria-label="Setores">
+        <section id="produtos" className="container scroll-mt-6 py-16" aria-label="Produtos">
           <div className="grid gap-5 sm:grid-cols-2">
             {ENTRADAS.map((e) => (
               <Link
