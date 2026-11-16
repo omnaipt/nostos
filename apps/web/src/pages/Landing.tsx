@@ -1,3 +1,4 @@
+import ecraRest from "@/assets/site/ecra-rest.png";
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -129,6 +130,16 @@ export default function Landing() {
         <p className="mt-6 text-sm text-[hsl(var(--brand-pine-soft))]">
           Sem comissões · Alergénios UE no menu · Clientes que voltam
         </p>
+        <figure className="mt-12">
+          <img
+            src={ecraRest}
+            alt="Margens do menu no nostos rest, com o custo e a margem de cada prato"
+            width={900}
+            height={758}
+            className="w-full rounded-[10px] border border-[var(--regua)] shadow-[0_1px_3px_rgba(22,64,60,.06),0_4px_14px_rgba(22,64,60,.08)]"
+          />
+          <figcaption className="mt-3 text-sm text-[var(--texto-2)]">Margem de cada prato, num restaurante de demonstração.</figcaption>
+        </figure>
       </section>
 
       <Ornament />

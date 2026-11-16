@@ -6,6 +6,7 @@ import {
   botaoPrincipal,
   usePageMeta,
 } from "@/components/site/SiteChrome";
+import ecraUrbs from "@/assets/site/ecra-urbs.png";
 
 // nostos.pt/urbs: página curta, do tamanho do que já se pode afirmar.
 // Tratamento por você. Textos aprovados a 13-11-2026.
@@ -34,6 +35,17 @@ export default function Urbs() {
           Registar o meu gabinete
         </a>
       </div>
+
+      <figure className="mt-12">
+        <img
+          src={ecraUrbs}
+          alt="Carteira de processos de um gabinete no nostos urbs, com fase, quem tem a bola e o prazo mais próximo de cada um"
+          width={1070}
+          height={740}
+          className="w-full rounded-[10px] border border-[var(--regua)] shadow-[0_1px_3px_rgba(22,64,60,.06),0_4px_14px_rgba(22,64,60,.08)]"
+        />
+        <figcaption className="mt-3 text-sm text-[var(--texto-2)]">Carteira de processos, com dados de demonstração.</figcaption>
+      </figure>
 
       <Bloco titulo="O que faz hoje">
         <Lista

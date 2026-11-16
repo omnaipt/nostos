@@ -6,6 +6,7 @@ import {
   botaoPrincipal,
   usePageMeta,
 } from "@/components/site/SiteChrome";
+import ecraPulse from "@/assets/site/ecra-pulse.png";
 
 // nostos.pt/pulse: página curta. Tratamento por você. Textos revistos a 15-11-2026 (CRM configurado por cliente), por aprovar.
 
@@ -29,6 +30,17 @@ export default function Pulse() {
           Fale connosco
         </a>
       </div>
+
+      <figure className="mt-12">
+        <img
+          src={ecraPulse}
+          alt="Painel do nostos pulse com oportunidades ativas, valor em pipeline e valor por fase"
+          width={1568}
+          height={522}
+          className="w-full rounded-[10px] border border-[var(--regua)] shadow-[0_1px_3px_rgba(22,64,60,.06),0_4px_14px_rgba(22,64,60,.08)]"
+        />
+        <figcaption className="mt-3 text-sm text-[var(--texto-2)]">Painel de um nostos pulse em uso, com os nomes ocultados.</figcaption>
+      </figure>
 
       <Bloco titulo="Primeiro pacote de módulos, agentes de telecomunicações">
         <p>
