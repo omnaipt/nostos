@@ -35,7 +35,7 @@ const ENTRADAS: Entrada[] = [
     vertical: "pulse",
     paraQuem: "Equipas comerciais",
     linha: "O CRM montado à volta da forma como a sua empresa vende",
-    estado: "Em desenvolvimento com o primeiro cliente",
+    estado: "Em uso na OMNAI e em teste num cliente",
   },
   ...(__NOSTOS_CORPS__
     ? [

@@ -31,8 +31,13 @@ const MONTAGENS: Montagem[] = [
     : []),
   {
     vertical: "pulse",
-    titulo: "Um agente de telecomunicações",
+    titulo: "Uma equipa comercial",
     pecas: [
+      { nome: "Pipeline", largura: 2, estado: "uso" },
+      { nome: "Propostas", largura: 2, estado: "uso" },
+      { nome: "Contratos", largura: 2, estado: "uso" },
+      { nome: "Clientes", largura: 3, estado: "uso" },
+      { nome: "Concorrência", largura: 3, estado: "uso" },
       { nome: "Conciliação de comissões", largura: 6, estado: "desenvolvimento" },
       { nome: "Parque de clientes", largura: 3, estado: "seguir" },
       { nome: "Leads", largura: 3, estado: "seguir" },

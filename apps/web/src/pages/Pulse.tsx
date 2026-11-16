@@ -13,7 +13,7 @@ import ecraPulse from "@/assets/site/ecra-pulse.png";
 export default function Pulse() {
   usePageMeta(
     "nostos pulse · o CRM montado à volta da forma como a sua empresa vende",
-    "O nostos pulse parte de uma base comum e ganha os módulos que o seu negócio pede. Em desenvolvimento com o primeiro cliente.",
+    "O nostos pulse parte de uma base comum e ganha os módulos que o seu negócio pede. Em uso na OMNAI e em teste num cliente em Portugal.",
   );
 
   return (
@@ -39,10 +39,10 @@ export default function Pulse() {
           height={522}
           className="w-full rounded-[10px] border border-[var(--regua)] shadow-[0_1px_3px_rgba(22,64,60,.06),0_4px_14px_rgba(22,64,60,.08)]"
         />
-        <figcaption className="mt-3 text-sm text-[var(--texto-2)]">Painel de um nostos pulse em uso, com os nomes ocultados.</figcaption>
+        <figcaption className="mt-3 text-sm text-[var(--texto-2)]">Painel de um nostos pulse em teste, com os nomes ocultados.</figcaption>
       </figure>
 
-      <Bloco titulo="Primeiro pacote de módulos, agentes de telecomunicações">
+      <Bloco titulo="Em desenvolvimento, o pacote para agentes de telecomunicações">
         <p>
           Com a JMSoares, agente MEO Empresas, o pulse cruza todos os meses o mapa de comissões com
           o ficheiro do dealer, emparelha linha a linha e deixa as diferenças prontas para contestação. A seguir entram o parque de clientes e as
@@ -52,7 +52,7 @@ export default function Pulse() {
 
       <Bloco titulo="Estado">
         <p>
-          <Estado>Em desenvolvimento com o primeiro cliente</Estado>
+          <Estado>Em uso na OMNAI e em teste num cliente em Portugal</Estado>
         </p>
         <p className="mt-3">Fazemos poucos arranques por ano e acompanhamos cada um.</p>
       </Bloco>
