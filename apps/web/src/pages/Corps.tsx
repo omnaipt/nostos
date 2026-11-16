@@ -7,6 +7,7 @@ import {
   botaoPrincipal,
   usePageMeta,
 } from "@/components/site/SiteChrome";
+import ecra from "@/assets/site/ecra-corps.png";
 
 // nostos.pt/corps: página curta. Tratamento por você. Nome e textos novos a 15-11-2026 (antes nostos fire), por aprovar.
 // Só é publicada em builds a partir de 01-12-2026 (ver vite.config.ts e App.tsx).
@@ -33,6 +34,19 @@ export default function Corps() {
           Fale connosco
         </a>
       </div>
+
+      <figure className="mt-12">
+        <img
+          src={ecra}
+          alt="Escala semanal de uma brigada no nostos corps, com os turnos de manhã, tarde e noite de cada equipa"
+          width={1050}
+          height={758}
+          className="w-full rounded-[10px] border border-[var(--regua)] shadow-[0_1px_3px_rgba(22,64,60,.06),0_4px_14px_rgba(22,64,60,.08)]"
+        />
+        <figcaption className="mt-3 text-sm text-[var(--texto-2)]">
+          Escala semanal de uma brigada, com dados de demonstração.
+        </figcaption>
+      </figure>
 
       <Bloco titulo="Em produção">
         <Lista
